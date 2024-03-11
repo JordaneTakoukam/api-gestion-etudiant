@@ -3,21 +3,21 @@ import { DateTime } from "luxon";
 import jwt from 'jsonwebtoken';
 import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
-import { keyRoleApp } from '../../../configs/key_role.js'
+import { appConfigs } from '../../../configs/app_configs.js'
 
 
 export const createDefaultSuperAdmin = async (req, res) => {
     const data = {
-        nom: 'super',
-        prenom: 'admin',
-        email: 'takoukam.jordane@gmail.com',
-        role: 'super-admin',
-        genre: 'm'
+        nom: appConfigs.defaultSuperUser.nom,
+        prenom: appConfigs.defaultSuperUser.prenom,
+        email: appConfigs.defaultSuperUser.email,
+        role: appConfigs.role.superAdmin,
+        genre: appConfigs.defaultSuperUser.genre,
     }
 
     try {
         // Vérifier s'il existe un compte super-admin
-        const existingSuperAdmin = await User.findOne({ role: keyRoleApp.superAdmin });
+        const existingSuperAdmin = await User.findOne({ role: data.role });
 
         if (existingSuperAdmin) {
             return res.status(400).json({
@@ -37,10 +37,7 @@ export const createDefaultSuperAdmin = async (req, res) => {
         }
 
 
-        let passwordGenerate = 'SuperAdmin'
-        console.log('Mot de passe = ', passwordGenerate);
-
-        let role = keyRoleApp.superAdmin;
+        const passwordGenerate = appConfigs.defaultSuperUser.defautlPassword;
 
         // Hash du mot de passe
         const saltRounds = 10;
@@ -52,20 +49,20 @@ export const createDefaultSuperAdmin = async (req, res) => {
             email: data.email,
             nom: data.nom,
             prenom: data.prenom,
-            role: role,
+            role: data.role,
             genre: data.genre,
-            motDePasse: hashedPassword,
-            dateCreation: currentDate,
+            mot_de_passe: hashedPassword,
+            date_creation: currentDate,
 
         });
 
         const user = await newUser.save();
 
         const playload = {
-            "test": "test"
-            // cId: user._id,
-            // lId: user.loginId,
-            // r: user.role,
+            userId: user._id,
+            role: user.role,
+            nom: user.nom,
+            prenom: user.prenom,
         }
         // Générer un jeton JWT
         const token = jwt.sign(
@@ -76,14 +73,13 @@ export const createDefaultSuperAdmin = async (req, res) => {
 
         // on retourne tous sauf le mot de passe
         const userData = user.toObject();
-        delete userData.motDePasse;
+        delete userData.mot_de_passe;
 
         res.json({
             success: true,
             message: message.inscriptReuissie,
             token,
             data: userData,
-            id: userData._id
         });
 
     } catch (error) {

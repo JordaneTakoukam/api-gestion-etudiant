@@ -81,18 +81,18 @@ app.use("/api/v1/setting/salle-de-cour", salleDeCourRoutes);
 
 
 
-// connectMongoDB(process.env.MONGODB_URL)
-//     .then(() => {
-app.listen(
-    process.env.PORT || 8085,
-    async () => {
-        console.log(`🚀💥 Serveur en cours d\'exécution sur http://localhost:${process.env.PORT} `);
+connectMongoDB(process.env.MONGODB_URL)
+    .then(() => {
+        app.listen(
+            process.env.PORT || 8085,
+            async () => {
+                console.log(`🚀💥 Serveur en cours d\'exécution sur http://localhost:${process.env.PORT} `);
+            });
+    })
+    .catch((error) => {
+        console.log(error);
+        process.exit(1); // Quitter le processus en cas d'echec
     });
-// })
-// .catch((error) => {
-//     console.log(error);
-//     process.exit(1); // Quitter le processus en cas d'echec
-// });
 
 
 
