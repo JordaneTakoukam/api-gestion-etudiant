@@ -25,6 +25,10 @@ const message = {
         fr: "Mot de passe incorrect !",
         en: "Incorrect password!"
     },
+    success_changer_mdp: {
+        fr: "Mot de passe changer avec succès !",
+        en: ""
+    },
 
     // =======================================
 
