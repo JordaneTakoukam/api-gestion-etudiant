@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import paginate from 'mongoose-paginate-v2'
+mongoose.plugin(paginate);
 
 const connectMongoDB = async (url) => {
     console.log("🕟 wait, connecting to mongodb ....");

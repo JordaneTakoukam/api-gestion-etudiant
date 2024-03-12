@@ -17,6 +17,7 @@ import calendarRoutes from "./routes/calendar.routes.js";
 import scheduleRoutes from "./routes/schedule.routes.js";
 import subjectRoutes from "./routes/subject.routes.js"; // matieres
 // routes de settings
+import settingRoute from "./routes/settings/get_all_settings.route.js";
 import serviceRoutes from "./routes/settings/service.routes.js";
 import fonctionRoutes from "./routes/settings/fonction.routes.js";
 import gradeRoutes from "./routes/settings/grade.routes.js";
@@ -66,6 +67,8 @@ app.use("/api/v1/user/", userRoutes);
 app.use("/api/v1/subject/", subjectRoutes);
 app.use("/api/v1/calendar/", calendarRoutes);
 app.use("/api/v1/schedule/", scheduleRoutes);
+
+app.use("/api/v1/settings", settingRoute);
 app.use("/api/v1/setting/service", serviceRoutes);
 app.use("/api/v1/setting/fonction", fonctionRoutes);
 app.use("/api/v1/setting/grade", gradeRoutes);

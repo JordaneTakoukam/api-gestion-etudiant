@@ -1,10 +1,10 @@
 import express from "express";
 
 // controllers
-import { createService, deleteService, readService, readServices, updateService } from "../../controllers/setting/service/service.controller.js";
+import { createService, deleteService, readServices, updateService } from "../../controllers/setting/service/service.controller.js";
 
 
-// middlewares
+// mserviceIddlewares
 
 const router = express.Router();
 
@@ -12,15 +12,14 @@ const router = express.Router();
 router.post("/create", createService);
 
 //  read
-router.get("/get/:id", readService);
-router.get("/get/:params", readServices);
+router.get("", readServices);
 
 
 // update
-router.put("/update/:id", updateService);
+router.put("/update/:serviceId", updateService);
 
 // delete
-router.delete("/delete/:id", deleteService);
+router.delete("/delete/:serviceId", deleteService);
 
 
 

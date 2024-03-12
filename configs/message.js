@@ -1,6 +1,6 @@
 const message = {
-    erreurServeur:  "Erreur interne du serveur !",
-    emailExiste:  "Cette adresse e-mail est déjà enregistrée !",
+    erreurServeur: "Erreur interne du serveur !",
+    emailExiste: "Cette adresse e-mail est déjà enregistrée !",
 
     superAdminCreerAvecSuccess: {
         fr: "Super Administrateur créer avec succès !",
@@ -44,7 +44,7 @@ const message = {
         fr: "Token invalide !",
         en: "Invalid token!"
     },
-  
+
 
     motDePasseChange: {
         fr: "Mot de passe changé avec succès !",
@@ -55,10 +55,35 @@ const message = {
     invalidInput: {
         fr: "Entrée invalide.",
         en: "Invalid input."
+    },
+
+
+    // ============ parametre
+    ajouter_avec_success: {
+        fr: "Ajouter avec succès",
+        en: ""
+    },
+    identifiant_invalide: {
+        fr: "L'identifiant est invalide",
+        en: ""
+    },
+    non_trouvee: {
+        fr: "Non trouvé",
+        en: ""
     }
-
-
-    // =======================================
+    ,
+    existe_deja: {
+        fr: "Existe déjà",
+        en: ""
+    },
+    mis_a_jour: {
+        fr: "Mis à jour avec succès",
+        en: ""
+    },
+    supprimer_avec_success: {
+        fr: "Supprimer avec succès",
+        en: "Delete success"
+    }
 
 
 };
