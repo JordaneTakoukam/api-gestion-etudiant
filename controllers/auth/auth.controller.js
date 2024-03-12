@@ -60,7 +60,13 @@ export const signin = async (req, res) => {
         }
     }
 
-    catch (e) { }
+    catch (e) {
+        console.error("Erreur interne au serveur :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
 }
 
 
