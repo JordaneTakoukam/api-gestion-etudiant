@@ -14,13 +14,14 @@ router.post("/create", createGrade);
 //  read
 router.get("/get/:id", readGrade);
 router.get("/get/:params", readGrades);
+router.get("", readGrades);
 
 
 // update
-router.put("/update/:id", updateGrade);
+router.put("/update/:gradeId", updateGrade);
 
 // delete
-router.delete("/delete/:id", deleteGrade);
+router.delete("/delete/:gradeId", deleteGrade);
 
 
 

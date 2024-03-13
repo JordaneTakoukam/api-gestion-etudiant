@@ -14,6 +14,7 @@ router.post("/create", createCategorie);
 //  read
 router.get("/get/:id", readCategorie);
 router.get("/get/:params", readCategories);
+router.get("", readCategories);
 
 
 // update

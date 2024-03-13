@@ -14,6 +14,7 @@ router.post("/create", createFonction);
 //  read
 router.get("/get/:id", readFonction);
 router.get("/get/:params", readFonctions);
+router.get("", readFonctions);
 
 
 // update

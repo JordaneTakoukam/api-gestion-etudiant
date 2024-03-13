@@ -14,6 +14,7 @@ router.post("/create", createSection);
 //  read
 router.get("/get/:id", readSection);
 router.get("/get/:params", readSections);
+router.get("", readSections);
 
 
 // update
