@@ -76,7 +76,7 @@ export const createService = async (req, res) => {
 export const readServices = async (req, res) => {
     try {
         // Définir la limite par défaut
-        const defaultLimit = 5;
+        const defaultLimit = 10;
 
         // Extraire le paramètre `limit` de la requête
         let { limit } = req.query;
