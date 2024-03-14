@@ -5,13 +5,34 @@ import mongoose from 'mongoose';
 
 // create
 export const createCommune = async (req, res) => {
-    const { code, libelle } = req.body;
+    const { code, libelle, id_departement } = req.body;
 
     try {
+        // Vérifier si l'ID de département est valide
+        if (!mongoose.Types.ObjectId.isValid(id_departement)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        // Vérifier si le département existe
+        const existingDepartement = await Setting.findOne({
+            'departement._id': id_departement
+        });
+
+        if (!existingDepartement) {
+            return res.status(400).json({
+                success: false,
+                message: message.departement_inexistant,
+            });
+        }
+
         // Vérifier si la commune existe déjà
         const existingCommune = await Setting.findOne({
             'communes.code': code,
             'communes.libelle': libelle,
+            'communes.id_departement': id_departement
         });
 
         if (existingCommune) {
@@ -24,12 +45,12 @@ export const createCommune = async (req, res) => {
         const date_creation = DateTime.now().toJSDate();
 
         // Créer une nouvelle commune
-        const newCommune = { code, libelle, date_creation };
+        const newCommune = { code, libelle, id_departement, date_creation };
 
         // Vérifier si la collection "Setting" existe
         const setting = await Setting.findOne();
 
-        var data = null;
+        let data;
         if (!setting) {
             // Créer la collection et le document
             data = await Setting.create({ communes: [newCommune] });
@@ -38,15 +59,14 @@ export const createCommune = async (req, res) => {
             data = await Setting.findOneAndUpdate({}, { $push: { communes: newCommune } }, { new: true });
         }
 
-        // Récupérer le dernier élément du tableau des communes
-        const newCommuneObject = data.communes[data.communes.length - 1];
+        // Retourner uniquement l'objet ajouté
+        const createdCommune = data.communes.find((commune) => commune.code === code && commune.libelle === libelle);
 
         res.json({
             success: true,
             message: message.ajouter_avec_success,
-            data: newCommuneObject, // Retourner seulement l'objet de la commune créée
+            data: createdCommune,
         });
-
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
         res.status(500).json({
@@ -56,19 +76,97 @@ export const createCommune = async (req, res) => {
     }
 };
 
-
-// read
-export const readCommune = async (req, res) => { }
-
-
-export const readCommunes = async (req, res) => { }
-
-
 // update
-export const updateCommune = async (req, res) => { }
+export const updateCommune = async (req, res) => {
+    const { communeId } = req.params;
+    const { code, libelle, id_departement } = req.body;
 
+    try {
+        // Vérifier si communeId est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(communeId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        // Vérifier si le département existe
+        const existingDepartement = await Setting.findOne({
+            'departement._id': id_departement
+        });
+
+        if (!existingDepartement) {
+            return res.status(400).json({
+                success: false,
+                message: message.departement_inexistant,
+            });
+        }
+
+        // Mettre à jour la commune dans la base de données
+        const updatedCommune = await Setting.findOneAndUpdate(
+            { "communes._id": new mongoose.Types.ObjectId(communeId) }, // Trouver la commune par son ID
+            { $set: { "communes.$.code": code, "communes.$.libelle": libelle, "communes.$.id_departement": id_departement, "communes.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour la commune
+            { new: true, projection: { _id: 0, communes: { $elemMatch: { _id: new mongoose.Types.ObjectId(communeId) } } } } // Renvoyer uniquement la commune mise à jour
+        );
+
+        // Vérifier si la commune existe
+        if (!updatedCommune || !updatedCommune.communes || !updatedCommune.communes.length) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
+
+        // Envoyer la réponse avec l'objet mis à jour
+        return res.json({
+            success: true,
+            message: message.mis_a_jour,
+            data: updatedCommune.communes[0],
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        return res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
+};
 
 // delete
-export const deleteCommune = async (req, res) => { }
+export const deleteCommune = async (req, res) => {
+    const { communeId } = req.params;
 
+    try {
+        // Vérifier si communeId est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(communeId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
 
+        const setting = await Setting.findOneAndUpdate(
+            {},
+            { $pull: { communes: { _id: new mongoose.Types.ObjectId(communeId) } } },
+            { new: true }
+        );
+
+        if (!setting || !setting.communes) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
+
+        res.json({
+            success: true,
+            message: message.supprimer_avec_success,
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
+};

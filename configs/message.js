@@ -84,6 +84,15 @@ const message = {
         fr: "Supprimer avec succès",
         en: "Delete success"
     }
+    ,
+    region_inexistante: {
+        fr: "Cette région n'existe pas",
+        en: ""
+    },
+    departement_inexistant: {
+        fr: "Ce département n'existe pas"
+    }
+
 
 
 };
