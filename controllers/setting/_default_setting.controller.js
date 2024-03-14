@@ -13,9 +13,12 @@ export const getSettings = async (_, res) => {
             settings = await newSetting.save();
         }
 
+        // Accéder au premier élément du tableau
+        settings = settings[0];
+
         res.status(200).json({
             success: true,
-            settings: settings
+            settings: settings,
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
@@ -25,6 +28,7 @@ export const getSettings = async (_, res) => {
         });
     }
 };
+
 
 // Supprime tous les documents de la collection "Setting"
 export const deleteAllSettings = async (req, res) => {
