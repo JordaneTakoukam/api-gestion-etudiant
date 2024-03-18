@@ -123,41 +123,41 @@ export const updateCommune = async (req, res) => {
             });
         }
 
-        // Vérifier si le code de la commune existe déjà
-        const existingCode = await Setting.findOne({
-            'communes.code': code,
-            '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
-        });
+        // // Vérifier si le code de la commune existe déjà
+        // const existingCode = await Setting.findOne({
+        //     'communes.code': code,
+        //     'communes._id': { $ne: communeId }
+        // });
         
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
-            });
-        }
-        // Vérifier si le libelle fr de la commune existe déjà
-        const existingLibelleFr = await Setting.findOne({
-            'communes.libelleFr': libelleFr,
-            '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
-        });
-        if (existingLibelleFr) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_libelle_fr,
-            });
-        }
-        // Vérifier si le libelle en de la commune existe déjà
-        const existingLibelleEn = await Setting.findOne({
-            'communes.libelleEn': libelleEn,
-            '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
-        });
+        // if (existingCode) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_code,
+        //     });
+        // }
+        // // Vérifier si le libelle fr de la commune existe déjà
+        // const existingLibelleFr = await Setting.findOne({
+        //     'communes.libelleFr': libelleFr,
+        //     '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
+        // });
+        // if (existingLibelleFr) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_fr,
+        //     });
+        // }
+        // // Vérifier si le libelle en de la commune existe déjà
+        // const existingLibelleEn = await Setting.findOne({
+        //     'communes.libelleEn': libelleEn,
+        //     '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
+        // });
 
-        if (existingLibelleEn) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_libelle_en,
-            });
-        }
+        // if (existingLibelleEn) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_en,
+        //     });
+        // }
 
         // Mettre à jour la commune dans la base de données
         const updatedCommune = await Setting.findOneAndUpdate(

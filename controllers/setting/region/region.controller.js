@@ -99,38 +99,38 @@ export const updateRegion = async (req, res) => {
             });
         }
 
-        // Vérifier si le code de la région existe déjà
-        const existingCode = await Setting.findOne({
-            'region.code': code,
-        });
+        // // Vérifier si le code de la région existe déjà
+        // const existingCode = await Setting.findOne({
+        //     'region.code': code,
+        // });
         
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
-            });
-        }
-        // Vérifier si le libelle fr de la région existe déjà
-        const existingLibelleFr = await Setting.findOne({
-            'region.libelleFr': libelleFr,
-        });
-        if (existingLibelleFr) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_libelle_fr,
-            });
-        }
-        // Vérifier si le libelle en de la région existe déjà
-        const existingLibelleEn = await Setting.findOne({
-            'region.libelleEn': libelleEn,
-        });
+        // if (existingCode) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_code,
+        //     });
+        // }
+        // // Vérifier si le libelle fr de la région existe déjà
+        // const existingLibelleFr = await Setting.findOne({
+        //     'region.libelleFr': libelleFr,
+        // });
+        // if (existingLibelleFr) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_fr,
+        //     });
+        // }
+        // // Vérifier si le libelle en de la région existe déjà
+        // const existingLibelleEn = await Setting.findOne({
+        //     'region.libelleEn': libelleEn,
+        // });
 
-        if (existingLibelleEn) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_libelle_en,
-            });
-        }
+        // if (existingLibelleEn) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_en,
+        //     });
+        // }
 
         // Mettre à jour la région dans la base de données
         const updatedRegion = await Setting.findOneAndUpdate(
