@@ -32,7 +32,7 @@ export const createDepartement = async (req, res) => {
 
         // Vérifier si le code de la département existe déjà
         const existingCode = await Setting.findOne({
-            'region.code': code,
+            'departement.code': code,
         });
         
         if (existingCode) {
@@ -43,7 +43,7 @@ export const createDepartement = async (req, res) => {
         }
         // Vérifier si le libelle fr de la département existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'region.libelleFr': libelleFr,
+            'departement.libelleFr': libelleFr,
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -53,7 +53,7 @@ export const createDepartement = async (req, res) => {
         }
         // Vérifier si le libelle en de la département existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'region.libelleEn': libelleEn,
+            'departement.libelleEn': libelleEn,
         });
 
         if (existingLibelleEn) {
@@ -114,6 +114,7 @@ export const updateDepartement = async (req, res) => {
         // Vérifier si la région existe
         const existingRegion = await Setting.findOne({
             'region._id': region._id
+            
         });
 
         if (!existingRegion) {
@@ -125,7 +126,8 @@ export const updateDepartement = async (req, res) => {
 
         // Vérifier si le code de la département existe déjà
         const existingCode = await Setting.findOne({
-            'region.code': code,
+            'departement.code': code,
+            '_id': { $ne: new mongoose.Types.ObjectId(departementId) }
         });
         
         if (existingCode) {
@@ -136,7 +138,8 @@ export const updateDepartement = async (req, res) => {
         }
         // Vérifier si le libelle fr de la département existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'region.libelleFr': libelleFr,
+            'departement.libelleFr': libelleFr,
+            '_id': { $ne: new mongoose.Types.ObjectId(departementId) }
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -146,7 +149,8 @@ export const updateDepartement = async (req, res) => {
         }
         // Vérifier si le libelle en de la département existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'region.libelleEn': libelleEn,
+            'departement.libelleEn': libelleEn,
+            '_id': { $ne: new mongoose.Types.ObjectId(departementId) }
         });
 
         if (existingLibelleEn) {

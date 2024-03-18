@@ -32,7 +32,7 @@ export const createCommune = async (req, res) => {
 
         // Vérifier si le code de la commune existe déjà
         const existingCode = await Setting.findOne({
-            'region.code': code,
+            'communes.code': code,
         });
         
         if (existingCode) {
@@ -43,7 +43,7 @@ export const createCommune = async (req, res) => {
         }
         // Vérifier si le libelle fr de la commune existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'region.libelleFr': libelleFr,
+            'communes.libelleFr': libelleFr,
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -53,7 +53,7 @@ export const createCommune = async (req, res) => {
         }
         // Vérifier si le libelle en de la commune existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'region.libelleEn': libelleEn,
+            'communes.libelleEn': libelleEn,
         });
 
         if (existingLibelleEn) {
@@ -125,7 +125,8 @@ export const updateCommune = async (req, res) => {
 
         // Vérifier si le code de la commune existe déjà
         const existingCode = await Setting.findOne({
-            'region.code': code,
+            'communes.code': code,
+            '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
         });
         
         if (existingCode) {
@@ -136,7 +137,8 @@ export const updateCommune = async (req, res) => {
         }
         // Vérifier si le libelle fr de la commune existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'region.libelleFr': libelleFr,
+            'communes.libelleFr': libelleFr,
+            '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -146,7 +148,8 @@ export const updateCommune = async (req, res) => {
         }
         // Vérifier si le libelle en de la commune existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'region.libelleEn': libelleEn,
+            'communes.libelleEn': libelleEn,
+            '_id': { $ne: new mongoose.Types.ObjectId(communeId) }
         });
 
         if (existingLibelleEn) {
