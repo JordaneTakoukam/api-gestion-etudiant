@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { createSection, deleteSection, readSection, readSections, updateSection } from "../../controllers/setting/section/section.controller.js";
+import { readSection, readSections, createSection, deleteSection, updateSection } from "../../controllers/setting/section/section.controller.js";
 
 
 // middlewares
@@ -15,6 +15,7 @@ router.post("/create", createSection);
 router.get("/get/:id", readSection);
 router.get("/get/:params", readSections);
 router.get("", readSections);
+
 
 
 // update

@@ -17,7 +17,7 @@ import calendarRoutes from "./routes/calendar.routes.js";
 import scheduleRoutes from "./routes/schedule.routes.js";
 import subjectRoutes from "./routes/subject.routes.js"; // matieres
 // routes de settings
-import settingRoute from "./routes/settings/get_all_settings.route.js";
+import settingRoute from "./routes/settings/_setting.routes.js";
 import serviceRoutes from "./routes/settings/service.routes.js";
 import fonctionRoutes from "./routes/settings/fonction.routes.js";
 import gradeRoutes from "./routes/settings/grade.routes.js";

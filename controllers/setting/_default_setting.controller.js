@@ -1,3 +1,4 @@
+import { message } from '../../configs/message.js';
 import Setting from './../../models/setting.model.js';
 
 // get alls settings
@@ -12,15 +13,37 @@ export const getSettings = async (_, res) => {
             settings = await newSetting.save();
         }
 
+        // Accéder au premier élément du tableau
+        settings = settings[0];
+
         res.status(200).json({
             success: true,
-            settings: settings
+            settings: settings,
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
         res.status(500).json({
             success: false,
-            message: message.erreurServeur, 
+            message: message.erreurServeur,
+        });
+    }
+};
+
+
+// Supprime tous les documents de la collection "Setting"
+export const deleteAllSettings = async (req, res) => {
+    try {
+        await Setting.deleteMany({}); // Supprime tous les documents
+
+        res.status(200).json({
+            success: true,
+            message: "Tous les paramètres ont été supprimés avec succès."
+        });
+    } catch (error) {
+        console.error("Erreur lors de la suppression des paramètres :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
         });
     }
 };

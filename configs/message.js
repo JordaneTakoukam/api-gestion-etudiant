@@ -72,8 +72,16 @@ const message = {
         en: ""
     }
     ,
-    existe_deja: {
-        fr: "Existe déjà",
+    existe_code: {
+        fr: "Code existe déjà",
+        en: ""
+    },
+    existe_libelle_fr: {
+        fr: "Libelle Fr existe déjà",
+        en: ""
+    },
+    existe_libelle_en: {
+        fr: "Libelle En existe déjà",
         en: ""
     },
     mis_a_jour: {
@@ -84,6 +92,15 @@ const message = {
         fr: "Supprimer avec succès",
         en: "Delete success"
     }
+    ,
+    region_inexistante: {
+        fr: "Cette région n'existe pas",
+        en: ""
+    },
+    departement_inexistant: {
+        fr: "Ce département n'existe pas"
+    }
+
 
 
 };

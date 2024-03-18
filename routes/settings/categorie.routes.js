@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { createCategorie, deleteCategorie, readCategorie, readCategories, updateCategorie } from "../../controllers/setting/categorie/categorie.controller.js";
+import {readCategorie, readCategories, createCategorie, deleteCategorie, updateCategorie } from "../../controllers/setting/categorie/categorie.controller.js";
 
 
 // middlewares

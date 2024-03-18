@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { createGrade, deleteGrade, readGrade, readGrades, updateGrade } from "../../controllers/setting/grade/grade.controller.js";
+import {readGrade, readGrades, createGrade, deleteGrade, updateGrade } from "../../controllers/setting/grade/grade.controller.js";
 
 
 // middlewares

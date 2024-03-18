@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { createFonction, deleteFonction, readFonction, readFonctions, updateFonction } from "../../controllers/setting/fonction/fonction.controller.js";
+import { readFonction, readFonctions, createFonction, deleteFonction, updateFonction } from "../../controllers/setting/fonction/fonction.controller.js";
 
 
 // middlewares
@@ -16,6 +16,7 @@ router.get("/get/:id", readFonction);
 router.get("/get/:params", readFonctions);
 router.get("", readFonctions);
 
+//
 
 // update
 router.put("/update/:id", updateFonction);
