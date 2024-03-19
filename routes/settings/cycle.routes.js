@@ -13,10 +13,10 @@ router.post("/create", createCycle);
 
 
 // update
-router.put("/update/:id", updateCycle);
+router.put("/update/:cycleId", updateCycle);
 
 // delete
-router.delete("/delete/:id", deleteCycle);
+router.delete("/delete/:cycleId", deleteCycle);
 
 
 

@@ -9,10 +9,10 @@ const settingSchema = new Schema({
     region: [codeLibelleSchema],
     departement: [departementSchema],
     communes: [communeSchema],
-    sections: [codeLibelleSchema],
-    cycles: [cycleSchema],
-    niveaux: [niveauSchema],
-    salleCours:[salleSchema]
+    section: [codeLibelleSchema],
+    cycle: [cycleSchema],
+    niveau: [niveauSchema],
+    salleDeCours:[salleSchema]
 });
 
 

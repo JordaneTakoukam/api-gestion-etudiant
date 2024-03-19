@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { createSalleDeCour, deleteSalleDeCour,  updateSalleDeCour } from "../../controllers/setting/salle_de_cour/salle_de_cour.controller.js";
+import { createSalleDeCours, deleteSalleDeCours,  updateSalleDeCours } from "../../controllers/setting/salle_de_cour/salle_de_cour.controller.js";
 
 
 // middlewares
@@ -9,15 +9,15 @@ import { createSalleDeCour, deleteSalleDeCour,  updateSalleDeCour } from "../../
 const router = express.Router();
 
 // create
-router.post("/create", createSalleDeCour);
+router.post("/create", createSalleDeCours);
 
 
 
 // update
-router.put("/update/:id", updateSalleDeCour);
+router.put("/update/:salleDeCoursId", updateSalleDeCours);
 
 // delete
-router.delete("/delete/:id", deleteSalleDeCour);
+router.delete("/delete/:salleDeCoursId", deleteSalleDeCours);
 
 
 

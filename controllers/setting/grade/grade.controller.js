@@ -6,26 +6,46 @@ import mongoose from 'mongoose';
 
 // create
 export const createGrade = async (req, res) => { 
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
-        // Vérifier si le grade existe déjà
-        const existingGrade = await Setting.findOne({
+         // Vérifier si le code du grade existe déjà
+        const existingCode = await Setting.findOne({
             'grades.code': code,
-            'grades.libelle': libelle,
         });
-
-        if (existingGrade) {
+        
+        if (existingCode) {
             return res.status(400).json({
                 success: false,
-                message: message.existe_deja,
+                message: message.existe_code,
+            });
+        }
+        // Vérifier si le libelle fr du grade existe déjà
+        const existingLibelleFr = await Setting.findOne({
+            'grades.libelleFr': libelleFr,
+        });
+        if (existingLibelleFr) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_fr,
+            });
+        }
+        // Vérifier si le libelle en du grade existe déjà
+        const existingLibelleEn = await Setting.findOne({
+            'grades.libelleEn': libelleEn,
+        });
+
+        if (existingLibelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_en,
             });
         }
 
         const date_creation = DateTime.now().toJSDate();
 
         // Créer un nouveau grade
-        const newGrade = { code, libelle, date_creation };
+        const newGrade = { code, libelleFr, libelleEn, date_creation };
 
         // Vérifier si la collection "Setting" existe
         const setting = await Setting.findOne();
@@ -116,7 +136,7 @@ export const readGrades = async (req, res) => {
 // update
 export const updateGrade = async (req, res) => {
     const { gradeId } = req.params;
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
         // Vérifier si gradeId est un ObjectId valide
@@ -145,7 +165,7 @@ export const updateGrade = async (req, res) => {
         const existingGrade = grade[0].grades;
 
         // Vérifier si les données existantes sont identiques aux nouvelles données
-        if (existingGrade.code === code && existingGrade.libelle === libelle) {
+        if (existingGrade.code === code && existingGrade.libelleFr === libelleFr && existingGrade.libelleEn === libelleEn) {
             return res.json({
                 success: true,
                 message: "Les données du grade sont déjà à jour.",
@@ -159,8 +179,11 @@ export const updateGrade = async (req, res) => {
         if (code !== undefined) {
             updatedGrade.code = code;
         }
-        if (libelle !== undefined) {
-            updatedGrade.libelle = libelle;
+        if (libelleFr !== undefined) {
+            updatedGrade.libelleFr = libelleFr;
+        }
+        if (libelleEn !== undefined) {
+            updatedGrade.libelleEn = libelleEn;
         }
 
         // Mettre à jour le grade dans la base de données

@@ -84,6 +84,10 @@ const message = {
         fr: "Libelle En existe déjà",
         en: ""
     },
+    nombre_entier: {
+        fr: "Attend un nombre entier",
+        en: ""
+    },
     mis_a_jour: {
         fr: "Mis à jour avec succès",
         en: ""

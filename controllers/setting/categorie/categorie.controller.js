@@ -5,26 +5,46 @@ import mongoose from 'mongoose';
 
 // create
 export const createCategorie = async (req, res) => { 
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
-        // Vérifier si le categorie existe déjà
-        const existingCategorie = await Setting.findOne({
+         // Vérifier si le code de la categorie existe déjà
+        const existingCode = await Setting.findOne({
             'categories.code': code,
-            'categories.libelle': libelle,
         });
-
-        if (existingCategorie) {
+        
+        if (existingCode) {
             return res.status(400).json({
                 success: false,
-                message: message.existe_deja,
+                message: message.existe_code,
+            });
+        }
+        // Vérifier si le libelle fr de la categorie existe déjà
+        const existingLibelleFr = await Setting.findOne({
+            'categories.libelleFr': libelleFr,
+        });
+        if (existingLibelleFr) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_fr,
+            });
+        }
+        // Vérifier si le libelle en de la categorie existe déjà
+        const existingLibelleEn = await Setting.findOne({
+            'categories.libelleEn': libelleEn,
+        });
+
+        if (existingLibelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_en,
             });
         }
 
         const date_creation = DateTime.now().toJSDate();
 
         // Créer un nouveau categorie
-        const newCategorie = { code, libelle, date_creation };
+        const newCategorie = { code, libelleFr, libelleEn, date_creation };
 
         // Vérifier si la collection "Setting" existe
         const setting = await Setting.findOne();
@@ -114,7 +134,7 @@ export const readCategories = async (req, res) => {
 // update
 export const updateCategorie = async (req, res) => {
     const { id } = req.params;
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
         // Vérifier si id est un ObjectId valide
@@ -143,7 +163,7 @@ export const updateCategorie = async (req, res) => {
         const existingCategorie = categorie[0].categories;
 
         // Vérifier si les données existantes sont identiques aux nouvelles données
-        if (existingCategorie.code === code && existingCategorie.libelle === libelle) {
+        if (existingCategorie.code === code && existingCategorie.libelleFr === libelleFr && existingCategorie.libelleEn === libelleEn) {
             return res.json({
                 success: true,
                 message: "Les données de la categorie sont déjà à jour.",
@@ -157,8 +177,11 @@ export const updateCategorie = async (req, res) => {
         if (code !== undefined) {
             updatedCategorie.code = code;
         }
-        if (libelle !== undefined) {
-            updatedCategorie.libelle = libelle;
+        if (libelleFr !== undefined) {
+            updatedCategorie.libelleFr = libelleFr;
+        }
+        if (libelleEn !== undefined) {
+            updatedCategorie.libelleEn = libelleEn;
         }
 
         // Mettre à jour le categorie dans la base de données

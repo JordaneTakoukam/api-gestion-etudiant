@@ -5,26 +5,46 @@ import mongoose from 'mongoose';
 
 // create
 export const createFonction = async (req, res) => { 
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
-        // Vérifier si le fonction existe déjà
-        const existingFonction = await Setting.findOne({
+         // Vérifier si le code de la fonction existe déjà
+         const existingCode = await Setting.findOne({
             'fonctions.code': code,
-            'fonctions.libelle': libelle,
         });
-
-        if (existingFonction) {
+        
+        if (existingCode) {
             return res.status(400).json({
                 success: false,
-                message: message.existe_deja,
+                message: message.existe_code,
+            });
+        }
+        // Vérifier si le libelle fr de la fonction existe déjà
+        const existingLibelleFr = await Setting.findOne({
+            'fonctions.libelleFr': libelleFr,
+        });
+        if (existingLibelleFr) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_fr,
+            });
+        }
+        // Vérifier si le libelle en de la fonction existe déjà
+        const existingLibelleEn = await Setting.findOne({
+            'fonctions.libelleEn': libelleEn,
+        });
+
+        if (existingLibelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_en,
             });
         }
 
         const date_creation = DateTime.now().toJSDate();
 
         // Créer un nouveau fonction
-        const newFonction = { code, libelle, date_creation };
+        const newFonction = { code, libelleFr, libelleEn, date_creation };
 
         // Vérifier si la collection "Setting" existe
         const setting = await Setting.findOne();
@@ -114,7 +134,7 @@ export const readFonctions = async (req, res) => {
 // update
 export const updateFonction = async (req, res) => {
     const { id } = req.params;
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
         // Vérifier si id est un ObjectId valide
@@ -143,7 +163,7 @@ export const updateFonction = async (req, res) => {
         const existingFonction = fonction[0].fonctions;
 
         // Vérifier si les données existantes sont identiques aux nouvelles données
-        if (existingFonction.code === code && existingFonction.libelle === libelle) {
+        if (existingFonction.code === code && existingFonction.libelleFr === libelleFr && existingFonction.libelleEn === libelleEn) {
             return res.json({
                 success: true,
                 message: "Les données de la fonction sont déjà à jour.",
@@ -157,8 +177,11 @@ export const updateFonction = async (req, res) => {
         if (code !== undefined) {
             updatedFonction.code = code;
         }
-        if (libelle !== undefined) {
-            updatedFonction.libelle = libelle;
+        if (libelleFr !== undefined) {
+            updatedFonction.libelleFr = libelleFr;
+        }
+        if (libelleEn !== undefined) {
+            updatedFonction.libelleEn = libelleEn;
         }
 
         // Mettre à jour le fonction dans la base de données

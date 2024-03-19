@@ -15,10 +15,10 @@ router.post("/create", createNiveau);
 
 
 // update
-router.put("/update/:id", updateNiveau);
+router.put("/update/:niveauId", updateNiveau);
 
 // delete
-router.delete("/delete/:id", deleteNiveau);
+router.delete("/delete/:niveauId", deleteNiveau);
 
 
 

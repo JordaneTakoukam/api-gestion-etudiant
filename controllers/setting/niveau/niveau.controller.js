@@ -1,21 +1,230 @@
 import Setting from './../../../models/setting.model.js';
+import { message } from '../../../configs/message.js';
+import { DateTime } from 'luxon';
+import mongoose from 'mongoose';
 
 // create
-export const createNiveau = async (req, res) => { }
+export const createNiveau = async (req, res) => {
+    // const { code, libelle, id_cycle } = req.body;
+    const { code, libelleFr, libelleEn, cycle } = req.body;
+
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(cycle._id)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        // Vérifier si le cycle existe
+        const existingCycle = await Setting.findOne({
+            'cycle._id': cycle._id
+        });
+
+        if (!existingCycle) {
+            return res.status(400).json({
+                success: false,
+                message: message.cycle_inexistante,
+            });
+        }
 
 
-// read
-export const readNiveau = async (req, res) => { }
+        // Vérifier si le code du niveau existe déjà
+        const existingCode = await Setting.findOne({
+            'niveau.code': code,
+        });
+        
+        if (existingCode) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_code,
+            });
+        }
+        // Vérifier si le libelle fr du niveau existe déjà
+        const existingLibelleFr = await Setting.findOne({
+            'niveau.libelleFr': libelleFr,
+        });
+        if (existingLibelleFr) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_fr,
+            });
+        }
+        // Vérifier si le libelle en du niveau existe déjà
+        const existingLibelleEn = await Setting.findOne({
+            'niveau.libelleEn': libelleEn,
+        });
 
+        if (existingLibelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_en,
+            });
+        }
 
-export const readNiveaus = async (req, res) => { }
+        const date_creation = DateTime.now().toJSDate();
 
+        // Créer un nouveau niveau
+        const newNiveau = { code, libelleFr, libelleEn, cycle, date_creation };
+
+        // Vérifier si la collection "Setting" existe
+        const setting = await Setting.findOne();
+
+        let data;
+        if (!setting) {
+            // Créer la collection et le document
+            data = await Setting.create({ niveau: [newNiveau] });
+        } else {
+            // Mettre à jour le document existant
+            data = await Setting.findOneAndUpdate({}, { $push: { niveau: newNiveau } }, { new: true });
+        }
+
+        // Retourner uniquement l'objet ajouté
+        const createdNiveau = data.niveau.find((niveau) => niveau.code === code);
+
+        res.json({
+            success: true,
+            message: message.ajouter_avec_success,
+            data: createdNiveau,
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
+};
 
 // update
-export const updateNiveau = async (req, res) => { }
+export const updateNiveau = async (req, res) => {
+    const { niveauId } = req.params;
+    const { code, libelleFr, libelleEn, cycle } = req.body;
 
+    try {
+        // Vérifier si niveauId est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        // Vérifier si la cycle existe
+        const existingCycle = await Setting.findOne({
+            'cycle._id': cycle._id
+            
+        });
+
+        if (!existingCycle) {
+            return res.status(400).json({
+                success: false,
+                message: message.cycle_inexistante,
+            });
+        }
+
+        // // Vérifier si le code du niveau existe déjà
+        // const existingCode = await Setting.findOne({
+        //     'niveau.code': code,
+        //     '_id': { $ne: new mongoose.Types.ObjectId(niveauId) }
+        // });
+        
+        // if (existingCode) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_code,
+        //     });
+        // }
+        // // Vérifier si le libelle fr du niveau existe déjà
+        // const existingLibelleFr = await Setting.findOne({
+        //     'niveau.libelleFr': libelleFr,
+        //     '_id': { $ne: new mongoose.Types.ObjectId(niveauId) }
+        // });
+        // if (existingLibelleFr) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_fr,
+        //     });
+        // }
+        // // Vérifier si le libelle en du niveau existe déjà
+        // const existingLibelleEn = await Setting.findOne({
+        //     'niveau.libelleEn': libelleEn,
+        //     '_id': { $ne: new mongoose.Types.ObjectId(niveauId) }
+        // });
+
+        // if (existingLibelleEn) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_en,
+        //     });
+        // }
+
+        // Mettre à jour le niveau dans la base de données
+        const updatedNiveau = await Setting.findOneAndUpdate(
+            { "niveau._id": new mongoose.Types.ObjectId(niveauId) }, // Trouver le niveau par son ID
+            { $set: { "niveau.$.code": code, "niveau.$.libelleFr": libelleFr, "niveau.$.libelleEn": libelleEn, "niveau.$.cycle": cycle, "niveau.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour le niveau
+            { new: true, projection: { _id: 0, niveau: { $elemMatch: { _id: new mongoose.Types.ObjectId(niveauId) } } } } // Renvoyer uniquement le niveau mis à jour
+        );
+
+        // Vérifier si le niveau existe
+        if (!updatedNiveau || !updatedNiveau.niveau || !updatedNiveau.niveau.length) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
+
+        // Envoyer la réponse avec l'objet mis à jour
+        return res.json({
+            success: true,
+            message: message.mis_a_jour,
+            data: updatedNiveau.niveau[0],
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        return res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
+};
 
 // delete
-export const deleteNiveau = async (req, res) => { }
+export const deleteNiveau = async (req, res) => {
+    const { niveauId } = req.params;
 
+    try {
+        // Vérifier si niveauId est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
 
+        const setting = await Setting.findOneAndUpdate(
+            {},
+            { $pull: { niveau: { _id: new mongoose.Types.ObjectId(niveauId) } } },
+            { new: true }
+        );
+
+        if (!setting || !setting.niveau) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
+
+        res.json({
+            success: true,
+            message: message.supprimer_avec_success,
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
+};

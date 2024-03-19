@@ -12,26 +12,46 @@ import mongoose from 'mongoose';
 //
 // create
 export const createService = async (req, res) => {
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
-        // Vérifier si le service existe déjà
-        const existingService = await Setting.findOne({
+         // Vérifier si le code du service existe déjà
+         const existingCode = await Setting.findOne({
             'services.code': code,
-            'services.libelle': libelle,
         });
-
-        if (existingService) {
+        
+        if (existingCode) {
             return res.status(400).json({
                 success: false,
-                message: message.existe_deja,
+                message: message.existe_code,
+            });
+        }
+        // Vérifier si le libelle fr du service existe déjà
+        const existingLibelleFr = await Setting.findOne({
+            'services.libelleFr': libelleFr,
+        });
+        if (existingLibelleFr) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_fr,
+            });
+        }
+        // Vérifier si le libelle en du service existe déjà
+        const existingLibelleEn = await Setting.findOne({
+            'services.libelleEn': libelleEn,
+        });
+
+        if (existingLibelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.existe_libelle_en,
             });
         }
 
         const date_creation = DateTime.now().toJSDate();
 
         // Créer un nouveau service
-        const newService = { code, libelle, date_creation };
+        const newService = { code, libelleFr, libelleEn, date_creation };
 
         // Vérifier si la collection "Setting" existe
         const setting = await Setting.findOne();
@@ -135,7 +155,7 @@ export const readServices = async (req, res) => {
 // update
 export const updateService = async (req, res) => {
     const { serviceId } = req.params;
-    const { code, libelle } = req.body;
+    const { code, libelleFr, libelleEn } = req.body;
 
     try {
         // Vérifier si serviceId est un ObjectId valide
@@ -164,7 +184,7 @@ export const updateService = async (req, res) => {
         const existingService = service[0].services;
 
         // Vérifier si les données existantes sont identiques aux nouvelles données
-        if (existingService.code === code && existingService.libelle === libelle) {
+        if (existingService.code === code && existingService.libelleFr === libelleFr && existingService.libelleEn === libelleEn) {
             return res.json({
                 success: true,
                 message: "Les données du service sont déjà à jour.",
@@ -178,8 +198,11 @@ export const updateService = async (req, res) => {
         if (code !== undefined) {
             updatedService.code = code;
         }
-        if (libelle !== undefined) {
-            updatedService.libelle = libelle;
+        if (libelleFr !== undefined) {
+            updatedService.libelleFr = libelleFr;
+        }
+        if (libelleEn !== undefined) {
+            updatedService.libelleEn = libelleEn;
         }
 
         // Mettre à jour le service dans la base de données
