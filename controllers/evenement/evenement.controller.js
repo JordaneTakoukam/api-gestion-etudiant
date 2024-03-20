@@ -123,6 +123,7 @@ export const createEvenement = async (req, res) => {
     }
 }
 
+//
 // update
 export const updateEvenement = async (req, res) => {
     const { evenementId } = req.params;
