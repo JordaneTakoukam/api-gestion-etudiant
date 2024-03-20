@@ -8,8 +8,16 @@ export const createFonction = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
-         // Vérifier si le code de la fonction existe déjà
-         const existingCode = await Setting.findOne({
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
+
+        // Vérifier si le code de la fonction existe déjà
+        const existingCode = await Setting.findOne({
             'fonctions.code': code,
         });
         
@@ -141,7 +149,15 @@ export const updateFonction = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
-                message: "L'ID de la fonction n'est pas valide.",
+                message: message.identifiant_invalide
+            });
+        }
+
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
             });
         }
 
@@ -166,23 +182,48 @@ export const updateFonction = async (req, res) => {
         if (existingFonction.code === code && existingFonction.libelleFr === libelleFr && existingFonction.libelleEn === libelleEn) {
             return res.json({
                 success: true,
-                message: "Les données de la fonction sont déjà à jour.",
+                message: message.donne_a_jour,
                 data: existingFonction,
             });
+        }
+
+        //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
+        if (existingFonction.code !== code) {
+            const existingCode = await Setting.findOne({ 'fonctions.code': code });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        //vérifier si le libelle fr existe déjà or mis le libelle fr de l'élément en cours de modification
+        if (existingFonction.libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({ 'fonctions.libelleFr': libelleFr });
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+        //vérifier si le libelle en existe déjà or mis le libelle en de l'élément en cours de modification
+        if (existingFonction.libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({ 'fonctions.libelleEn': libelleEn });
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
         }
 
         const updatedFonction = { ...existingFonction };
 
         // Mettre à jour les champs modifiés
-        if (code !== undefined) {
-            updatedFonction.code = code;
-        }
-        if (libelleFr !== undefined) {
-            updatedFonction.libelleFr = libelleFr;
-        }
-        if (libelleEn !== undefined) {
-            updatedFonction.libelleEn = libelleEn;
-        }
+        updatedFonction.code = code;
+        updatedFonction.libelleFr = libelleFr;
+        updatedFonction.libelleEn = libelleEn;
 
         // Mettre à jour le fonction dans la base de données
         await Setting.updateOne(

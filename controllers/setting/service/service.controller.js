@@ -3,18 +3,19 @@ import { message } from '../../../configs/message.js';
 import { DateTime } from 'luxon';
 import mongoose from 'mongoose';
 
-//
-//
-//
-//
-//
-//
-//
+
 // create
 export const createService = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
          // Vérifier si le code du service existe déjà
          const existingCode = await Setting.findOne({
             'services.code': code,
@@ -84,14 +85,6 @@ export const createService = async (req, res) => {
 };
 
 
-
-//
-//
-//
-//
-//
-//
-//
 // reads
 export const readServices = async (req, res) => {
     try {
@@ -144,14 +137,6 @@ export const readServices = async (req, res) => {
 };
 
 
-
-//
-//
-//
-//
-//
-//
-//
 // update
 export const updateService = async (req, res) => {
     const { serviceId } = req.params;
@@ -162,7 +147,15 @@ export const updateService = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(serviceId)) {
             return res.status(400).json({
                 success: false,
-                message: "L'ID du service n'est pas valide.",
+                message: message.identifiant_invalide
+            });
+        }
+
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
             });
         }
 
@@ -187,23 +180,48 @@ export const updateService = async (req, res) => {
         if (existingService.code === code && existingService.libelleFr === libelleFr && existingService.libelleEn === libelleEn) {
             return res.json({
                 success: true,
-                message: "Les données du service sont déjà à jour.",
+                message: message.donne_a_jour,
                 data: existingService,
             });
+        }
+
+        //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
+        if (existingService.code !== code) {
+            const existingCode = await Setting.findOne({ 'services.code': code });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        //vérifier si le libelle fr existe déjà or mis le libelle fr de l'élément en cours de modification
+        if (existingService.libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({ 'services.libelleFr': libelleFr });
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+        //vérifier si le libelle en existe déjà or mis le libelle en de l'élément en cours de modification
+        if (existingService.libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({ 'services.libelleEn': libelleEn });
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
         }
 
         const updatedService = { ...existingService };
 
         // Mettre à jour les champs modifiés
-        if (code !== undefined) {
-            updatedService.code = code;
-        }
-        if (libelleFr !== undefined) {
-            updatedService.libelleFr = libelleFr;
-        }
-        if (libelleEn !== undefined) {
-            updatedService.libelleEn = libelleEn;
-        }
+        updatedService.code = code;
+        updatedService.libelleFr = libelleFr;
+        updatedService.libelleEn = libelleEn;
 
         // Mettre à jour le service dans la base de données
         await Setting.updateOne(

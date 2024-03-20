@@ -70,8 +70,11 @@ const message = {
     non_trouvee: {
         fr: "Non trouvé",
         en: ""
-    }
-    ,
+    },
+
+    donne_a_jour:{
+        fr:"Données à jours"
+    },
     existe_code: {
         fr: "Code existe déjà",
         en: ""
@@ -83,6 +86,26 @@ const message = {
     existe_libelle_en: {
         fr: "Libelle En existe déjà",
         en: ""
+    },
+    existe_periode_fr: {
+        fr: "Période Fr existe déjà",
+        en: ""
+    },
+    existe_periode_en: {
+        fr: "Période En existe déjà",
+        en: ""
+    },
+    existe_num:{
+        fr:"Le numéro existe déjà",
+        en:"",
+    },
+    chevauchement:{
+        fr:"Chevauchement de date",
+        en:"",
+    },
+    champ_obligatoire:{
+        fr:"Tous les champs obligatoires doivent être fournis",
+        en:""
     },
     nombre_entier: {
         fr: "Attend un nombre entier",
@@ -103,7 +126,17 @@ const message = {
     },
     departement_inexistant: {
         fr: "Ce département n'existe pas"
+    },
+    evenement_inexistant:{
+        fr:"Cet évènement n'existe pas"
+    },
+    liste_event:{
+        fr:"Liste des événements récupérée avec succès"
+    },
+    event_a_venir:{
+        fr:"Evenement à venir"
     }
+
 
 
 

@@ -9,6 +9,13 @@ export const createCycle = async (req, res) => {
     const { code, libelleFr, libelleEn, section } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn || !section) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
 
         if (!mongoose.Types.ObjectId.isValid(section._id)) {
             return res.status(400).json({
@@ -103,6 +110,13 @@ export const updateCycle = async (req, res) => {
     const { code, libelleFr, libelleEn, section } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn || !section) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
         // Vérifier si cycleId est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(cycleId)) {
             return res.status(400).json({
@@ -124,42 +138,61 @@ export const updateCycle = async (req, res) => {
             });
         }
 
-        // // Vérifier si le code du cycle existe déjà
-        // const existingCode = await Setting.findOne({
-        //     'cycle.code': code,
-        //     '_id': { $ne: new mongoose.Types.ObjectId(cycleId) }
-        // });
+         // Trouver le cycle en cours de modification
+         const existingCycle = await Setting.findOne(
+            { "cycle._id": cycleId },
+            { "cycle.$": 1 }//récupéré uniquement l'élément de la recherche
+        );
         
-        // if (existingCode) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_code,
-        //     });
-        // }
-        // // Vérifier si le libelle fr du cycle existe déjà
-        // const existingLibelleFr = await Setting.findOne({
-        //     'cycle.libelleFr': libelleFr,
-        //     '_id': { $ne: new mongoose.Types.ObjectId(cycleId) }
-        // });
-        // if (existingLibelleFr) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_fr,
-        //     });
-        // }
-        // // Vérifier si le libelle en du cycle existe déjà
-        // const existingLibelleEn = await Setting.findOne({
-        //     'cycle.libelleEn': libelleEn,
-        //     '_id': { $ne: new mongoose.Types.ObjectId(cycleId) }
-        // });
+        if (!existingCycle) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
 
-        // if (existingLibelleEn) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_en,
-        //     });
-        // }
+        // Vérifier si le code existe déjà, à l'exception du cycle en cours de modification
+        if (existingCycle.cycle[0].code !== code) {
+            const existingCode = await Setting.findOne({
+                'cycle.code': code,
+            });
 
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        // Vérifier si le libelle fr existe déjà, à l'exception du cycle en cours de modification
+        if (existingCycle.cycle[0].libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({
+                'cycle.libelleFr': libelleFr,
+            });
+
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+
+        // Vérifier si le libelle en existe déjà, à l'exception du cycle en cours de modification
+        if (existingCycle.cycle[0].libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({
+                'cycle.libelleEn': libelleEn,
+            });
+
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
+        }
+
+       
         // Mettre à jour le cycle dans la base de données
         const updatedCycle = await Setting.findOneAndUpdate(
             { "cycle._id": new mongoose.Types.ObjectId(cycleId) }, // Trouver le cycle par son ID

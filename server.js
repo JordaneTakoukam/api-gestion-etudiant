@@ -13,7 +13,7 @@ import connectMongoDB from "./database/mongodb.connection.js";
 import defaultRoute from "./routes/_default.route.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
-import calendarRoutes from "./routes/calendar.routes.js";
+import evenementRoutes from "./routes/evenement.routes.js";
 import scheduleRoutes from "./routes/schedule.routes.js";
 import subjectRoutes from "./routes/subject.routes.js"; // matieres
 // routes de settings
@@ -65,7 +65,7 @@ app.use("/", defaultRoute);
 app.use("/api/v1/auth/", authRoutes);
 app.use("/api/v1/user/", userRoutes);
 app.use("/api/v1/subject/", subjectRoutes);
-app.use("/api/v1/calendar/", calendarRoutes);
+app.use("/api/v1/evenement/", evenementRoutes);
 app.use("/api/v1/schedule/", scheduleRoutes);
 
 app.use("/api/v1/settings", settingRoute);

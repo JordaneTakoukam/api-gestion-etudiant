@@ -2,6 +2,7 @@ import Setting from './../../../models/setting.model.js';
 import { message } from '../../../configs/message.js';
 import { DateTime } from 'luxon';
 import mongoose from 'mongoose';
+import { verifierEntier } from '../../../fonctions/fonctions.js';
 
 
 
@@ -10,6 +11,14 @@ export const createSalleDeCours = async (req, res) => {
     const { code, libelleFr, libelleEn, nbPlace} = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn || !nbPlace) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
+
         // Vérifier si le code de la salle de cours existe déjà
         const existingCode = await Setting.findOne({
             'salleDeCours.code': code,
@@ -87,60 +96,80 @@ export const createSalleDeCours = async (req, res) => {
     }
 };
 
-//
-//
-//
-//
-//
-//
-//
-//
 // update
 export const updateSalleDeCours = async (req, res) => {
     const { salleDeCoursId } = req.params;
     const { code, libelleFr, libelleEn, nbPlace } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn || !nbPlace) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
         // Vérifier si salledecoursId est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(salleDeCoursId)) {
             return res.status(400).json({
                 success: false,
-                message: "hello",
+                message: message.identifiant_invalide,
             });
         }
 
-        // // Vérifier si le code de la salle de cours existe déjà
-        // const existingCode = await Setting.findOne({
-        //     'salledecours.code': code,
-        // });
+         // Trouver la salle de cours en cours de modification
+         const existingSalledeCours = await Setting.findOne(
+            { "salleDeCours._id": salleDeCoursId },
+            { "salleDeCours.$": 1 }//récupéré uniquement l'élément de la recherche
+        );
         
-        // if (existingCode) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_code,
-        //     });
-        // }
-        // // Vérifier si le libelle fr de la salle de cours existe déjà
-        // const existingLibelleFr = await Setting.findOne({
-        //     'salledecours.libelleFr': libelleFr,
-        // });
-        // if (existingLibelleFr) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_fr,
-        //     });
-        // }
-        // // Vérifier si le libelle en de la salle de cours existe déjà
-        // const existingLibelleEn = await Setting.findOne({
-        //     'salledecours.libelleEn': libelleEn,
-        // });
+        if (!existingSalledeCours) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
 
-        // if (existingLibelleEn) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_en,
-        //     });
-        // }
+        // Vérifier si le code existe déjà, à l'exception de la salle de cours en cours de modification
+        if (existingSalledeCours.salleDeCours[0].code !== code) {
+            const existingCode = await Setting.findOne({
+                'salleDeCours.code': code,
+            });
+
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        // Vérifier si le libelle fr existe déjà, à l'exception de la salla de cours en cours de modification
+        if (existingSalledeCours.salleDeCours[0].libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({
+                'salleDeCours.libelleFr': libelleFr,
+            });
+
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+
+        // Vérifier si le libelle en existe déjà, à l'exception de la salle de cours en cours de modification
+        if (existingSalledeCours.salleDeCours[0].libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({
+                'salleDeCours.libelleEn': libelleEn,
+            });
+
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
+        }
         
         //Vérifier si le nombre de place est un entier
         const isInteger = Number.isInteger(nbPlace);
@@ -149,7 +178,8 @@ export const updateSalleDeCours = async (req, res) => {
                 success: false,
                 message: message.nombre_entier
             });
-        } 
+            
+        }
         // Mettre à jour la salle de cours dans la base de données
         const updatedSalleDeCours = await Setting.findOneAndUpdate(
             { "salleDeCours._id": new mongoose.Types.ObjectId(salleDeCoursId) }, // Trouver la salle de cours par son ID
@@ -180,16 +210,6 @@ export const updateSalleDeCours = async (req, res) => {
     }
 };
 
-
-
-
-
-
-//
-//
-//
-//
-//
 
 // delete
 export const deleteSalleDeCours = async (req, res) => {

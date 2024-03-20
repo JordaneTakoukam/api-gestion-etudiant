@@ -1,7 +1,9 @@
 import Schedule from './../../models/schedule.model.js'
 
 // create
-export const createSchedule = async (req, res) => { }
+export const createSchedule = async (req, res) => {
+    
+}
 
 
 // read

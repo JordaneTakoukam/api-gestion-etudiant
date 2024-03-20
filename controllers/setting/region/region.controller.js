@@ -10,6 +10,12 @@ export const createRegion = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
         // Vérifier si le code de la région existe déjà
         const existingCode = await Setting.findOne({
             'region.code': code,
@@ -77,20 +83,19 @@ export const createRegion = async (req, res) => {
     }
 };
 
-//
-//
-//
-//
-//
-//
-//
-//
 // update
 export const updateRegion = async (req, res) => {
     const { regionId } = req.params;
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
+
         // Vérifier si regionId est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(regionId)) {
             return res.status(400).json({
@@ -99,38 +104,59 @@ export const updateRegion = async (req, res) => {
             });
         }
 
-        // // Vérifier si le code de la région existe déjà
-        // const existingCode = await Setting.findOne({
-        //     'region.code': code,
-        // });
+        // Trouver la région en cours de modification
+        const existingRegion = await Setting.findOne(
+            { "region._id": regionId },
+            { "region.$": 1 }//récupéré uniquement l'élément de la recherche
+        );
         
-        // if (existingCode) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_code,
-        //     });
-        // }
-        // // Vérifier si le libelle fr de la région existe déjà
-        // const existingLibelleFr = await Setting.findOne({
-        //     'region.libelleFr': libelleFr,
-        // });
-        // if (existingLibelleFr) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_fr,
-        //     });
-        // }
-        // // Vérifier si le libelle en de la région existe déjà
-        // const existingLibelleEn = await Setting.findOne({
-        //     'region.libelleEn': libelleEn,
-        // });
+        if (!existingRegion) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
 
-        // if (existingLibelleEn) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_en,
-        //     });
-        // }
+        // Vérifier si le code existe déjà, à l'exception de la région en cours de modification
+        if (existingRegion.region[0].code !== code) {
+            const existingCode = await Setting.findOne({
+                'region.code': code,
+            });
+
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        // Vérifier si le libelle fr existe déjà, à l'exception de la région en cours de modification
+        if (existingRegion.region[0].libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({
+                'region.libelleFr': libelleFr,
+            });
+
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+
+        // Vérifier si le libelle en existe déjà, à l'exception de la région en cours de modification
+        if (existingRegion.region[0].libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({
+                'region.libelleEn': libelleEn,
+            });
+
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
+        }
 
         // Mettre à jour la région dans la base de données
         const updatedRegion = await Setting.findOneAndUpdate(
@@ -161,17 +187,6 @@ export const updateRegion = async (req, res) => {
         });
     }
 };
-
-
-
-
-
-
-//
-//
-//
-//
-//
 
 // delete
 export const deleteRegion = async (req, res) => {

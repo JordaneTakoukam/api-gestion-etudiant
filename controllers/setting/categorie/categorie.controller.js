@@ -8,6 +8,14 @@ export const createCategorie = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
+        
          // Vérifier si le code de la categorie existe déjà
         const existingCode = await Setting.findOne({
             'categories.code': code,
@@ -137,11 +145,18 @@ export const updateCategorie = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
         // Vérifier si id est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
-                message: "L'ID de la categorie n'est pas valide.",
+                message: message.identifiant_invalide
             });
         }
 
@@ -166,23 +181,48 @@ export const updateCategorie = async (req, res) => {
         if (existingCategorie.code === code && existingCategorie.libelleFr === libelleFr && existingCategorie.libelleEn === libelleEn) {
             return res.json({
                 success: true,
-                message: "Les données de la categorie sont déjà à jour.",
+                message: message.donne_a_jour,
                 data: existingCategorie,
             });
+        }
+
+        //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
+        if (existingCategorie.code !== code) {
+            const existingCode = await Setting.findOne({ 'categories.code': code });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        //vérifier si le libelle fr existe déjà or mis le libelle fr de l'élément en cours de modification
+        if (existingCategorie.libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({ 'categories.libelleFr': libelleFr });
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+        //vérifier si le libelle en existe déjà or mis le libelle en de l'élément en cours de modification
+        if (existingCategorie.libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({ 'categories.libelleEn': libelleEn });
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
         }
 
         const updatedCategorie = { ...existingCategorie };
 
         // Mettre à jour les champs modifiés
-        if (code !== undefined) {
-            updatedCategorie.code = code;
-        }
-        if (libelleFr !== undefined) {
-            updatedCategorie.libelleFr = libelleFr;
-        }
-        if (libelleEn !== undefined) {
-            updatedCategorie.libelleEn = libelleEn;
-        }
+        updatedCategorie.code = code;
+        updatedCategorie.libelleFr = libelleFr;
+        updatedCategorie.libelleEn = libelleEn;
 
         // Mettre à jour le categorie dans la base de données
         await Setting.updateOne(

@@ -10,6 +10,14 @@ export const createNiveau = async (req, res) => {
 
     try {
 
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn || !cycle) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
+
         if (!mongoose.Types.ObjectId.isValid(cycle._id)) {
             return res.status(400).json({
                 success: false,
@@ -103,6 +111,14 @@ export const updateNiveau = async (req, res) => {
     const { code, libelleFr, libelleEn, cycle } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn || !cycle) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
+
         // Vérifier si niveauId est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(niveauId)) {
             return res.status(400).json({
@@ -124,41 +140,59 @@ export const updateNiveau = async (req, res) => {
             });
         }
 
-        // // Vérifier si le code du niveau existe déjà
-        // const existingCode = await Setting.findOne({
-        //     'niveau.code': code,
-        //     '_id': { $ne: new mongoose.Types.ObjectId(niveauId) }
-        // });
+         // Trouver le niveau en cours de modification
+         const existingNiveau = await Setting.findOne(
+            { "niveau._id": niveauId },
+            { "niveau.$": 1 }//récupéré uniquement l'élément de la recherche
+        );
         
-        // if (existingCode) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_code,
-        //     });
-        // }
-        // // Vérifier si le libelle fr du niveau existe déjà
-        // const existingLibelleFr = await Setting.findOne({
-        //     'niveau.libelleFr': libelleFr,
-        //     '_id': { $ne: new mongoose.Types.ObjectId(niveauId) }
-        // });
-        // if (existingLibelleFr) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_fr,
-        //     });
-        // }
-        // // Vérifier si le libelle en du niveau existe déjà
-        // const existingLibelleEn = await Setting.findOne({
-        //     'niveau.libelleEn': libelleEn,
-        //     '_id': { $ne: new mongoose.Types.ObjectId(niveauId) }
-        // });
+        if (!existingNiveau) {
+            return res.status(404).json({
+                success: false,
+                message: message.non_trouvee,
+            });
+        }
 
-        // if (existingLibelleEn) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: message.existe_libelle_en,
-        //     });
-        // }
+        // Vérifier si le code existe déjà, à l'exception du niveau en cours de modification
+        if (existingNiveau.niveau[0].code !== code) {
+            const existingCode = await Setting.findOne({
+                'niveau.code': code,
+            });
+
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        // Vérifier si le libelle fr existe déjà, à l'exception du niveau en cours de modification
+        if (existingNiveau.niveau[0].libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({
+                'niveau.libelleFr': libelleFr,
+            });
+
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+
+        // Vérifier si le libelle en existe déjà, à l'exception du niveau en cours de modification
+        if (existingNiveau.niveau[0].libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({
+                'niveau.libelleEn': libelleEn,
+            });
+
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
+        }
 
         // Mettre à jour le niveau dans la base de données
         const updatedNiveau = await Setting.findOneAndUpdate(

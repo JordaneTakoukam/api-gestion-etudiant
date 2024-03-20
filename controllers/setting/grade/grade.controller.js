@@ -9,6 +9,14 @@ export const createGrade = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
+
          // Vérifier si le code du grade existe déjà
         const existingCode = await Setting.findOne({
             'grades.code': code,
@@ -143,7 +151,15 @@ export const updateGrade = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(gradeId)) {
             return res.status(400).json({
                 success: false,
-                message: "L'ID du grade n'est pas valide.",
+                message: message.identifiant_invalide
+            });
+        }
+
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
             });
         }
 
@@ -168,23 +184,48 @@ export const updateGrade = async (req, res) => {
         if (existingGrade.code === code && existingGrade.libelleFr === libelleFr && existingGrade.libelleEn === libelleEn) {
             return res.json({
                 success: true,
-                message: "Les données du grade sont déjà à jour.",
+                message: message.donne_a_jour,
                 data: existingGrade,
             });
+        }
+
+        //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
+        if (existingGrade.code !== code) {
+            const existingCode = await Setting.findOne({ 'grades.code': code });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        //vérifier si le libelle fr existe déjà or mis le libelle fr de l'élément en cours de modification
+        if (existingGrade.libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({ 'grades.libelleFr': libelleFr });
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+        //vérifier si le libelle en existe déjà or mis le libelle en de l'élément en cours de modification
+        if (existingGrade.libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({ 'grades.libelleEn': libelleEn });
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
         }
 
         const updatedGrade = { ...existingGrade };
 
         // Mettre à jour les champs modifiés
-        if (code !== undefined) {
-            updatedGrade.code = code;
-        }
-        if (libelleFr !== undefined) {
-            updatedGrade.libelleFr = libelleFr;
-        }
-        if (libelleEn !== undefined) {
-            updatedGrade.libelleEn = libelleEn;
-        }
+        updatedGrade.code = code;
+        updatedGrade.libelleFr = libelleFr;
+        updatedGrade.libelleEn = libelleEn;
 
         // Mettre à jour le grade dans la base de données
         await Setting.updateOne(

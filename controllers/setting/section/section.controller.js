@@ -8,6 +8,13 @@ export const createSection = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
+            });
+        }
          // Vérifier si le code de la section existe déjà
          const existingCode = await Setting.findOne({
             'section.code': code,
@@ -141,7 +148,14 @@ export const updateSection = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
-                message: "L'ID de la section n'est pas valide.",
+                message: message.identifiant_invalide
+            });
+        }
+        // Vérifier si tous les champs obligatoires sont présents
+        if (!code || !libelleFr || !libelleEn) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire
             });
         }
 
@@ -166,23 +180,48 @@ export const updateSection = async (req, res) => {
         if (existingSection.code === code && existingSection.libelleFr === libelleFr && existingSection.libelleEn === libelleEn) {
             return res.json({
                 success: true,
-                message: "Les données de la section sont déjà à jour.",
+                message: message.donne_a_jour,
                 data: existingSection,
             });
+        }
+
+        //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
+        if (existingSection.code !== code) {
+            const existingCode = await Setting.findOne({ 'section.code': code });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
+        }
+        //vérifier si le libelle fr existe déjà or mis le libelle fr de l'élément en cours de modification
+        if (existingSection.libelleFr !== libelleFr) {
+            const existingLibelleFr = await Setting.findOne({ 'section.libelleFr': libelleFr });
+            if (existingLibelleFr) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_fr
+                });
+            }
+        }
+        //vérifier si le libelle en existe déjà or mis le libelle en de l'élément en cours de modification
+        if (existingSection.libelleEn !== libelleEn) {
+            const existingLibelleEn = await Setting.findOne({ 'section.libelleEn': libelleEn });
+            if (existingLibelleEn) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_libelle_en
+                });
+            }
         }
 
         const updatedSection = { ...existingSection };
 
         // Mettre à jour les champs modifiés
-        if (code !== undefined) {
-            updatedSection.code = code;
-        }
-        if (libelleFr !== undefined) {
-            updatedSection.libelleFr = libelleFr;
-        }
-        if (libelleEn !== undefined) {
-            updatedSection.libelleEn = libelleEn;
-        }
+        updatedSection.code = code;
+        updatedSection.libelleFr = libelleFr;
+        updatedSection.libelleEn = libelleEn;
 
         // Mettre à jour le section dans la base de données
         await Setting.updateOne(

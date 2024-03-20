@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import { message } from '../configs/message.js';
 
 
 // generer le mot de passes
@@ -54,4 +55,15 @@ export function encrypt(value, secretKey) {
     const ciphertextWithIV = iv.toString('hex') + encryptedChunk;
   
     return ciphertextWithIV;
+  }
+
+  export function verifierEntier(value, res){
+        const isInteger = Number.isInteger(value);
+        if (!isInteger) {
+            return res.status(400).json({
+                success: false,
+                message: message.nombre_entier
+            });
+            
+        }
   }
