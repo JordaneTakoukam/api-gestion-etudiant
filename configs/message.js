@@ -2,6 +2,11 @@ const message = {
     erreurServeur: "Erreur interne du serveur !",
     emailExiste: "Cette adresse e-mail est déjà enregistrée !",
 
+    emailRequis: {
+        fr: "L'adresse e-mail est requise",
+        en: ""
+    },
+
     superAdminCreerAvecSuccess: {
         fr: "Super Administrateur créer avec succès !",
     },
@@ -17,6 +22,10 @@ const message = {
         fr: "Connexion effectuée avec succès !",
         en: "Login successful!"
     },
+    creation_reuissi: {
+        fr: "Création réuissi",
+        en: ""
+    },
     userNonTrouver: {
         fr: "Utilisateur non trouvé !",
         en: "User not found!"
@@ -27,6 +36,32 @@ const message = {
     },
     success_changer_mdp: {
         fr: "Mot de passe changer avec succès !",
+        en: ""
+    },
+    section_manquante: {
+        fr: "La section est manquante!",
+        en: ""
+    },
+    cycle_manquant: {
+        fr: "Le cycle est manquant!",
+        en: ""
+    },
+    niveau_manquant: {
+        fr: "Le niveau est manquant!",
+        en: ""
+    },
+
+
+    section_invalide: {
+        fr: "La section est invalide!",
+        en: ""
+    },
+    cycle_invalide: {
+        fr: "Le cycle est invalide!",
+        en: ""
+    },
+    niveau_invalide: {
+        fr: "Le niveau est invalide!",
         en: ""
     },
 
@@ -72,8 +107,8 @@ const message = {
         en: ""
     },
 
-    donne_a_jour:{
-        fr:"Données à jours"
+    donne_a_jour: {
+        fr: "Données à jours"
     },
     existe_code: {
         fr: "Code existe déjà",
@@ -95,17 +130,17 @@ const message = {
         fr: "Période En existe déjà",
         en: ""
     },
-    existe_num:{
-        fr:"Le numéro existe déjà",
-        en:"",
+    existe_num: {
+        fr: "Le numéro existe déjà",
+        en: "",
     },
-    chevauchement:{
-        fr:"Chevauchement de date",
-        en:"",
+    chevauchement: {
+        fr: "Chevauchement de date",
+        en: "",
     },
-    champ_obligatoire:{
-        fr:"Tous les champs obligatoires doivent être fournis",
-        en:""
+    champ_obligatoire: {
+        fr: "Tous les champs obligatoires doivent être fournis",
+        en: ""
     },
     nombre_entier: {
         fr: "Attend un nombre entier",
@@ -127,14 +162,14 @@ const message = {
     departement_inexistant: {
         fr: "Ce département n'existe pas"
     },
-    evenement_inexistant:{
-        fr:"Cet évènement n'existe pas"
+    evenement_inexistant: {
+        fr: "Cet évènement n'existe pas"
     },
-    liste_event:{
-        fr:"Liste des événements récupérée avec succès"
+    liste_event: {
+        fr: "Liste des événements récupérée avec succès"
     },
-    event_a_venir:{
-        fr:"Evenement à venir"
+    event_a_venir: {
+        fr: "Evenement à venir"
     }
 
 

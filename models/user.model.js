@@ -15,38 +15,53 @@ const validGenres = [
 ];
 
 const userSchema = new Schema({
-    role: {
+    matricule: { type: String, default: null },
+
+    roles: [{
         type: String,
         enum: validRoles,
         required: true
-    },
+    }],
+
+
+    date_creation: { type: Date, required: true },
+    nom: { type: String, required: true },
+    prenom: { type: String, default: null },
+
+    date_naiss: { type: Date, default: null },
+    lieu_naiss: { type: String, default: null },
+
     genre: {
         type: String,
         enum: validGenres,
         required: true
     },
 
-    date_creation: { type: Date, required: true },
-    nom: { type: String, required: true },
-    prenom: { type: String, default: null },
-
     email: { type: String, required: true },
-    mot_de_passe: { type: String, required: true },
-
-    id_commune: { type: mongoose.Schema.Types.ObjectId, default: null },
-    id_categorie: { type: mongoose.Schema.Types.ObjectId, default: null },
-    id_service: { type: mongoose.Schema.Types.ObjectId, default: null },
-    id_grade: { type: mongoose.Schema.Types.ObjectId, default: null },
-
-    matricule: { type: String, default: null },
-    date_naiss: { type: Date, default: null },
-    lieu_naiss: { type: String, default: null },
     contact: { type: String, default: null },
 
-    status: { type: String, default: "actif" }, // suspendu
+    section: { type: String, default: null },
+    cycle: { type: String, default: null },
+    niveau: { type: String, default: null },
+
+    grades: { type: String, default: null },
+    categories: { type: String, default: null },
+    fonction: { type: String, default: null },
+    service: { type: String, default: null },
+    region: { type: String, default: null },
+    departement: { type: String, default: null },
+    communes: { type: String, default: null },
+
+
+    date_entree: { type: String, default: null },
+    photo_profil: { type: String, default: null },
+
+    status: { type: String, default: "actif" },
+    mot_de_passe: { type: String, required: true },
+
 
     abscences: [{
-        date_abs: { type: Date, default: null },
+        date_abscence: { type: Date, default: null },
         heure_debut: { type: String, default: null },
         heure_fin: { type: String, default: null },
         semestre: { type: String, default: null },

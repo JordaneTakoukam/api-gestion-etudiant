@@ -29,7 +29,8 @@ export const signin = async (req, res) => {
             const token = jwt.sign(
                 {
                     userId: user._id,
-                    role: user.role,
+                    roles: user.roles,
+                    role: user.roles[0],
                     nom: user.nom,
                     prenom: user.prenom,
                 },
@@ -49,7 +50,7 @@ export const signin = async (req, res) => {
                 success: true,
                 message: message.connexionReussie,
                 token,
-                data: user,
+                data: userData,
             });
         } else {
             // Le mot de passe ne correspond pas

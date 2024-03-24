@@ -3,77 +3,169 @@ import { DateTime } from "luxon";
 import jwt from 'jsonwebtoken';
 import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
-import { generateRandomPassword } from "../../../fonctions/fonctions.js";
-
+import { appConfigs } from "../../../configs/app_configs.js";
+import mongoose from 'mongoose';
 
 export const createUser = async (req, res) => {
-    const { username, email, role } = req.body;
+    const {
+        role,
+        nom,
+        genre,
+        email,
+        section,
+        cycle,
+        niveau,
+        // info facultative
+
+        contact,
+        photo_profil,
+        matricule,
+        prenom,
+        date_naiss,
+        lieu_naiss,
+        grades,
+        categories,
+        fonction,
+        service,
+        region,
+        departement,
+        communes,
+        date_entree,
+    } = req.body;
 
     try {
+        var abscence = null;
 
-        // Vérifier si l'utilisateur existe déjà avec cet e-mail
-        const existingUserWithEmail = await User.findOne({ email });
-
-        if (existingUserWithEmail) {
+        if (!email) {
             return res.status(400).json({
                 success: false,
-                message: message.emailExiste,
+                message: message.emailRequis,
             });
+        } else {
+            // Vérifier si l'utilisateur existe déjà avec cet e-mail
+            const existingUserWithEmail = await User.findOne({ email });
+
+            if (existingUserWithEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.emailExiste,
+                });
+            }
         }
 
 
-        // Générer un identifiant de connexion unique
-        let loginId = generateRandomUserId();
-        let existingUserWithLoginId = await User.findOne({ loginId });
 
-        // Vérifier si le loginId existe déjà et le régénérer jusqu'à ce qu'il soit unique
-        while (existingUserWithLoginId) {
-            loginId = generateRandomUserId();
-            existingUserWithLoginId = await User.findOne({ loginId });
+
+        // Vérifier si des champs spécifiques sont requis pour certains rôles
+        if (role === appConfigs.role.etudiant || role === appConfigs.role.delegue) {
+
+            if (!section) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.section_manquante,
+                });
+            } else {
+                // Vérifier si le service est un ObjectId valide
+                if (!mongoose.Types.ObjectId.isValid(section)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message.section_invalide,
+                    });
+                }
+
+
+            }
+            if (!cycle) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.cycle_manquant,
+                });
+            } else {
+                // Vérifier si le cycle est un ObjectId valide
+                if (!mongoose.Types.ObjectId.isValid(cycle)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message.cycle_invalide,
+                    });
+                }
+
+
+            }
+            if (!niveau) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.niveau_manquant,
+                });
+            } else {
+                // Vérifier si le niveau est un ObjectId valide
+                if (!mongoose.Types.ObjectId.isValid(niveau)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message.niveau_invalide,
+                    });
+                }
+            }
         }
 
-        let passwordGenerate = generateRandomPassword();
-        console.log('Mot de passe = ', passwordGenerate);
 
-        // Hash du mot de passe
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(passwordGenerate, saltRounds);
+
+        // initialisation des abscence 
+        if (role === appConfigs.role.etudiant || role === appConfigs.role.delegue || role === appConfigs.role.enseignant) {
+            abscence = {
+                date_abscence: null,
+                heure_debut: null,
+                heure_fin: null,
+                semestre: null,
+                annee: null,
+            };
+        }
+
+
+        // mot de psase par defaut
+        const mot_de_passe = process.env.DEFAULT_USERS_PASSWORD;
+
+
+        const saltRounds = 10; // Nombre de tours pour le hachage
+        const hashedPassword = await bcrypt.hash(mot_de_passe, saltRounds);
+
         const currentDate = DateTime.now();
 
-        // Créer un nouvel utilisateur
+        // Créer un nouvel utilisateur avec tous les champs fournis
         const newUser = new User({
-            loginId,
+            matricule,
+            roles: [role],
+            date_creation: currentDate,
+            nom,
+            prenom,
+            date_naiss,
+            lieu_naiss,
+            genre,
             email,
-            username,
-            role,
-            password: hashedPassword,
-            registrationDate: currentDate,
-            loginHistory: []
+            contact,
+
+            section,
+            cycle,
+            niveau,
+            grades,
+            categories,
+            fonction,
+            service,
+            region,
+            departement,
+            communes,
+            date_entree,
+            photo_profil,
+            mot_de_passe: hashedPassword,
+            abscences: abscence ? [abscence] : [],
+            historique_connexion: [],
         });
 
-        const user = await newUser.save();
 
-        // Générer un jeton JWT
-        const token = jwt.sign(
-            {
-                cId: user._id,
-                lId: user.loginId,
-                r: user.role,
-            },
-            process.env.SECRET_JWT_KEYS,
-            { expiresIn: '24h' }
-        );
-
-
-        // on retourne tous sauf le password
-        const userData = user.toObject();
-        delete userData.password;
+        await newUser.save();
 
         res.json({
             success: true,
-            message: message.inscriptReuissie,
-            token,
-            data: userData,
+            message: message.creation_reuissi,
         });
 
     } catch (error) {
@@ -84,4 +176,3 @@ export const createUser = async (req, res) => {
         });
     }
 };
-
