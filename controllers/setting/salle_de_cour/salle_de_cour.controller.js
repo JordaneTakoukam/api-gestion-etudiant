@@ -180,10 +180,11 @@ export const updateSalleDeCours = async (req, res) => {
             });
             
         }
+        console.log("nbPlace ==="+nbPlace);
         // Mettre à jour la salle de cours dans la base de données
         const updatedSalleDeCours = await Setting.findOneAndUpdate(
             { "salleDeCours._id": new mongoose.Types.ObjectId(salleDeCoursId) }, // Trouver la salle de cours par son ID
-            { $set: { "salleDeCours.$.code": code, "salleDeCours.$.libelleFr": libelleFr, "salleDeCours.$.libelleEn": libelleEn, "salleDeCours.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour la salle de cours
+            { $set: { "salleDeCours.$.code": code, "salleDeCours.$.libelleFr": libelleFr, "salleDeCours.$.libelleEn": libelleEn, "salleDeCours.$.nbPlace" : nbPlace, "salleDeCours.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour la salle de cours
             { new: true, projection: { _id: 0, salleDeCours: { $elemMatch: { _id: new mongoose.Types.ObjectId(salleDeCoursId) } } } } // Renvoyer uniquement la salle de cours mise à jour
         );
 

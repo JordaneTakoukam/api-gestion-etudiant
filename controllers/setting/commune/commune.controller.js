@@ -17,7 +17,7 @@ export const createCommune = async (req, res) => {
         }
         // Vérifier si l'ID de département est valide
         // if (!mongoose.Types.ObjectId.isValid(id_departement)) {
-        if (!mongoose.Types.ObjectId.isValid(departement._id)) {
+        if (!mongoose.Types.ObjectId.isValid(departement)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -128,7 +128,7 @@ export const updateCommune = async (req, res) => {
 
         // Vérifier si le département existe
         const existingDepartement = await Setting.findOne({
-            'departement._id': departements
+            'departement._id': departement
         });
 
         if (!existingDepartement) {
