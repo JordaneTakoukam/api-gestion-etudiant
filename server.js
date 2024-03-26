@@ -15,7 +15,7 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import evenementRoutes from "./routes/evenement.routes.js";
 import scheduleRoutes from "./routes/schedule.routes.js";
-import subjectRoutes from "./routes/subject.routes.js"; // matieres
+import matiereRoutes from "./routes/matiere.routes.js"; // matieres
 // routes de settings
 import settingRoute from "./routes/settings/_setting.routes.js";
 import serviceRoutes from "./routes/settings/service.routes.js";
@@ -29,6 +29,7 @@ import sectionRoutes from "./routes/settings/section.routes.js";
 import cycleRoutes from "./routes/settings/cycle.routes.js";
 import niveauRoutes from "./routes/settings/niveau.routes.js";
 import salleDeCourRoutes from "./routes/settings/salle_de_cour.routes.js";
+import typeEnseignementRoutes from "./routes/settings/type_enseignement.routes.js";
 
 
 
@@ -64,7 +65,7 @@ app.use("/profile_images", express.static(path.join(staticsPath, "profile_images
 app.use("/", defaultRoute);
 app.use("/api/v1/auth/", authRoutes);
 app.use("/api/v1/user/", userRoutes);
-app.use("/api/v1/subject/", subjectRoutes);
+app.use("/api/v1/matiere/", matiereRoutes);
 app.use("/api/v1/evenement/", evenementRoutes);
 app.use("/api/v1/schedule/", scheduleRoutes);
 
@@ -80,6 +81,7 @@ app.use("/api/v1/setting/section", sectionRoutes);
 app.use("/api/v1/setting/cycle", cycleRoutes);
 app.use("/api/v1/setting/niveau", niveauRoutes);
 app.use("/api/v1/setting/salle-de-cour", salleDeCourRoutes);
+app.use("/api/v1/setting/type-enseignement", typeEnseignementRoutes);
 
 
 

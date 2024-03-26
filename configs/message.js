@@ -170,6 +170,9 @@ const message = {
     },
     event_a_venir: {
         fr: "Evenement à venir"
+    },
+    matiere_non_trouvee:{
+        fr:"Cette matière n'existe pas"
     }
 
 

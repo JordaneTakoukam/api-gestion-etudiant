@@ -1,4 +1,4 @@
-import Subject from './../../../models/subject.model.js'
+import Subject from '../../../models/matiere.model.js'
 
 // create
 export const createChapter = async (req, res) => { }
