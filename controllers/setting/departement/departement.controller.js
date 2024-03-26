@@ -25,7 +25,7 @@ export const createDepartement = async (req, res) => {
 
         // Vérifier si la région existe
         const existingRegion = await Setting.findOne({
-            'region._id': region._id
+            'region._id': region
         });
 
         if (!existingRegion) {
@@ -126,7 +126,7 @@ export const updateDepartement = async (req, res) => {
 
         // Vérifier si la région existe
         const existingRegion = await Setting.findOne({
-            'region._id': region._id
+            'region._id': region
             
         });
 
