@@ -17,7 +17,7 @@ export const createCycle = async (req, res) => {
             });
         }
 
-        if (!mongoose.Types.ObjectId.isValid(section._id)) {
+        if (!mongoose.Types.ObjectId.isValid(section)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -26,22 +26,25 @@ export const createCycle = async (req, res) => {
 
         // Vérifier si la section existe
         const existingSection = await Setting.findOne({
-            'section._id': section._id
+            'section._id': section
         });
 
         if (!existingSection) {
             return res.status(400).json({
                 success: false,
-                message: message.section_inexistante,
+                message: message.section_manquante,
             });
         }
 
-
         // Vérifier si le code du cycle existe déjà
         const existingCode = await Setting.findOne({
-            'cycle.code': code,
+            cycle: {
+                $elemMatch: {
+                    code: code,
+                    section: section // Assurez-vous d'avoir l'ID de la section à vérifier
+                }
+            }
         });
-        
         if (existingCode) {
             return res.status(400).json({
                 success: false,
@@ -50,7 +53,12 @@ export const createCycle = async (req, res) => {
         }
         // Vérifier si le libelle fr du cycle existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'cycle.libelleFr': libelleFr,
+            cycle: {
+                $elemMatch: {
+                    libelleFr: libelleFr,
+                    section: section // Assurez-vous d'avoir l'ID de la section à vérifier
+                }
+            }
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -60,7 +68,12 @@ export const createCycle = async (req, res) => {
         }
         // Vérifier si le libelle en du cycle existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'cycle.libelleEn': libelleEn,
+            cycle: {
+                $elemMatch: {
+                    libelleEn: libelleEn,
+                    section: section // Assurez-vous d'avoir l'ID de la section à vérifier
+                }
+            }
         });
 
         if (existingLibelleEn) {
@@ -127,7 +140,7 @@ export const updateCycle = async (req, res) => {
 
         // Vérifier si la section existe
         const existingSection = await Setting.findOne({
-            'section._id': section._id
+            'section._id': section
             
         });
 
@@ -154,7 +167,12 @@ export const updateCycle = async (req, res) => {
         // Vérifier si le code existe déjà, à l'exception du cycle en cours de modification
         if (existingCycle.cycle[0].code !== code) {
             const existingCode = await Setting.findOne({
-                'cycle.code': code,
+                cycle: {
+                    $elemMatch: {
+                        code: code,
+                        section: section // Assurez-vous d'avoir l'ID de la section à vérifier
+                    }
+                }
             });
 
             if (existingCode) {
@@ -167,7 +185,12 @@ export const updateCycle = async (req, res) => {
         // Vérifier si le libelle fr existe déjà, à l'exception du cycle en cours de modification
         if (existingCycle.cycle[0].libelleFr !== libelleFr) {
             const existingLibelleFr = await Setting.findOne({
-                'cycle.libelleFr': libelleFr,
+                cycle: {
+                    $elemMatch: {
+                        libelleFr: libelleFr,
+                        section: section // Assurez-vous d'avoir l'ID de la section à vérifier
+                    }
+                }
             });
 
             if (existingLibelleFr) {
@@ -181,7 +204,12 @@ export const updateCycle = async (req, res) => {
         // Vérifier si le libelle en existe déjà, à l'exception du cycle en cours de modification
         if (existingCycle.cycle[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
-                'cycle.libelleEn': libelleEn,
+                cycle: {
+                    $elemMatch: {
+                        libelleEn: libelleEn,
+                        section: section // Assurez-vous d'avoir l'ID de la section à vérifier
+                    }
+                }
             });
 
             if (existingLibelleEn) {

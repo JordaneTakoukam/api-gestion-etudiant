@@ -18,7 +18,7 @@ export const createNiveau = async (req, res) => {
             });
         }
 
-        if (!mongoose.Types.ObjectId.isValid(cycle._id)) {
+        if (!mongoose.Types.ObjectId.isValid(cycle)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -27,7 +27,7 @@ export const createNiveau = async (req, res) => {
 
         // Vérifier si le cycle existe
         const existingCycle = await Setting.findOne({
-            'cycle._id': cycle._id
+            'cycle._id': cycle
         });
 
         if (!existingCycle) {
@@ -40,18 +40,27 @@ export const createNiveau = async (req, res) => {
 
         // Vérifier si le code du niveau existe déjà
         const existingCode = await Setting.findOne({
-            'niveau.code': code,
+            niveau: {
+                $elemMatch: {
+                    code: code,
+                    cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+                }
+            }
         });
-        
         if (existingCode) {
             return res.status(400).json({
                 success: false,
                 message: message.existe_code,
             });
         }
-        // Vérifier si le libelle fr du niveau existe déjà
+        // Vérifier si le libelle fr du cycle existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'niveau.libelleFr': libelleFr,
+            niveau: {
+                $elemMatch: {
+                    libelleFr: libelleFr,
+                    cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+                }
+            }
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -59,9 +68,14 @@ export const createNiveau = async (req, res) => {
                 message: message.existe_libelle_fr,
             });
         }
-        // Vérifier si le libelle en du niveau existe déjà
+        // Vérifier si le libelle en du cycle existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'niveau.libelleEn': libelleEn,
+            niveau: {
+                $elemMatch: {
+                    libelleEn: libelleEn,
+                    cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+                }
+            }
         });
 
         if (existingLibelleEn) {
@@ -129,7 +143,7 @@ export const updateNiveau = async (req, res) => {
 
         // Vérifier si la cycle existe
         const existingCycle = await Setting.findOne({
-            'cycle._id': cycle._id
+            'cycle._id': cycle
             
         });
 
@@ -156,7 +170,12 @@ export const updateNiveau = async (req, res) => {
         // Vérifier si le code existe déjà, à l'exception du niveau en cours de modification
         if (existingNiveau.niveau[0].code !== code) {
             const existingCode = await Setting.findOne({
-                'niveau.code': code,
+                niveau: {
+                    $elemMatch: {
+                        code: code,
+                        cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+                    }
+                }
             });
 
             if (existingCode) {
@@ -169,7 +188,12 @@ export const updateNiveau = async (req, res) => {
         // Vérifier si le libelle fr existe déjà, à l'exception du niveau en cours de modification
         if (existingNiveau.niveau[0].libelleFr !== libelleFr) {
             const existingLibelleFr = await Setting.findOne({
-                'niveau.libelleFr': libelleFr,
+                niveau: {
+                    $elemMatch: {
+                        libelleFr: libelleFr,
+                        cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+                    }
+                }
             });
 
             if (existingLibelleFr) {
@@ -183,7 +207,12 @@ export const updateNiveau = async (req, res) => {
         // Vérifier si le libelle en existe déjà, à l'exception du niveau en cours de modification
         if (existingNiveau.niveau[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
-                'niveau.libelleEn': libelleEn,
+                niveau: {
+                    $elemMatch: {
+                        libelleEn: libelleEn,
+                        cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+                    }
+                }
             });
 
             if (existingLibelleEn) {
