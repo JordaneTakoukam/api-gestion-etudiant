@@ -160,19 +160,28 @@ const message = {
         en: ""
     },
     departement_inexistant: {
-        fr: "Ce département n'existe pas"
+        fr: "Ce département n'existe pas",
+        en:""
     },
     evenement_inexistant: {
-        fr: "Cet évènement n'existe pas"
+        fr: "Cet évènement n'existe pas",
+        en:""
     },
     liste_event: {
-        fr: "Liste des événements récupérée avec succès"
+        fr: "Liste des événements récupérée avec succès",
+        en:""
     },
     event_a_venir: {
-        fr: "Evenement à venir"
+        fr: "Evenement à venir",
+        en:""
     },
     matiere_non_trouvee:{
-        fr:"Cette matière n'existe pas"
+        fr:"Cette matière n'existe pas",
+        en:""
+    },
+    chapitre_non_trouve:{
+        fr:"Ce chapitre n'existe pas",
+        en:""
     }
 
 

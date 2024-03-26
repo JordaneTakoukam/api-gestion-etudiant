@@ -1,6 +1,7 @@
 import Matiere from '../../models/matiere.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
+
 // create
 export const createMatiere = async (req, res) => { 
     const { code, libelleFr, libelleEn, niveau, prerequisFr, prerequisEn, approchePedFr, approchePedEn, evaluationAcquisFr, evaluationAcquisEn, typesEnseignement, chapitres } = req.body;
@@ -200,8 +201,6 @@ export const updateMatiere = async (req, res) => {
     }
 }
 
-
-
 // delete
 export const deleteMatiere = async (req, res) => {
     const { matiereId } = req.params;
@@ -215,6 +214,8 @@ export const deleteMatiere = async (req, res) => {
             });
         }
 
+        // Supprimer tous les chapitres liés à la matière
+        await Chapitre.deleteMany({ matiere: matiereId });
         
         // Supprimer la matiere par son ID
         const deletedMatiere = await Matiere.findByIdAndDelete(matiereId);
@@ -237,6 +238,78 @@ export const deleteMatiere = async (req, res) => {
         });
     }
 }
+
+export const getMatieresByNiveau = async (req, res) => {
+    const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+
+    try {
+        // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
+        const matieres = await Matiere.find({}).populate({
+            path: 'typesEnseignement.enseignantsPrincipaux',
+            select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
+        }).populate({
+            path: 'typesEnseignement.enseignantsSuppleants',
+            select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
+        }).populate('chapitres');
+        
+        res.status(200).json({ 
+            success: true, 
+            data: matieres
+        });
+        
+
+        res.status(200).json({ 
+            success: true, 
+            data: matieres 
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        res.status(500).json({ success: false, message: message.erreurServeur });
+    }
+};
+
+export const getMatieresByNiveauWithPagination = async (req, res) => {
+    const niveauId = req.params.niveauId;
+    const { page = 1, pageSize = 10 } = req.query;
+
+    try {
+        
+
+        // Récupération des matières avec pagination
+        const startIndex = (page - 1) * pageSize;
+        const matieres = await Matiere.find({ niveau: niveauId })
+            .populate({
+                path: 'typesEnseignement.enseignantsPrincipaux',
+                select: '_id nom prenom'
+            })
+            .populate({
+                path: 'typesEnseignement.enseignantsSuppleants',
+                select: '_id nom prenom'
+            })
+            .populate('chapitres')
+            .skip(startIndex)
+            .limit(parseInt(pageSize));
+            
+        // Comptage total des matières pour la pagination
+        const totalMatiere = await Matiere.countDocuments({ niveau: niveauId });
+        const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
+
+        res.status(200).json({ 
+            success: true, 
+            data:{
+                matieres,
+                totalPages: totalPages,
+                currentPage: page,
+                totalItems: totalMatiere
+            } 
+            
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        res.status(500).json({ success: false, message: message.erreurServeur });
+    }
+};
+
 
 
 // read

@@ -18,5 +18,4 @@ const settingSchema = new Schema({
 
 
 const Setting = mongoose.model('Setting', settingSchema, 'settings');
-
 export default Setting;

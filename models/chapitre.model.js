@@ -26,6 +26,6 @@ const chapitreSchema = new mongoose.Schema({
     competences: [competenceSchema]
 });
 
-const Chapitre = mongoose.model('Chapitre', chapitreSchema);
+const Chapitre = mongoose.model('Chapitre', chapitreSchema, 'chapitre');
 
-module.exports = Chapitre;
+export default Chapitre;
