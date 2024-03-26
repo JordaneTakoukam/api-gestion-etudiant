@@ -590,46 +590,82 @@ export const getPeriodesByNiveau = async (req, res) => {
 }
 
 export const getPeriodesAVenirByNiveau = async (req, res) => {
-    const {niveauId}=req.params;
-    const {nbElement = 5 } = req.query;
+    const { niveauId } = req.params;
+    const { nbElement = 5 } = req.query;
+
     try {
-        // Déterminer le jour et l'heure actuels
-        const now = moment();
-        // Rechercher les 5 périodes de cours à venir pour le niveau spécifié
-        const periodesAVenir = await Periode.find({
-            jour: now.format('dddd'), // Format 'dddd' pour obtenir le nom complet du jour de la semaine
-            heureDebut: { $gte: now.format('HH:mm') }, // Heure de début supérieure ou égale à l'heure actuelle
-            niveau: niveauId // Filtrer par le niveau spécifié
-        })
-        .sort({ heureDebut: 1 }) // Trier par heure de début croissante
-        .limit(nbElement)
-        .populate({
-            path: 'matiere',
-            select: 'code'
-        })
-        .populate({
-            path: 'enseignantPrincipal',
-            select: 'nom prenom'
-        })
-        .populate({
-            path: 'enseignantSuppleant',
-            select: 'nom prenom'
-        })
-        .exec(); // Limiter à 5 résultats
+        // Récupérer toutes les périodes de cours pour le niveau spécifié
+        const periodes = await Periode.find({ niveau: niveauId })
+            .populate({
+                path: 'matiere',
+                select: 'code'
+            })
+            .populate({
+                path: 'enseignantPrincipal',
+                select: 'nom prenom'
+            })
+            .populate({
+                path: 'enseignantSuppleant',
+                select: 'nom prenom'
+            });
+
+        // Déterminer le jour actuel
+        const now = new Date();
+        const currentDayIndex = now.getDay(); // 0 pour dimanche, 1 pour lundi, ..., 6 pour samedi
+
+        // Diviser les périodes en groupes par jour de la semaine
+        const periodesParJour = {};
+        for (let i = 0; i < 7; i++) {
+            periodesParJour[i] = [];
+        }
+        periodes.forEach(periode => {
+            const [heure, minutes] = periode.heureDebut.split(':');
+            const heureDebut = new Date();
+            heureDebut.setHours(parseInt(heure));
+            heureDebut.setMinutes(parseInt(minutes));
+            const jourIndex = periode.jour === 'Lundi' ? 1 :
+                periode.jour === 'Mardi' ? 2 :
+                periode.jour === 'Mercredi' ? 3 :
+                periode.jour === 'Jeudi' ? 4 :
+                periode.jour === 'Vendredi' ? 5 :
+                periode.jour === 'Samedi' ? 6 :
+                0; // Dimanche
+            if (heureDebut > now) {
+                periodesParJour[jourIndex].push(periode);
+            }
+        });
+
+        // Concaténer les groupes de périodes dans l'ordre de la semaine, en commençant par le jour actuel
+        let periodesAVenir = [];
+        for (let i = currentDayIndex; i <= 7; i++) {
+            periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
+        }
+        for (let i = 1; i < currentDayIndex; i++) {
+            periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
+        }
+
+        // Filtrer les périodes null
+        periodesAVenir = periodesAVenir.filter(periode => periode !== null);
+
+        // Limiter le nombre de périodes à renvoyer
+        const periodesAVenirLimitees = periodesAVenir.slice(0, nbElement);
 
         res.status(200).json({ 
             success: true,
-            data: periodesAVenir
+            data: periodesAVenirLimitees
         });
     } catch (error) {
         console.error('Erreur lors de la récupération des périodes de cours à venir pour le niveau :', error);
         res.status(500).json({ 
             success: false,
-            message:message.erreurServeur
+            message: message.erreurServeur
         });
     }
-    
 }
+
+
+
+
 
 
 
