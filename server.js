@@ -14,7 +14,7 @@ import defaultRoute from "./routes/_default.route.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import evenementRoutes from "./routes/evenement.routes.js";
-import scheduleRoutes from "./routes/schedule.routes.js";
+import periodeRoutes from "./routes/periode.routes.js";
 import matiereRoutes from "./routes/matiere.routes.js"; // matieres
 // routes de settings
 import settingRoute from "./routes/settings/_setting.routes.js";
@@ -67,7 +67,7 @@ app.use("/api/v1/auth/", authRoutes);
 app.use("/api/v1/user/", userRoutes);
 app.use("/api/v1/matiere/", matiereRoutes);
 app.use("/api/v1/evenement/", evenementRoutes);
-app.use("/api/v1/schedule/", scheduleRoutes);
+app.use("/api/v1/periode/", periodeRoutes);
 
 app.use("/api/v1/settings", settingRoute);
 app.use("/api/v1/setting/service", serviceRoutes);

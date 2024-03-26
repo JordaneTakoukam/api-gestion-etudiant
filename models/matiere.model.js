@@ -13,9 +13,9 @@ const matiereSchema = new Schema({
     evaluationAcquisEn: { type: String, required: false },
     typesEnseignement: [{
         typeEnseignement: { type: mongoose.Schema.Types.ObjectId, ref: 'TypeEnseignement', required: true },
-        enseignantsPrincipaux: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
-        enseignantsSuppleants: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false}
-        }],
+        enseignantPrincipal: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true},
+        enseignantSuppleant: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false}
+    }],
     chapitres: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chapitre', required: false }]
 
 });

@@ -1,6 +1,6 @@
 import express from "express";
 import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination} from "../controllers/matiere/matiere.controller.js";
-import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre } from "../controllers/matiere/chapitre/chapitre.controller.js";
+import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat } from "../controllers/matiere/chapitre/chapitre.controller.js";
 
 // controllers
 
@@ -41,7 +41,7 @@ router.put("/chapitre/update/:chapitreId", updateChapitre);
 
 // delete
 router.delete("/chapitre/delete/:chapitreId", deleteChapitre);
-
+router.put("/chapitre/update_etat/:chapitreId", updateObjectifEtat);
 
 
 export default router;

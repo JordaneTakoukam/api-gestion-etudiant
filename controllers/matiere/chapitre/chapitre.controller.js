@@ -202,6 +202,56 @@ export const deleteChapitre = async (req, res) => {
     }
 }
 
+//update etat
+export const updateObjectifEtat = async (req, res) => {
+    const { chapitreId }= req.params;
+    const {objectifId, etat } = req.query;
+
+    try {
+        // Vérifier si les ObjectId sont valides
+        if (!mongoose.Types.ObjectId.isValid(chapitreId) || !mongoose.Types.ObjectId.isValid(objectifId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide 
+            });
+        }
+
+        // Vérifier si le chapitre existe
+        const chapitre = await Chapitre.findById(chapitreId);
+        if (!chapitre) {
+            return res.status(404).json({ 
+                success: false, message: 
+                message.chapitre_non_trouve 
+            });
+        }
+
+        // Trouver l'objectif dans le chapitre
+        const objectif = chapitre.objectifs.id(objectifId);
+        if (!objectif) {
+            return res.status(404).json({ 
+                success: false, message: 
+                message.objectif_non_trouve 
+            });
+        }
+
+        // Mettre à jour l'état de l'objectif
+        objectif.etat = etat;
+
+        // Sauvegarder les modifications du chapitre
+        await chapitre.save();
+
+        res.status(200).json({ success: true, 
+            //message: message.objectif_modifie, 
+            data: chapitre 
+        });
+    } catch (error) {
+        console.error('Erreur lors de la modification de l\'état de l\'objectif :', error);
+        res.status(500).json({ 
+            success: false, 
+            message: message.erreurServeur 
+        });
+    }
+};
 
 // read
 export const readChapitre = async (req, res) => { }

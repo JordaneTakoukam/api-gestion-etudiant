@@ -182,7 +182,37 @@ const message = {
     chapitre_non_trouve:{
         fr:"Ce chapitre n'existe pas",
         en:""
+    },
+    type_ens_non_trouve:{
+        fr:"Le type d'enseignement spécifié n'a pas été trouvé." ,
+        en:""
+    },
+    periode_non_trouve:{
+        fr:"La période de cours n'a pas été trouvée.",
+        en:""
+    },
+    existe_periode_cours:{
+        fr:"Une période de cours avec les mêmes paramètres existe déjà",
+        en:""
+    },
+    existe_enseignant_p_cours:{
+        fr:"L'enseignant principal a déjà un cours programmé au même moment",
+        en:""
+    },
+    existe_enseignant_s_cours:{
+        fr:"L'enseignant suppléant a déjà un cours programmé au même moment",
+        en:""
+    },
+    existe_salle_cours_programme:{
+        fr:"La salle de cours a déjà un cours programmé au même moment" ,
+        en:""
+    },
+    heure_invalide:{
+        fr:"Format de l'heure invalide. Utilisez HH:MM.",
+        en:""
     }
+
+
 
 
 

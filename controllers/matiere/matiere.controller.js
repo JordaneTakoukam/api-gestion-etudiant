@@ -28,14 +28,14 @@ export const createMatiere = async (req, res) => {
                     message: message.identifiant_invalide,
                 });
             }
-            if (!mongoose.Types.ObjectId.isValid(typeEnseignement.enseignantsPrincipaux)) {
+            if (!mongoose.Types.ObjectId.isValid(typeEnseignement.enseignantPrincipal)) {
                 return res.status(400).json({ 
                     success: false, 
                     message: message.identifiant_invalide,
                 });
             }
             
-            if (typeEnseignement.enseignantsSuppleants && !mongoose.Types.ObjectId.isValid(typeEnseignement.enseignantsSuppleants)) {
+            if (typeEnseignement.enseignantSuppleant && !mongoose.Types.ObjectId.isValid(typeEnseignement.enseignantSuppleant)) {
                 return res.status(400).json({ 
                     success: false, 
                     message: message.identifiant_invalide,
@@ -245,10 +245,10 @@ export const getMatieresByNiveau = async (req, res) => {
     try {
         // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
         const matieres = await Matiere.find({}).populate({
-            path: 'typesEnseignement.enseignantsPrincipaux',
+            path: 'typesEnseignement.enseignantPrincipal',
             select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
         }).populate({
-            path: 'typesEnseignement.enseignantsSuppleants',
+            path: 'typesEnseignement.enseignantSuppleant',
             select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
         }).populate('chapitres');
         
@@ -279,11 +279,11 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
         const startIndex = (page - 1) * pageSize;
         const matieres = await Matiere.find({ niveau: niveauId })
             .populate({
-                path: 'typesEnseignement.enseignantsPrincipaux',
+                path: 'typesEnseignement.enseignantPrincipal',
                 select: '_id nom prenom'
             })
             .populate({
-                path: 'typesEnseignement.enseignantsSuppleants',
+                path: 'typesEnseignement.enseignantSuppleant',
                 select: '_id nom prenom'
             })
             .populate('chapitres')
