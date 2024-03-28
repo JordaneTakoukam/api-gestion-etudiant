@@ -101,8 +101,7 @@ export const createCycle = async (req, res) => {
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdCycle = data.cycle.find((cycle) => cycle.code === code);
-
+        const createdCycle = data.cycle.find((cycle) => cycle.code === code && cycle.section.toString() === section);
         res.json({
             success: true,
             message: message.ajouter_avec_success,

@@ -103,7 +103,7 @@ export const createNiveau = async (req, res) => {
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdNiveau = data.niveau.find((niveau) => niveau.code === code);
+        const createdNiveau = data.niveau.find((niveau) => niveau.code === code && niveau.cycle.toString() === cycle);
 
         res.json({
             success: true,
