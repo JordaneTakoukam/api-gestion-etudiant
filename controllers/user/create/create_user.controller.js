@@ -176,3 +176,19 @@ export const createUser = async (req, res) => {
         });
     }
 };
+
+export const getUsersWithRole = async (req, res) => {
+    const role = req.params
+    try {
+        // Récupérer la liste des utilisateurs ayant le rôle enseignant
+        const users = await User.find({ roles: { $in: ['enseignant'] } });
+        console.log(users);
+        res.status(200).json({ 
+            success: true, 
+            data: {users }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des enseignants :', error);
+        res.status(500).json({ success: false, message: 'Erreur serveur lors de la récupération des enseignants' });
+    }
+};

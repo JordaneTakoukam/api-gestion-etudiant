@@ -252,15 +252,17 @@ export const getMatieresByNiveau = async (req, res) => {
             select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
         }).populate('chapitres');
         
-        res.status(200).json({ 
-            success: true, 
-            data: matieres
-        });
         
 
         res.status(200).json({ 
             success: true, 
-            data: matieres 
+            data: {
+                matieres ,
+                totalPages: 0,
+                currentPage: 0,
+                totalItems: 0,
+                pageSize:0
+            }
         });
     } catch (error) {
         console.error('Erreur lors de la récupération des matières par niveau :', error);
@@ -300,7 +302,8 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
                 matieres,
                 totalPages: totalPages,
                 currentPage: page,
-                totalItems: totalMatiere
+                totalItems: totalMatiere,
+                pageSize:pageSize
             } 
             
         });

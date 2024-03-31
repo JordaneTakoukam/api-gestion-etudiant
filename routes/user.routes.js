@@ -4,6 +4,7 @@ import express from "express";
 import { createDefaultSuperAdmin } from "../controllers/user/create/create_default_super_admin.controller.js";
 import { createUser } from "../controllers/user/create/create_user.controller.js";
 import { deleteUsers, getUser, getUsers, updateUser } from "../controllers/user/account.controller.js";
+import {getUsersWithRole } from "../controllers/user/create/create_user.controller.js";
 
 // middlewares
 
@@ -22,6 +23,9 @@ router.put("/update/:id", updateUser);
 
 // supprimer
 router.delete("/delete/:id", deleteUsers);
+
+//récupérer la liste des utilisateurs d'un rôle
+router.get("/getUsersWithRole/:role", getUsersWithRole);
 
 
 
