@@ -8,6 +8,7 @@ export const codeLibelleSchema = new Schema({
 
 });
 
+
 export const departementSchema = new Schema({
     // id_region: { type: mongoose.Schema.Types.ObjectId, required: true },
     date_creation: { type: Date, required: true },

@@ -1,7 +1,10 @@
 import mongoose, { Schema } from 'mongoose';
 import { codeLibelleSchema, communeSchema, cycleSchema, departementSchema, niveauSchema, salleSchema} from './shemas/setting_shema.js';
+import { string } from 'yup';
 
 const settingSchema = new Schema({
+    anneeCourante:{type:Number},
+    premiereAnnee:{type:Number},
     services: [codeLibelleSchema],
     fonctions: [codeLibelleSchema],
     grades: [codeLibelleSchema],
@@ -14,6 +17,7 @@ const settingSchema = new Schema({
     niveau: [niveauSchema],
     salleDeCours:[salleSchema],
     typeEnseignement:[codeLibelleSchema],
+    etatEvenement:[codeLibelleSchema],
     roles:[codeLibelleSchema]
 });
 

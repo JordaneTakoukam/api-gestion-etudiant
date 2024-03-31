@@ -30,6 +30,8 @@ import cycleRoutes from "./routes/settings/cycle.routes.js";
 import niveauRoutes from "./routes/settings/niveau.routes.js";
 import salleDeCourRoutes from "./routes/settings/salle_de_cour.routes.js";
 import typeEnseignementRoutes from "./routes/settings/type_enseignement.routes.js";
+import etatEvenementRoutes from "./routes/settings/etat_evenement.routes.js";
+import anneeRoutes from "./routes/settings/annee.routes.js";
 import roleRoutes from "./routes/settings/role.routes.js";
 
 
@@ -83,6 +85,8 @@ app.use("/api/v1/setting/cycle", cycleRoutes);
 app.use("/api/v1/setting/niveau", niveauRoutes);
 app.use("/api/v1/setting/salle-de-cour", salleDeCourRoutes);
 app.use("/api/v1/setting/type-enseignement", typeEnseignementRoutes);
+app.use("/api/v1/setting/etat-evenement", etatEvenementRoutes);
+app.use("/api/v1/setting/annee", anneeRoutes);
 app.use("/api/v1/setting/role", roleRoutes);
 
 

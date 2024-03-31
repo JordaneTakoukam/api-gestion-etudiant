@@ -8,7 +8,7 @@ const evenementSchema = new Schema({
     dateFin:{type:Date, required:true},
     periodeFr:{type:String, required:true},
     periodeEn:{type:String, required:true},
-    status:{type:String, required:true},
+    etat: { type: mongoose.Schema.Types.ObjectId, ref: 'EtatEvenement', required: true },
     personnelFr:{type:String, required:false},
     personnelEn:{type:String, required:false},
     descriptionObservationFr:{type:String, required:false},

@@ -6,14 +6,22 @@ import { verifierEntier } from '../../fonctions/fonctions.js';
 
 // create
 export const createEvenement = async (req, res) => {
-    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, status, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
+    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !status || !annee) {
+        if (!code || !libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !etat || !annee) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
+            });
+        }
+
+        // Vérifier si les ObjectId pour les références existent
+        if (!mongoose.Types.ObjectId.isValid(etat)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide
             });
         }
 
@@ -77,7 +85,7 @@ export const createEvenement = async (req, res) => {
 
         // Créer un nouvel événement
         const newEvenement = new Evenement({
-            code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, status,
+            code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat,
             personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, date_creation, annee
         });
 
@@ -127,11 +135,11 @@ export const createEvenement = async (req, res) => {
 // update
 export const updateEvenement = async (req, res) => {
     const { evenementId } = req.params;
-    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, status, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
+    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !status || !annee) {
+        if (!code || !libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !etat || !annee) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -152,6 +160,14 @@ export const updateEvenement = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: message.evenement_inexistant
+            });
+        }
+
+        // Vérifier si les ObjectId pour les références existent
+        if (!mongoose.Types.ObjectId.isValid(etat)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide
             });
         }
 
@@ -253,7 +269,7 @@ export const updateEvenement = async (req, res) => {
         existingEvenement.dateFin = dateFin;
         existingEvenement.periodeFr = periodeFr;
         existingEvenement.periodeEn = periodeEn;
-        existingEvenement.status = status;
+        existingEvenement.etat = etat;
         existingEvenement.personnelFr = personnelFr;
         existingEvenement.personnelEn = personnelEn;
         existingEvenement.descriptionObservationFr = descriptionObservationFr;
@@ -357,6 +373,7 @@ export const getEvenementsByYear = async (req, res) => {
                 currentPage: parseInt(page),
                 totalPages: Math.ceil(totalEvenements / parseInt(pageSize)),
                 totalItems: totalEvenements,
+                pageSize : pageSize
             },
         });
     } catch (error) {
