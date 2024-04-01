@@ -37,7 +37,7 @@ export const createPeriode = async (req, res) => {
                 message: message.identifiant_invalide,
             });
         }
-        if (!mongoose.Types.ObjectId.isValid(matiere)) {
+        if (!mongoose.Types.ObjectId.isValid(matiere._id)) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -84,18 +84,10 @@ export const createPeriode = async (req, res) => {
             });
         }
 
-        // Récupérer la matière correspondante
-        const matiereFind = await Matiere.findById(matiere);
-
-        if (!matiereFind) {
-            return res.status(404).json({ 
-                success: false, 
-                message: message.matiere_non_trouvee,
-            });
-        }
+        
 
         // Trouver le type d'enseignement correspondant à l'identifiant fourni
-        const typeEnseignementFind = matiereFind.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
+        const typeEnseignementFind = matiere.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
 
         if (!typeEnseignementFind) {
             return res.status(404).json({ 
@@ -227,7 +219,7 @@ export const createPeriode = async (req, res) => {
             semestre,
             annee,
             niveau,
-            matiere,
+            matiere:matiere._id,
             typeEnseignement,
             heureDebut,
             heureFin,
@@ -238,11 +230,16 @@ export const createPeriode = async (req, res) => {
 
         // Enregistrer la période de cours dans la base de données
         const savedPeriodeCours = await newPeriodeCours.save();
+        const populatedPeriodeCours = await Periode.populate(savedPeriodeCours, [
+            { path: 'matiere', select: '_id code' }, // Peupler avec l'_id et le code de la matière
+            { path: 'enseignantPrincipal', select: '_id nom prenom' }, // Peupler avec l'_id, le nom et le prénom de l'enseignant principal
+            { path: 'enseignantSuppleant', select: '_id nom prenom' } // Peupler avec l'_id, le nom et le prénom de l'enseignant suppléant
+        ]);
 
         res.status(201).json({ 
             success: true,
             message: message.ajouter_avec_success,
-            data: savedPeriodeCours 
+            data: populatedPeriodeCours 
         });
     } catch (error) {
         console.error('Erreur lors de l\'enregistrement de la période de cours :', error);
@@ -285,7 +282,7 @@ export const updatePeriode = async (req, res) => {
                 message: message.identifiant_invalide,
             });
         }
-        if (!mongoose.Types.ObjectId.isValid(matiere)) {
+        if (!mongoose.Types.ObjectId.isValid(matiere._id)) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -479,17 +476,22 @@ export const updatePeriode = async (req, res) => {
             semestre,
             annee,
             niveau,
-            matiere,
+            matiere: matiere._id,
             typeEnseignement,
             heureDebut,
             heureFin,
             salleCours
         }, { new: true });
+        const populatedPeriodeCours = await Periode.populate(updatedPeriodeCours, [
+            { path: 'matiere', select: '_id code' }, // Peupler avec l'_id et le code de la matière
+            { path: 'enseignantPrincipal', select: '_id nom prenom' }, // Peupler avec l'_id, le nom et le prénom de l'enseignant principal
+            { path: 'enseignantSuppleant', select: '_id nom prenom' } // Peupler avec l'_id, le nom et le prénom de l'enseignant suppléant
+        ]);
 
         res.status(200).json({ 
             success: true,
             message: message.mis_a_jour,
-            data: updatedPeriodeCours 
+            data: populatedPeriodeCours 
         });
     } catch (error) {
         console.error('Erreur lors de la modification de la période de cours :', error);
@@ -531,8 +533,8 @@ export const deletePeriode = async (req, res) => {
 };
 
 export const getPeriodesByNiveau = async (req, res) => {
-    const {niveauId}=req.params;
-    const {page = 1, pageSize = 10 } = req.query;
+    const { niveauId } = req.params;
+    const { annee, semestre } = req.query;
 
     try {
         // Vérifier si l'ID du niveau est valide
@@ -543,17 +545,37 @@ export const getPeriodesByNiveau = async (req, res) => {
             });
         }
 
-        // Convertir les paramètres de pagination en nombres entiers
-        const pageNumber = parseInt(page);
-        const pageSizeNumber = parseInt(pageSize);
+        // Création du filtre initial pour le niveau
+        const filter = { niveau: niveauId };
 
-        // Calculer l'indice de départ pour la pagination
-        const startIndex = (pageNumber - 1) * pageSizeNumber;
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+            const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
+            if (!periodesCurrentYear) {
+                // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+                let found = false;
+                let previousYear = parseInt(annee) - 1;
+                while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                    const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
+                    if (periodesPreviousYear) {
+                        filter.annee = previousYear;
+                        found = true;
+                    } else {
+                        previousYear--;
+                    }
+                }
+            } 
+        }
 
-        // Récupérer la liste des périodes du niveau spécifié, paginée
-        const periodes = await Periode.find({ niveau: niveauId })
-            .skip(startIndex)
-            .limit(pageSizeNumber)
+        // Si un semestre est spécifié dans la requête, l'utiliser
+        if (semestre && !isNaN(semestre)) {
+            filter.semestre = parseInt(semestre);
+        }
+
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter)
             .populate({
                 path: 'matiere',
                 select: 'code'
@@ -568,19 +590,19 @@ export const getPeriodesByNiveau = async (req, res) => {
             })
             .exec();
 
-        // Compter le nombre total de périodes pour ce niveau
-        const totalCount = await Periode.countDocuments({ niveau: niveauId });
-
+        // Envoyer la réponse avec les données
         res.status(200).json({ 
             success: true,
             data: {
                 periodes,
-                currentPage: pageNumber,
-                totalPages: Math.ceil(totalCount / pageSizeNumber),
-                totalItems: totalCount
+                currentPage: 0,
+                totalPages: 0,
+                totalItems: periodes.length,
+                pageSize: periodes.length
             }
         });
     } catch (error) {
+        // Gérer les erreurs
         console.error('Erreur lors de la récupération des périodes par niveau :', error);
         res.status(500).json({ 
             success: false, 
@@ -589,13 +611,14 @@ export const getPeriodesByNiveau = async (req, res) => {
     }
 }
 
+
 export const getPeriodesAVenirByNiveau = async (req, res) => {
     const { niveauId } = req.params;
-    const { nbElement = 5 } = req.query;
+    const { nbElement = 5, annee = 2024, semestre = 1 } = req.query;
 
     try {
         // Récupérer toutes les périodes de cours pour le niveau spécifié
-        const periodes = await Periode.find({ niveau: niveauId })
+        const periodes = await Periode.find({ niveau: niveauId})
             .populate({
                 path: 'matiere',
                 select: 'code'

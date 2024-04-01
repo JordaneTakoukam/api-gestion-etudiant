@@ -244,7 +244,7 @@ export const getMatieresByNiveau = async (req, res) => {
 
     try {
         // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-        const matieres = await Matiere.find({}).populate({
+        const matieres = await Matiere.find({niveau:niveauId}).populate({
             path: 'typesEnseignement.enseignantPrincipal',
             select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
         }).populate({

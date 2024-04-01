@@ -3,7 +3,7 @@ import mongoose, { Schema } from 'mongoose';
 
 const periodeSchema = new Schema({
     jour: { type: String, required: true }, // Jour de la semaine (ex: Lundi, Mardi, etc.)
-    semestre: { type: String, required: true }, // Semestre (ex: Semestre 1, Semestre 2)
+    semestre: { type: Number, required: true }, // Semestre (ex: Semestre 1, Semestre 2)
     annee: { type: Number, required: true }, // Année académique
     niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true }, // Référence au niveau
     matiere: { type: mongoose.Schema.Types.ObjectId, ref: 'Matiere', required: true }, // Référence à la matière
