@@ -182,7 +182,6 @@ export const getUsersWithRole = async (req, res) => {
     try {
         // Récupérer la liste des utilisateurs ayant le rôle enseignant
         const users = await User.find({ roles: { $in: ['enseignant'] } });
-        console.log(users);
         res.status(200).json({ 
             success: true, 
             data: {users }
