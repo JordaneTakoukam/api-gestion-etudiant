@@ -27,7 +27,7 @@ export const createNiveau = async (req, res) => {
 
         // Vérifier si le cycle existe
         const existingCycle = await Setting.findOne({
-            'cycle._id': cycle
+            'cycles._id': cycle
         });
 
         if (!existingCycle) {
@@ -40,7 +40,7 @@ export const createNiveau = async (req, res) => {
 
         // Vérifier si le code du niveau existe déjà
         const existingCode = await Setting.findOne({
-            niveau: {
+            niveaux: {
                 $elemMatch: {
                     code: code,
                     cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
@@ -55,7 +55,7 @@ export const createNiveau = async (req, res) => {
         }
         // Vérifier si le libelle fr du cycle existe déjà
         const existingLibelleFr = await Setting.findOne({
-            niveau: {
+            niveaux: {
                 $elemMatch: {
                     libelleFr: libelleFr,
                     cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
@@ -70,7 +70,7 @@ export const createNiveau = async (req, res) => {
         }
         // Vérifier si le libelle en du cycle existe déjà
         const existingLibelleEn = await Setting.findOne({
-            niveau: {
+            niveaux: {
                 $elemMatch: {
                     libelleEn: libelleEn,
                     cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
@@ -96,14 +96,14 @@ export const createNiveau = async (req, res) => {
         let data;
         if (!setting) {
             // Créer la collection et le document
-            data = await Setting.create({ niveau: [newNiveau] });
+            data = await Setting.create({ niveaux: [newNiveau] });
         } else {
             // Mettre à jour le document existant
-            data = await Setting.findOneAndUpdate({}, { $push: { niveau: newNiveau } }, { new: true });
+            data = await Setting.findOneAndUpdate({}, { $push: { niveaux: newNiveau } }, { new: true });
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdNiveau = data.niveau.find((niveau) => niveau.code === code && niveau.cycle.toString() === cycle);
+        const createdNiveau = data.niveaux.find((niveau) => niveau.code === code && niveau.cycle.toString() === cycle);
 
         res.json({
             success: true,
@@ -143,7 +143,7 @@ export const updateNiveau = async (req, res) => {
 
         // Vérifier si la cycle existe
         const existingCycle = await Setting.findOne({
-            'cycle._id': cycle
+            'cycles._id': cycle
             
         });
 
@@ -156,8 +156,8 @@ export const updateNiveau = async (req, res) => {
 
          // Trouver le niveau en cours de modification
          const existingNiveau = await Setting.findOne(
-            { "niveau._id": niveauId },
-            { "niveau.$": 1 }//récupéré uniquement l'élément de la recherche
+            { "niveaux._id": niveauId },
+            { "niveaux.$": 1 }//récupéré uniquement l'élément de la recherche
         );
         
         if (!existingNiveau) {
@@ -168,7 +168,7 @@ export const updateNiveau = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception du niveau en cours de modification
-        if (existingNiveau.niveau[0].code !== code) {
+        if (existingNiveau.niveaux[0].code !== code) {
             const existingCode = await Setting.findOne({
                 niveau: {
                     $elemMatch: {
@@ -186,9 +186,9 @@ export const updateNiveau = async (req, res) => {
             }
         }
         // Vérifier si le libelle fr existe déjà, à l'exception du niveau en cours de modification
-        if (existingNiveau.niveau[0].libelleFr !== libelleFr) {
+        if (existingNiveau.niveaux[0].libelleFr !== libelleFr) {
             const existingLibelleFr = await Setting.findOne({
-                niveau: {
+                niveaux: {
                     $elemMatch: {
                         libelleFr: libelleFr,
                         cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
@@ -205,7 +205,7 @@ export const updateNiveau = async (req, res) => {
         }
 
         // Vérifier si le libelle en existe déjà, à l'exception du niveau en cours de modification
-        if (existingNiveau.niveau[0].libelleEn !== libelleEn) {
+        if (existingNiveau.niveaux[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
                 niveau: {
                     $elemMatch: {
@@ -225,13 +225,13 @@ export const updateNiveau = async (req, res) => {
 
         // Mettre à jour le niveau dans la base de données
         const updatedNiveau = await Setting.findOneAndUpdate(
-            { "niveau._id": new mongoose.Types.ObjectId(niveauId) }, // Trouver le niveau par son ID
-            { $set: { "niveau.$.code": code, "niveau.$.libelleFr": libelleFr, "niveau.$.libelleEn": libelleEn, "niveau.$.cycle": cycle, "niveau.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour le niveau
-            { new: true, projection: { _id: 0, niveau: { $elemMatch: { _id: new mongoose.Types.ObjectId(niveauId) } } } } // Renvoyer uniquement le niveau mis à jour
+            { "niveaux._id": new mongoose.Types.ObjectId(niveauId) }, // Trouver le niveau par son ID
+            { $set: { "niveaux.$.code": code, "niveaux.$.libelleFr": libelleFr, "niveaux.$.libelleEn": libelleEn, "niveaux.$.cycle": cycle, "niveaux.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour le niveau
+            { new: true, projection: { _id: 0, niveaux: { $elemMatch: { _id: new mongoose.Types.ObjectId(niveauId) } } } } // Renvoyer uniquement le niveau mis à jour
         );
 
         // Vérifier si le niveau existe
-        if (!updatedNiveau || !updatedNiveau.niveau || !updatedNiveau.niveau.length) {
+        if (!updatedNiveau || !updatedNiveau.niveaux || !updatedNiveau.niveaux.length) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,
@@ -242,7 +242,7 @@ export const updateNiveau = async (req, res) => {
         return res.json({
             success: true,
             message: message.mis_a_jour,
-            data: updatedNiveau.niveau[0],
+            data: updatedNiveau.niveaux[0],
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
@@ -268,11 +268,11 @@ export const deleteNiveau = async (req, res) => {
 
         const setting = await Setting.findOneAndUpdate(
             {},
-            { $pull: { niveau: { _id: new mongoose.Types.ObjectId(niveauId) } } },
+            { $pull: { niveaux: { _id: new mongoose.Types.ObjectId(niveauId) } } },
             { new: true }
         );
 
-        if (!setting || !setting.niveau) {
+        if (!setting || !setting.niveaux) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,

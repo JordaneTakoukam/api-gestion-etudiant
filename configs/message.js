@@ -1,5 +1,8 @@
 const message = {
-    erreurServeur: "Erreur interne du serveur !",
+    erreurServeur: {
+        fr: "Erreur interne du serveur !",
+        en: "Erreur interne du serveur !"
+    },
     emailExiste: "Cette adresse e-mail est déjà enregistrée !",
 
     emailRequis: {
@@ -23,7 +26,7 @@ const message = {
         en: "Login successful!"
     },
     creation_reuissi: {
-        fr: "Création réuissi",
+        fr: "Utilisateur créer avec succès",
         en: ""
     },
     userNonTrouver: {
@@ -62,6 +65,35 @@ const message = {
     },
     niveau_invalide: {
         fr: "Le niveau est invalide!",
+        en: ""
+    },
+    grade_invalide: {
+        fr: "Le grade est invalide!",
+        en: ""
+    },
+    categorie_invalide: {
+        fr: "La catégorie est invalide!",
+        en: ""
+    },
+    fonction_invalide: {
+        fr: "La fonction est invalide!",
+        en: ""
+    },
+    service_invalide: {
+        fr: "Le service est invalide!",
+        en: ""
+    },
+
+    region_invalide: {
+        fr: "La région est invalide!",
+        en: ""
+    },
+    departement_invalide: {
+        fr: "Le département est invalide!",
+        en: ""
+    },
+    commune_invalide: {
+        fr: "La commune est invalide!",
         en: ""
     },
 
@@ -161,55 +193,55 @@ const message = {
     },
     departement_inexistant: {
         fr: "Ce département n'existe pas",
-        en:""
+        en: ""
     },
     evenement_inexistant: {
         fr: "Cet évènement n'existe pas",
-        en:""
+        en: ""
     },
     liste_event: {
         fr: "Liste des événements récupérée avec succès",
-        en:""
+        en: ""
     },
     event_a_venir: {
         fr: "Evenement à venir",
-        en:""
+        en: ""
     },
-    matiere_non_trouvee:{
-        fr:"Cette matière n'existe pas",
-        en:""
+    matiere_non_trouvee: {
+        fr: "Cette matière n'existe pas",
+        en: ""
     },
-    chapitre_non_trouve:{
-        fr:"Ce chapitre n'existe pas",
-        en:""
+    chapitre_non_trouve: {
+        fr: "Ce chapitre n'existe pas",
+        en: ""
     },
-    type_ens_non_trouve:{
-        fr:"Le type d'enseignement spécifié n'a pas été trouvé." ,
-        en:""
+    type_ens_non_trouve: {
+        fr: "Le type d'enseignement spécifié n'a pas été trouvé.",
+        en: ""
     },
-    periode_non_trouve:{
-        fr:"La période de cours n'a pas été trouvée.",
-        en:""
+    periode_non_trouve: {
+        fr: "La période de cours n'a pas été trouvée.",
+        en: ""
     },
-    existe_periode_cours:{
-        fr:"Une période de cours avec les mêmes paramètres existe déjà",
-        en:""
+    existe_periode_cours: {
+        fr: "Une période de cours avec les mêmes paramètres existe déjà",
+        en: ""
     },
-    existe_enseignant_p_cours:{
-        fr:"L'enseignant principal a déjà un cours programmé au même moment",
-        en:""
+    existe_enseignant_p_cours: {
+        fr: "L'enseignant principal a déjà un cours programmé au même moment",
+        en: ""
     },
-    existe_enseignant_s_cours:{
-        fr:"L'enseignant suppléant a déjà un cours programmé au même moment",
-        en:""
+    existe_enseignant_s_cours: {
+        fr: "L'enseignant suppléant a déjà un cours programmé au même moment",
+        en: ""
     },
-    existe_salle_cours_programme:{
-        fr:"La salle de cours a déjà un cours programmé au même moment" ,
-        en:""
+    existe_salle_cours_programme: {
+        fr: "La salle de cours a déjà un cours programmé au même moment",
+        en: ""
     },
-    heure_invalide:{
-        fr:"Format de l'heure invalide. Utilisez HH:MM.",
-        en:""
+    heure_invalide: {
+        fr: "Format de l'heure invalide. Utilisez HH:MM.",
+        en: ""
     }
 
 

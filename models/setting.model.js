@@ -1,24 +1,24 @@
 import mongoose, { Schema } from 'mongoose';
-import { codeLibelleSchema, communeSchema, cycleSchema, departementSchema, niveauSchema, salleSchema} from './shemas/setting_shema.js';
+import { codeLibelleSchema, communeSchema, cycleSchema, departementSchema, niveauSchema, salleSchema } from './shemas/setting_shema.js';
 import { string } from 'yup';
 
 const settingSchema = new Schema({
-    anneeCourante:{type:Number},
-    premiereAnnee:{type:Number},
+    anneeCourante: { type: Number },
+    premiereAnnee: { type: Number },
     services: [codeLibelleSchema],
     fonctions: [codeLibelleSchema],
     grades: [codeLibelleSchema],
     categories: [codeLibelleSchema],
-    region: [codeLibelleSchema],
-    departement: [departementSchema],
+    regions: [codeLibelleSchema],
+    departements: [departementSchema],
     communes: [communeSchema],
-    section: [codeLibelleSchema],
-    cycle: [cycleSchema],
-    niveau: [niveauSchema],
-    salleDeCours:[salleSchema],
-    typeEnseignement:[codeLibelleSchema],
-    etatEvenement:[codeLibelleSchema],
-    roles:[codeLibelleSchema]
+    sections: [codeLibelleSchema],
+    cycles: [cycleSchema],
+    niveaux: [niveauSchema],
+    salleDeCours: [salleSchema],
+    typeEnseignement: [codeLibelleSchema],
+    etatEvenement: [codeLibelleSchema],
+    roles: [codeLibelleSchema]
 });
 
 

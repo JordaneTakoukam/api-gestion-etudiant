@@ -16,7 +16,7 @@ export const createDepartement = async (req, res) => {
                 message: message.champ_obligatoire
             });
         }
-        if (!mongoose.Types.ObjectId.isValid(region._id)) {
+        if (!mongoose.Types.ObjectId.isValid(region)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -25,7 +25,7 @@ export const createDepartement = async (req, res) => {
 
         // Vérifier si la région existe
         const existingRegion = await Setting.findOne({
-            'region._id': region
+            'regions._id': region
         });
 
         if (!existingRegion) {
@@ -38,9 +38,9 @@ export const createDepartement = async (req, res) => {
 
         // Vérifier si le code de la département existe déjà
         const existingCode = await Setting.findOne({
-            'departement.code': code,
+            'departements.code': code,
         });
-        
+
         if (existingCode) {
             return res.status(400).json({
                 success: false,
@@ -49,7 +49,7 @@ export const createDepartement = async (req, res) => {
         }
         // Vérifier si le libelle fr de la département existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'departement.libelleFr': libelleFr,
+            'departements.libelleFr': libelleFr,
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -59,7 +59,7 @@ export const createDepartement = async (req, res) => {
         }
         // Vérifier si le libelle en de la département existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'departement.libelleEn': libelleEn,
+            'departements.libelleEn': libelleEn,
         });
 
         if (existingLibelleEn) {
@@ -80,14 +80,14 @@ export const createDepartement = async (req, res) => {
         let data;
         if (!setting) {
             // Créer la collection et le document
-            data = await Setting.create({ departement: [newDepartement] });
+            data = await Setting.create({ departements: [newDepartement] });
         } else {
             // Mettre à jour le document existant
-            data = await Setting.findOneAndUpdate({}, { $push: { departement: newDepartement } }, { new: true });
+            data = await Setting.findOneAndUpdate({}, { $push: { departements: newDepartement } }, { new: true });
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdDepartement = data.departement.find((departement) => departement.code === code);
+        const createdDepartement = data.departements.find((departement) => departement.code === code);
 
         res.json({
             success: true,
@@ -126,8 +126,8 @@ export const updateDepartement = async (req, res) => {
 
         // Vérifier si la région existe
         const existingRegion = await Setting.findOne({
-            'region._id': region
-            
+            'regions._id': region
+
         });
 
         if (!existingRegion) {
@@ -139,10 +139,10 @@ export const updateDepartement = async (req, res) => {
 
         // Trouver le département en cours de modification
         const existingDepartement = await Setting.findOne(
-            { "departement._id": departementId },
-            { "departement.$": 1 }//récupéré uniquement l'élément de la recherche
+            { "departements._id": departementId },
+            { "departements.$": 1 }//récupéré uniquement l'élément de la recherche
         );
-        
+
         if (!existingDepartement) {
             return res.status(404).json({
                 success: false,
@@ -151,9 +151,9 @@ export const updateDepartement = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception du département en cours de modification
-        if (existingDepartement.departement[0].code !== code) {
+        if (existingDepartement.departements[0].code !== code) {
             const existingCode = await Setting.findOne({
-                'departement.code': code,
+                'departements.code': code,
             });
 
             if (existingCode) {
@@ -164,9 +164,9 @@ export const updateDepartement = async (req, res) => {
             }
         }
         // Vérifier si le libelle fr existe déjà, à l'exception du département en cours de modification
-        if (existingDepartement.departement[0].libelleFr !== libelleFr) {
+        if (existingDepartement.departements[0].libelleFr !== libelleFr) {
             const existingLibelleFr = await Setting.findOne({
-                'departement.libelleFr': libelleFr,
+                'departements.libelleFr': libelleFr,
             });
 
             if (existingLibelleFr) {
@@ -178,9 +178,9 @@ export const updateDepartement = async (req, res) => {
         }
 
         // Vérifier si le libelle en existe déjà, à l'exception du département en cours de modification
-        if (existingDepartement.departement[0].libelleEn !== libelleEn) {
+        if (existingDepartement.departements[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
-                'departement.libelleEn': libelleEn,
+                'departements.libelleEn': libelleEn,
             });
 
             if (existingLibelleEn) {
@@ -191,18 +191,18 @@ export const updateDepartement = async (req, res) => {
             }
         }
 
-        
-        
+
+
 
         // Mettre à jour le département dans la base de données
         const updatedDepartement = await Setting.findOneAndUpdate(
-            { "departement._id": new mongoose.Types.ObjectId(departementId) }, // Trouver le département par son ID
-            { $set: { "departement.$.code": code, "departement.$.libelleFr": libelleFr, "departement.$.libelleEn": libelleEn, "departement.$.region": region, "departement.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour le département
-            { new: true, projection: { _id: 0, departement: { $elemMatch: { _id: new mongoose.Types.ObjectId(departementId) } } } } // Renvoyer uniquement le département mis à jour
+            { "departements._id": new mongoose.Types.ObjectId(departementId) }, // Trouver le département par son ID
+            { $set: { "departements.$.code": code, "departements.$.libelleFr": libelleFr, "departements.$.libelleEn": libelleEn, "departement.$.region": region, "departements.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour le département
+            { new: true, projection: { _id: 0, departements: { $elemMatch: { _id: new mongoose.Types.ObjectId(departementId) } } } } // Renvoyer uniquement le département mis à jour
         );
 
         // Vérifier si le département existe
-        if (!updatedDepartement || !updatedDepartement.departement || !updatedDepartement.departement.length) {
+        if (!updatedDepartement || !updatedDepartement.departements || !updatedDepartement.departements.length) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,
@@ -213,7 +213,7 @@ export const updateDepartement = async (req, res) => {
         return res.json({
             success: true,
             message: message.mis_a_jour,
-            data: updatedDepartement.departement[0],
+            data: updatedDepartement.departements[0],
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
@@ -239,11 +239,11 @@ export const deleteDepartement = async (req, res) => {
 
         const setting = await Setting.findOneAndUpdate(
             {},
-            { $pull: { departement: { _id: new mongoose.Types.ObjectId(departementId) } } },
+            { $pull: { departements: { _id: new mongoose.Types.ObjectId(departementId) } } },
             { new: true }
         );
 
-        if (!setting || !setting.departement) {
+        if (!setting || !setting.departements) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,

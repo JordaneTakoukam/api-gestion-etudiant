@@ -12,11 +12,11 @@ export const appConfigs = {
     },
 
     defaultSuperUser: {
-        nom: "Idriss",
-        prenom: "Jordane",
-        email: "takoukam.jordane@gmail.com",
+        nom: "Arturo",
+        prenom: "Palace",
+        email: "super.admin@gmail.com",
         genre: "m",
-        defautlPassword: "Superadmin2024",
+        defautlPassword: process.env.DEFAULT_SUPER_ADMIN_PASSWORD,
     }
 
 }

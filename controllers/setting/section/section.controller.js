@@ -4,7 +4,7 @@ import { DateTime } from 'luxon';
 import mongoose from 'mongoose';
 
 // create
-export const createSection = async (req, res) => { 
+export const createSection = async (req, res) => {
     const { code, libelleFr, libelleEn } = req.body;
 
     try {
@@ -15,11 +15,11 @@ export const createSection = async (req, res) => {
                 message: message.champ_obligatoire
             });
         }
-         // Vérifier si le code de la section existe déjà
-         const existingCode = await Setting.findOne({
-            'section.code': code,
+        // Vérifier si le code de la section existe déjà
+        const existingCode = await Setting.findOne({
+            'sections.code': code,
         });
-        
+
         if (existingCode) {
             return res.status(400).json({
                 success: false,
@@ -28,7 +28,7 @@ export const createSection = async (req, res) => {
         }
         // Vérifier si le libelle fr de la section existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'section.libelleFr': libelleFr,
+            'sections.libelleFr': libelleFr,
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -38,7 +38,7 @@ export const createSection = async (req, res) => {
         }
         // Vérifier si le libelle en de la section existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'section.libelleEn': libelleEn,
+            'sections.libelleEn': libelleEn,
         });
 
         if (existingLibelleEn) {
@@ -59,14 +59,14 @@ export const createSection = async (req, res) => {
         var data = null;
         if (!setting) {
             // Create the collection and document
-            data = await Setting.create({ section: [newSection] });
+            data = await Setting.create({ sections: [newSection] });
         } else {
             // Update the existing document
-            data = await Setting.findOneAndUpdate({}, { $push: { section: newSection } }, { new: true });
+            data = await Setting.findOneAndUpdate({}, { $push: { sections: newSection } }, { new: true });
         }
 
         // Récupérer le dernier élément du tableau section
-        const newSectionObject = data.section[data.section.length - 1];
+        const newSectionObject = data.sections[data.sections.length - 1];
 
         res.json({
             success: true,
@@ -103,8 +103,8 @@ export const readSections = async (req, res) => {
         // Récupérer les section filtrés par date de création avec la limite appliquée
         const filteredSection = await Setting.aggregate([
             { $unwind: "$section" }, // Dérouler le tableau de section
-            { $match: { "section.date_creation": { $exists: true, $ne: null } } }, // Filtrer les section ayant une date de création définie
-            { $sort: { "section.date_creation": -1 } }, // Trier les section par date de création (du plus récent au plus ancien)
+            { $match: { "sections.date_creation": { $exists: true, $ne: null } } }, // Filtrer les section ayant une date de création définie
+            { $sort: { "sections.date_creation": -1 } }, // Trier les section par date de création (du plus récent au plus ancien)
             { $limit: parseInt(limit) } // Appliquer la limite
         ]);
 
@@ -113,8 +113,8 @@ export const readSections = async (req, res) => {
 
         // Nombre total d'éléments dans la base de données (à récupérer)
         const totalCount = await Setting.aggregate([
-            { $unwind: "$section" }, // Dérouler le tableau de section
-            { $match: { "section.date_creation": { $exists: true, $ne: null } } }, // Filtrer les section ayant une date de création définie
+            { $unwind: "$sections" }, // Dérouler le tableau de section
+            { $match: { "sections.date_creation": { $exists: true, $ne: null } } }, // Filtrer les section ayant une date de création définie
             { $count: "total" } // Compter le nombre total d'éléments
         ]);
 
@@ -160,21 +160,21 @@ export const updateSection = async (req, res) => {
         }
 
         // Rechercher le section correspondant dans la collection Setting
-        const section = await Setting.aggregate([
-            { $unwind: "$section" }, // Dérouler le tableau de section
-            { $match: { "section._id": new mongoose.Types.ObjectId(id) } }, // Filtrer le section par son ID
-            { $project: { section: 1 } } // Projeter uniquement le section
+        const sections = await Setting.aggregate([
+            { $unwind: "$sections" }, // Dérouler le tableau de section
+            { $match: { "sections._id": new mongoose.Types.ObjectId(id) } }, // Filtrer le section par son ID
+            { $project: { sections: 1 } } // Projeter uniquement le section
         ]);
 
         // Vérifier si le section existe
-        if (section.length === 0) {
+        if (sections.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,
             });
         }
 
-        const existingSection = section[0].section;
+        const existingSection = sections[0].section;
 
         // Vérifier si les données existantes sont identiques aux nouvelles données
         if (existingSection.code === code && existingSection.libelleFr === libelleFr && existingSection.libelleEn === libelleEn) {
@@ -187,7 +187,7 @@ export const updateSection = async (req, res) => {
 
         //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
         if (existingSection.code !== code) {
-            const existingCode = await Setting.findOne({ 'section.code': code });
+            const existingCode = await Setting.findOne({ 'sections.code': code });
             if (existingCode) {
                 return res.status(400).json({
                     success: false,
@@ -197,7 +197,7 @@ export const updateSection = async (req, res) => {
         }
         //vérifier si le libelle fr existe déjà or mis le libelle fr de l'élément en cours de modification
         if (existingSection.libelleFr !== libelleFr) {
-            const existingLibelleFr = await Setting.findOne({ 'section.libelleFr': libelleFr });
+            const existingLibelleFr = await Setting.findOne({ 'sections.libelleFr': libelleFr });
             if (existingLibelleFr) {
                 return res.status(400).json({
                     success: false,
@@ -207,7 +207,7 @@ export const updateSection = async (req, res) => {
         }
         //vérifier si le libelle en existe déjà or mis le libelle en de l'élément en cours de modification
         if (existingSection.libelleEn !== libelleEn) {
-            const existingLibelleEn = await Setting.findOne({ 'section.libelleEn': libelleEn });
+            const existingLibelleEn = await Setting.findOne({ 'sections.libelleEn': libelleEn });
             if (existingLibelleEn) {
                 return res.status(400).json({
                     success: false,
@@ -225,8 +225,8 @@ export const updateSection = async (req, res) => {
 
         // Mettre à jour le section dans la base de données
         await Setting.updateOne(
-            { "section._id": new mongoose.Types.ObjectId(id) }, // Trouver le section par son ID
-            { $set: { "section.$": updatedSection } } // Mettre à jour le section
+            { "sections._id": new mongoose.Types.ObjectId(id) }, // Trouver le section par son ID
+            { $set: { "sections.$": updatedSection } } // Mettre à jour le section
         );
 
         // Envoyer la réponse avec les données mises à jour
