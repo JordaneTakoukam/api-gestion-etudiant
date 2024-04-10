@@ -3,6 +3,7 @@ import { DateTime } from "luxon";
 import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
 import { appConfigs } from '../../../configs/app_configs.js'
+import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 
 
 export const createDefaultSuperAdmin = async (req, res) => {
@@ -53,8 +54,19 @@ export const createDefaultSuperAdmin = async (req, res) => {
             mot_de_passe: hashedPassword,
         });
 
-        await newUser.save();
-
+        const user = await newUser.save();
+        try {
+            await sendPasswordOnEmail(user.nom, user.email, passwordGenerate);
+        } catch (error) {
+            console.error("Erreur lors de l'envoi de l'e-mail:", error);
+            // return res.status(500).json({
+            //     success: false,
+            //     message: {
+            //         fr: "Une erreur est survenue lors de l'envoi de l'e-mail.",
+            //         en: "An error occurred while sending the email."
+            //     }
+            // });
+        }
         res.json({
             success: true,
             message: message.creation_reuissi,

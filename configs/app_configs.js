@@ -17,6 +17,11 @@ export const appConfigs = {
         email: "super.admin@gmail.com",
         genre: "m",
         defautlPassword: process.env.DEFAULT_SUPER_ADMIN_PASSWORD,
-    }
+    },
+    user: "suport.resetpass@gmail.com",
+    pass: "nyxsjvahaavoilbg",
+    appName: "Gestion Etudiant",
+    appEmail: "contact@gestion-etudiant.com",
+    frontEndUrl: "http://localhost:5173/"
 
 }

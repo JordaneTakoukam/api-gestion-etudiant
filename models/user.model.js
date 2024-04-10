@@ -12,6 +12,10 @@ const validRoles = [
 const validGenres = [appConfigs.genre.masculin, appConfigs.genre.feminin];
 
 const userSchema = new Schema({
+    verificationCode: {
+        code: { type: String, default: null },
+        expirationDate: { type: Date, default: null },
+    },
     roles: [{ type: String, enum: validRoles, required: true }],
     genre: { type: String, enum: validGenres, required: true },
     date_creation: { type: Date, required: true },

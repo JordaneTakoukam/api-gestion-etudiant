@@ -54,7 +54,7 @@ export const createEtudiantController = async (req, res) => {
 
 
         // veriifer le grade
-        if (abscences) {
+        if (abscence) {
             if (!mongoose.Types.ObjectId.isValid(grades)) {
                 return res.status(400).json({
                     success: false,
@@ -114,7 +114,7 @@ export const createEtudiantController = async (req, res) => {
         }
 
         // veriifer la commune
-        if (communes) {
+        if (commune) {
             if (!mongoose.Types.ObjectId.isValid(communes)) {
                 return res.status(400).json({
                     success: false,

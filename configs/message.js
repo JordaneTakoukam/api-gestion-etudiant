@@ -242,9 +242,7 @@ const message = {
     heure_invalide: {
         fr: "Format de l'heure invalide. Utilisez HH:MM.",
         en: ""
-    }
-
-
+    },
 
 
 

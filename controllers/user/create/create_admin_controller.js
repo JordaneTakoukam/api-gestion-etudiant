@@ -4,6 +4,7 @@ import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
 import { appConfigs } from "../../../configs/app_configs.js";
 import mongoose from 'mongoose';
+import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 
 export const createAdminController = async (req, res) => {
     const {
@@ -53,7 +54,7 @@ export const createAdminController = async (req, res) => {
 
 
         // veriifer le grade
-        if (grades) {
+        if (grade) {
             if (!mongoose.Types.ObjectId.isValid(grades)) {
                 return res.status(400).json({
                     success: false,
@@ -63,7 +64,7 @@ export const createAdminController = async (req, res) => {
         }
 
         // veriifer la categories
-        if (categories) {
+        if (categorie) {
             if (!mongoose.Types.ObjectId.isValid(categories)) {
                 return res.status(400).json({
                     success: false,
@@ -113,7 +114,7 @@ export const createAdminController = async (req, res) => {
         }
 
         // veriifer la commune
-        if (communes) {
+        if (commune) {
             if (!mongoose.Types.ObjectId.isValid(communes)) {
                 return res.status(400).json({
                     success: false,
@@ -164,7 +165,20 @@ export const createAdminController = async (req, res) => {
         });
 
 
-        await newUser.save();
+        const user = await newUser.save();
+
+        try {
+            await sendPasswordOnEmail(user.nom, user.email, mot_de_passe);
+        } catch (error) {
+            console.error("Erreur lors de l'envoi de l'e-mail:", error);
+            // return res.status(500).json({
+            //     success: false,
+            //     message: {
+            //         fr: "Une erreur est survenue lors de l'envoi de l'e-mail.",
+            //         en: "An error occurred while sending the email."
+            //     }
+            // });
+        }
 
         res.json({
             success: true,
