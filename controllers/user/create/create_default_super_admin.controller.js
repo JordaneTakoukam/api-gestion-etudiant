@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt";
 import { DateTime } from "luxon";
-import jwt from 'jsonwebtoken';
 import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
 import { appConfigs } from '../../../configs/app_configs.js'
+import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 
 
 export const createDefaultSuperAdmin = async (req, res) => {
@@ -11,13 +11,13 @@ export const createDefaultSuperAdmin = async (req, res) => {
         nom: appConfigs.defaultSuperUser.nom,
         prenom: appConfigs.defaultSuperUser.prenom,
         email: appConfigs.defaultSuperUser.email,
-        role: appConfigs.role.superAdmin,
         genre: appConfigs.defaultSuperUser.genre,
     }
 
     try {
         // Vérifier s'il existe un compte super-admin
-        const existingSuperAdmin = await User.findOne({ role: data.role });
+        // Récupérer l'utilisateur par son ID
+        const existingSuperAdmin = await User.findOne({ roles: { $in: [appConfigs.role.superAdmin] } });
 
         if (existingSuperAdmin) {
             return res.status(400).json({
@@ -36,8 +36,7 @@ export const createDefaultSuperAdmin = async (req, res) => {
             });
         }
 
-
-        const passwordGenerate = appConfigs.defaultSuperUser.defautlPassword;
+        const passwordGenerate = process.env.DEFAULT_SUPER_ADMIN_PASSWORD;
 
         // Hash du mot de passe
         const saltRounds = 10;
@@ -46,40 +45,31 @@ export const createDefaultSuperAdmin = async (req, res) => {
 
         // Créer un nouvel utilisateur
         const newUser = new User({
+            roles: [appConfigs.role.superAdmin],
+            genre: data.genre,
             email: data.email,
             nom: data.nom,
             prenom: data.prenom,
-            role: data.role,
-            genre: data.genre,
-            mot_de_passe: hashedPassword,
             date_creation: currentDate,
-
+            mot_de_passe: hashedPassword,
         });
 
         const user = await newUser.save();
-
-        const playload = {
-            userId: user._id,
-            role: user.role,
-            nom: user.nom,
-            prenom: user.prenom,
+        try {
+            await sendPasswordOnEmail(user.nom, user.email, passwordGenerate);
+        } catch (error) {
+            console.error("Erreur lors de l'envoi de l'e-mail:", error);
+            // return res.status(500).json({
+            //     success: false,
+            //     message: {
+            //         fr: "Une erreur est survenue lors de l'envoi de l'e-mail.",
+            //         en: "An error occurred while sending the email."
+            //     }
+            // });
         }
-        // Générer un jeton JWT
-        const token = jwt.sign(
-            playload,
-            process.env.JWT_KEY,
-            { expiresIn: process.env.JWT_EXPIRATION_DATE || '1d' }
-        );
-
-        // on retourne tous sauf le mot de passe
-        const userData = user.toObject();
-        delete userData.mot_de_passe;
-
         res.json({
             success: true,
-            message: message.inscriptReuissie,
-            token,
-            data: userData,
+            message: message.creation_reuissi,
         });
 
     } catch (error) {

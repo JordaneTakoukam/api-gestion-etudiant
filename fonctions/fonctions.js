@@ -43,27 +43,44 @@ export function generateRandomPassword() {
 export function encrypt(value, secretKey) {
     // Generate a random initialization vector (IV) for CBC mode
     const iv = crypto.randomBytes(16);
-  
+
     // Create the cipher with the algorithm, key, and IV
     const cipher = crypto.createCipheriv('aes-256-cbc', secretKey, iv);
-  
+
     // Encrypt in multiple steps for large data
     let encryptedChunk = cipher.update(value, 'utf8', 'hex');
     encryptedChunk += cipher.final('hex');
-  
+
     // Prepend the IV to the ciphertext for decryption
     const ciphertextWithIV = iv.toString('hex') + encryptedChunk;
-  
-    return ciphertextWithIV;
-  }
 
-  export function verifierEntier(value, res){
-        const isInteger = Number.isInteger(value);
-        if (!isInteger) {
-            return res.status(400).json({
-                success: false,
-                message: message.nombre_entier
-            });
-            
-        }
-  }
+    return ciphertextWithIV;
+}
+
+export function verifierEntier(value, res) {
+    const isInteger = Number.isInteger(value);
+    if (!isInteger) {
+        return res.status(400).json({
+            success: false,
+            message: message.nombre_entier
+        });
+
+    }
+}
+
+
+
+export function generateConfirmationCode() {
+    let code = '';
+    const length = 6;
+    const digits = '0123456789';
+
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * digits.length);
+        code += digits[randomIndex];
+    }
+
+    return code;
+}
+
+

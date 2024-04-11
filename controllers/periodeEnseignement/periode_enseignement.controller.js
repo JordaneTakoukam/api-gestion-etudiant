@@ -344,11 +344,13 @@ export const getPeriodesEnseignement = async (req, res) => {
         });
         res.status(200).json({ 
             success: true, 
-            data: periodes,
-            totalPages: Math.ceil(totalPeriodes / limitNumber),
-            currentPage: pageNumber,
-            totalItems: totalPeriodes,
-            pageSize:parseInt(pageSize)
+            data:{
+                periodes,
+                totalPages: Math.ceil(totalPeriodes / limitNumber),
+                currentPage: pageNumber,
+                totalItems: totalPeriodes,
+                pageSize:parseInt(pageSize)
+            } 
         });
     } catch (error) {
         console.error('Erreur lors de la récupération des périodes d\'enseignement :', error);

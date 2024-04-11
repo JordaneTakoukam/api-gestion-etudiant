@@ -1,8 +1,9 @@
 import express from "express";
 
 // controllers
-import { changePassword, resetPassword, signin } from "../controllers/auth/auth.controller.js";
+import { signin } from "../controllers/auth/signin.controller.js";
 import { NewJWT } from "../controllers/auth/new-jwt.js";
+import { sendVerificationCodeByEmail, updatePassword, verifyVerificationCode } from "../controllers/auth/reset_password.controller.js";
 
 // middlewares
 
@@ -11,9 +12,11 @@ const router = express.Router();
 
 router.post("/signin", signin); // connexion
 router.post("/signin/re-jwt", NewJWT); // connexion
-router.post("/password/change", changePassword); // changer le mot de passe
-router.post("/password/reset", resetPassword); // reinitialiser le mot de passe
 
+
+router.put("/password/verification/send", sendVerificationCodeByEmail);
+router.get("/password/verification/verify", verifyVerificationCode);
+router.put("/password/update", updatePassword);
 
 
 

@@ -27,7 +27,7 @@ export const createCommune = async (req, res) => {
         // Vérifier si le département existe
         const existingDepartement = await Setting.findOne({
             // 'departement._id': id_departement
-            'departement._id': departement
+            'departements._id': departement
         });
 
         if (!existingDepartement) {
@@ -128,7 +128,7 @@ export const updateCommune = async (req, res) => {
 
         // Vérifier si le département existe
         const existingDepartement = await Setting.findOne({
-            'departement._id': departement
+            'departements._id': departement
         });
 
         if (!existingDepartement) {

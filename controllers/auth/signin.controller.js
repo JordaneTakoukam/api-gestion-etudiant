@@ -1,4 +1,4 @@
-import User from './../../models/user.model.js'
+import User from '../../models/user.model.js'
 import bcrypt from "bcrypt";
 import { DateTime } from "luxon";
 import { message } from '../../configs/message.js';
@@ -69,57 +69,4 @@ export const signin = async (req, res) => {
         });
     }
 }
-
-
-// changer le mot de passe
-// changer le mot de passe
-export const changePassword = async (req, res) => {
-    const { userId, ancien_mdp, nouveau_mdp } = req.body;
-
-    try {
-        // Récupérer l'utilisateur par son ID
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: message.userNonTrouver,
-            });
-        }
-
-        // Vérifier si l'ancien mot de passe correspond
-        const passwordMatch = await bcrypt.compare(ancien_mdp, user.mot_de_passe);
-        if (!passwordMatch) {
-            return res.status(401).json({
-                success: false,
-                message: message.motDePasseIncorrect,
-            });
-        }
-
-        // Hasher le nouveau mot de passe
-        const hashedPassword = await bcrypt.hash(nouveau_mdp, 10);
-
-        // Mettre à jour le mot de passe de l'utilisateur
-        user.mot_de_passe = hashedPassword;
-        await user.save();
-
-        res.json({
-            success: true,
-            message: message.success_changer_mdp,
-
-        });
-
-    } catch (error) {
-        console.error("Erreur lors du changement de mot de passe :", error);
-        res.status(500).json({
-            success: false,
-            message: message.erreurServeur,
-        });
-    }
-};
-
-
-
-// reset password
-export const resetPassword = async (req, res) => { }
-
 

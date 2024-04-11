@@ -18,7 +18,7 @@ export const createRegion = async (req, res) => {
         }
         // Vérifier si le code de la région existe déjà
         const existingCode = await Setting.findOne({
-            'region.code': code,
+            'regions.code': code,
         });
         
         if (existingCode) {
@@ -29,7 +29,7 @@ export const createRegion = async (req, res) => {
         }
         // Vérifier si le libelle fr de la région existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'region.libelleFr': libelleFr,
+            'regions.libelleFr': libelleFr,
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -39,7 +39,7 @@ export const createRegion = async (req, res) => {
         }
         // Vérifier si le libelle en de la région existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'region.libelleEn': libelleEn,
+            'regions.libelleEn': libelleEn,
         });
 
         if (existingLibelleEn) {
@@ -60,14 +60,14 @@ export const createRegion = async (req, res) => {
         let data;
         if (!setting) {
             // Créer la collection et le document
-            data = await Setting.create({ region: [newRegion] });
+            data = await Setting.create({ regions: [newRegion] });
         } else {
             // Mettre à jour le document existant
-            data = await Setting.findOneAndUpdate({}, { $push: { region: newRegion } }, { new: true });
+            data = await Setting.findOneAndUpdate({}, { $push: { regions: newRegion } }, { new: true });
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdRegion = data.region.find((region) => region.code === code);
+        const createdRegion = data.regions.find((region) => region.code === code);
 
         res.json({
             success: true,
@@ -106,8 +106,8 @@ export const updateRegion = async (req, res) => {
 
         // Trouver la région en cours de modification
         const existingRegion = await Setting.findOne(
-            { "region._id": regionId },
-            { "region.$": 1 }//récupéré uniquement l'élément de la recherche
+            { "regions._id": regionId },
+            { "regions.$": 1 }//récupéré uniquement l'élément de la recherche
         );
         
         if (!existingRegion) {
@@ -118,9 +118,9 @@ export const updateRegion = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception de la région en cours de modification
-        if (existingRegion.region[0].code !== code) {
+        if (existingRegion.regions[0].code !== code) {
             const existingCode = await Setting.findOne({
-                'region.code': code,
+                'regions.code': code,
             });
 
             if (existingCode) {
@@ -131,9 +131,9 @@ export const updateRegion = async (req, res) => {
             }
         }
         // Vérifier si le libelle fr existe déjà, à l'exception de la région en cours de modification
-        if (existingRegion.region[0].libelleFr !== libelleFr) {
+        if (existingRegion.regions[0].libelleFr !== libelleFr) {
             const existingLibelleFr = await Setting.findOne({
-                'region.libelleFr': libelleFr,
+                'regions.libelleFr': libelleFr,
             });
 
             if (existingLibelleFr) {
@@ -145,9 +145,9 @@ export const updateRegion = async (req, res) => {
         }
 
         // Vérifier si le libelle en existe déjà, à l'exception de la région en cours de modification
-        if (existingRegion.region[0].libelleEn !== libelleEn) {
+        if (existingRegion.regions[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
-                'region.libelleEn': libelleEn,
+                'regions.libelleEn': libelleEn,
             });
 
             if (existingLibelleEn) {
@@ -160,13 +160,13 @@ export const updateRegion = async (req, res) => {
 
         // Mettre à jour la région dans la base de données
         const updatedRegion = await Setting.findOneAndUpdate(
-            { "region._id": new mongoose.Types.ObjectId(regionId) }, // Trouver la région par son ID
-            { $set: { "region.$.code": code, "region.$.libelleFr": libelleFr, "region.$.libelleEn": libelleEn, "region.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour la région
-            { new: true, projection: { _id: 0, region: { $elemMatch: { _id: new mongoose.Types.ObjectId(regionId) } } } } // Renvoyer uniquement la région mise à jour
+            { "regions._id": new mongoose.Types.ObjectId(regionId) }, // Trouver la région par son ID
+            { $set: { "regions.$.code": code, "regions.$.libelleFr": libelleFr, "regions.$.libelleEn": libelleEn, "regions.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour la région
+            { new: true, projection: { _id: 0, regions: { $elemMatch: { _id: new mongoose.Types.ObjectId(regionId) } } } } // Renvoyer uniquement la région mise à jour
         );
 
         // Vérifier si la région existe
-        if (!updatedRegion || !updatedRegion.region || !updatedRegion.region.length) {
+        if (!updatedRegion || !updatedRegion.regions || !updatedRegion.regions.length) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,
@@ -177,7 +177,7 @@ export const updateRegion = async (req, res) => {
         return res.json({
             success: true,
             message: message.mis_a_jour,
-            data: updatedRegion.region[0],
+            data: updatedRegion.regions[0],
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
@@ -203,11 +203,11 @@ export const deleteRegion = async (req, res) => {
 
         const setting = await Setting.findOneAndUpdate(
             {},
-            { $pull: { region: { _id: new mongoose.Types.ObjectId(regionId) } } },
+            { $pull: { regions: { _id: new mongoose.Types.ObjectId(regionId) } } },
             { new: true }
         );
 
-        if (!setting || !setting.region) {
+        if (!setting || !setting.regions) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,

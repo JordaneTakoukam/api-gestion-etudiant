@@ -26,7 +26,7 @@ export const createCycle = async (req, res) => {
 
         // Vérifier si la section existe
         const existingSection = await Setting.findOne({
-            'section._id': section
+            'sections._id': section
         });
 
         if (!existingSection) {
@@ -38,7 +38,7 @@ export const createCycle = async (req, res) => {
 
         // Vérifier si le code du cycle existe déjà
         const existingCode = await Setting.findOne({
-            cycle: {
+            cycles: {
                 $elemMatch: {
                     code: code,
                     section: section // Assurez-vous d'avoir l'ID de la section à vérifier
@@ -53,7 +53,7 @@ export const createCycle = async (req, res) => {
         }
         // Vérifier si le libelle fr du cycle existe déjà
         const existingLibelleFr = await Setting.findOne({
-            cycle: {
+            cycles: {
                 $elemMatch: {
                     libelleFr: libelleFr,
                     section: section // Assurez-vous d'avoir l'ID de la section à vérifier
@@ -68,7 +68,7 @@ export const createCycle = async (req, res) => {
         }
         // Vérifier si le libelle en du cycle existe déjà
         const existingLibelleEn = await Setting.findOne({
-            cycle: {
+            cycles: {
                 $elemMatch: {
                     libelleEn: libelleEn,
                     section: section // Assurez-vous d'avoir l'ID de la section à vérifier
@@ -94,14 +94,14 @@ export const createCycle = async (req, res) => {
         let data;
         if (!setting) {
             // Créer la collection et le document
-            data = await Setting.create({ cycle: [newCycle] });
+            data = await Setting.create({ cycles: [newCycle] });
         } else {
             // Mettre à jour le document existant
-            data = await Setting.findOneAndUpdate({}, { $push: { cycle: newCycle } }, { new: true });
+            data = await Setting.findOneAndUpdate({}, { $push: { cycles: newCycle } }, { new: true });
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdCycle = data.cycle.find((cycle) => cycle.code === code && cycle.section.toString() === section);
+        const createdCycle = data.cycles.find((cycle) => cycle.code === code && cycle.section.toString() === section);
         res.json({
             success: true,
             message: message.ajouter_avec_success,
@@ -139,21 +139,21 @@ export const updateCycle = async (req, res) => {
 
         // Vérifier si la section existe
         const existingSection = await Setting.findOne({
-            'section._id': section
+            'sections._id': section
             
         });
 
         if (!existingSection) {
             return res.status(400).json({
                 success: false,
-                message: message.section_inexistante,
+                message: message.section_invalide,
             });
         }
 
          // Trouver le cycle en cours de modification
          const existingCycle = await Setting.findOne(
-            { "cycle._id": cycleId },
-            { "cycle.$": 1 }//récupéré uniquement l'élément de la recherche
+            { "cycles._id": cycleId },
+            { "cycles.$": 1 }//récupéré uniquement l'élément de la recherche
         );
         
         if (!existingCycle) {
@@ -164,9 +164,9 @@ export const updateCycle = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception du cycle en cours de modification
-        if (existingCycle.cycle[0].code !== code) {
+        if (existingCycle.cycles[0].code !== code) {
             const existingCode = await Setting.findOne({
-                cycle: {
+                cycles: {
                     $elemMatch: {
                         code: code,
                         section: section // Assurez-vous d'avoir l'ID de la section à vérifier
@@ -182,9 +182,9 @@ export const updateCycle = async (req, res) => {
             }
         }
         // Vérifier si le libelle fr existe déjà, à l'exception du cycle en cours de modification
-        if (existingCycle.cycle[0].libelleFr !== libelleFr) {
+        if (existingCycle.cycles[0].libelleFr !== libelleFr) {
             const existingLibelleFr = await Setting.findOne({
-                cycle: {
+                cycles: {
                     $elemMatch: {
                         libelleFr: libelleFr,
                         section: section // Assurez-vous d'avoir l'ID de la section à vérifier
@@ -201,9 +201,9 @@ export const updateCycle = async (req, res) => {
         }
 
         // Vérifier si le libelle en existe déjà, à l'exception du cycle en cours de modification
-        if (existingCycle.cycle[0].libelleEn !== libelleEn) {
+        if (existingCycle.cycles[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
-                cycle: {
+                cycles: {
                     $elemMatch: {
                         libelleEn: libelleEn,
                         section: section // Assurez-vous d'avoir l'ID de la section à vérifier
@@ -222,13 +222,13 @@ export const updateCycle = async (req, res) => {
        
         // Mettre à jour le cycle dans la base de données
         const updatedCycle = await Setting.findOneAndUpdate(
-            { "cycle._id": new mongoose.Types.ObjectId(cycleId) }, // Trouver le cycle par son ID
-            { $set: { "cycle.$.code": code, "cycle.$.libelleFr": libelleFr, "cycle.$.libelleEn": libelleEn, "cycle.$.section": section, "cycle.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour le cycle
-            { new: true, projection: { _id: 0, cycle: { $elemMatch: { _id: new mongoose.Types.ObjectId(cycleId) } } } } // Renvoyer uniquement le cycle mis à jour
+            { "cycles._id": new mongoose.Types.ObjectId(cycleId) }, // Trouver le cycle par son ID
+            { $set: { "cycles.$.code": code, "cycles.$.libelleFr": libelleFr, "cycles.$.libelleEn": libelleEn, "cycles.$.section": section, "cycles.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour le cycle
+            { new: true, projection: { _id: 0, cycles: { $elemMatch: { _id: new mongoose.Types.ObjectId(cycleId) } } } } // Renvoyer uniquement le cycle mis à jour
         );
 
         // Vérifier si le cycle existe
-        if (!updatedCycle || !updatedCycle.cycle || !updatedCycle.cycle.length) {
+        if (!updatedCycle || !updatedCycle.cycles || !updatedCycle.cycles.length) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,
@@ -239,7 +239,7 @@ export const updateCycle = async (req, res) => {
         return res.json({
             success: true,
             message: message.mis_a_jour,
-            data: updatedCycle.cycle[0],
+            data: updatedCycle.cycles[0],
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
@@ -265,7 +265,7 @@ export const deleteCycle = async (req, res) => {
 
         const setting = await Setting.findOneAndUpdate(
             {},
-            { $pull: { cycle: { _id: new mongoose.Types.ObjectId(cycleId) } } },
+            { $pull: { cycles: { _id: new mongoose.Types.ObjectId(cycleId) } } },
             { new: true }
         );
 

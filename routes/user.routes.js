@@ -2,30 +2,35 @@ import express from "express";
 
 // controllers
 import { createDefaultSuperAdmin } from "../controllers/user/create/create_default_super_admin.controller.js";
-import { createUser } from "../controllers/user/create/create_user.controller.js";
 import { deleteUsers, getUser, getUsers, updateUser } from "../controllers/user/account.controller.js";
-import {getUsersWithRole } from "../controllers/user/create/create_user.controller.js";
+import { createAdminController } from "../controllers/user/create/create_admin_controller.js";
+import { createEtudiantController } from "../controllers/user/create/create_etudiant_controller.js";
+import { createEnseignantController } from "../controllers/user/create/create_enseignant_controller.js";
+import { getAllAdministrateurs, getAllEnseignants, getAllEtudiants } from "../controllers/user/get/get_user_controller.js";
 
 // middlewares
 
 const router = express.Router();
 
 // recuperer
-router.get("/get/:id", getUser);
-router.get("/get/:params", getUsers);
+// router.get("/get/:id", getUser);
+// router.get("/get/:params", getUsers);
+router.get("/getAdministrateurs", getAllAdministrateurs);
+router.get("/getEnseignants", getAllEnseignants);
+router.get("/getEtudiants", getAllEtudiants);
+
 
 // creer
 router.post("/create/unique/super-admin", createDefaultSuperAdmin);
-router.post("/create", createUser);
+router.post("/create/create-admin", createAdminController);
+router.post("/create/create-enseignant", createEnseignantController);
+router.post("/create/create-etudiant", createEtudiantController);
 
 //modifier
 router.put("/update/:id", updateUser);
 
 // supprimer
 router.delete("/delete/:id", deleteUsers);
-
-//récupérer la liste des utilisateurs d'un rôle
-router.get("/getUsersWithRole/:role", getUsersWithRole);
 
 
 
