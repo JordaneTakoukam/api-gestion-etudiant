@@ -27,19 +27,19 @@ export const createPeriodeEnseignement = async (req, res) => {
         }
 
         for (const enseignement of enseignements) {
-            for(const matiere of enseignement.matieres){
-                if (!mongoose.Types.ObjectId.isValid(matiere.typeEnseignement)) {
+            
+                if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
                     return res.status(400).json({ 
                         success: false, 
                         message: message.identifiant_invalide,
                     });
                 }
-                if (!mongoose.Types.ObjectId.isValid(matiere.matiere)) {
+                if (!mongoose.Types.ObjectId.isValid(enseignement.matiere)) {
                     return res.status(400).json({ 
                         success: false, 
                         message: message.identifiant_invalide,
-                    });
-                }
+                });
+                
             }
             
         }
@@ -71,6 +71,8 @@ export const createPeriodeEnseignement = async (req, res) => {
             });
             
         }
+
+       
 
         const date_creation = DateTime.now().toJSDate();
 
@@ -158,21 +160,18 @@ export const updatePeriodeEnseignement = async (req, res) => {
         }
 
         for (const enseignement of enseignements) {
-            for(const matiere of enseignement.matieres){
-                if (!mongoose.Types.ObjectId.isValid(matiere.typeEnseignement)) {
-                    return res.status(400).json({ 
-                        success: false, 
-                        message: message.identifiant_invalide,
-                    });
-                }
-                if (!mongoose.Types.ObjectId.isValid(matiere.matiere)) {
-                    return res.status(400).json({ 
-                        success: false, 
-                        message: message.identifiant_invalide,
-                    });
-                }
+            if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: message.identifiant_invalide,
+                });
             }
-            
+            if (!mongoose.Types.ObjectId.isValid(enseignement.matiere)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: message.identifiant_invalide,
+                });
+            }
         }
 
          //vérifier si la période fr de la période d'enseignement existe déjà
@@ -331,7 +330,7 @@ export const getPeriodesEnseignement = async (req, res) => {
             semestre: semestre,
         })
         .populate({
-            path: 'enseignements.matieres.matiere',
+            path: 'enseignements.matiere',
             select: '_id code libelleFr libelleEn typesEnseignement'
         })
         .skip(startIndex)
@@ -343,14 +342,13 @@ export const getPeriodesEnseignement = async (req, res) => {
             annee: annee,
             semestre: semestre
         });
-
         res.status(200).json({ 
             success: true, 
             data: periodes,
             totalPages: Math.ceil(totalPeriodes / limitNumber),
             currentPage: pageNumber,
             totalItems: totalPeriodes,
-            pageSize:pageSize
+            pageSize:parseInt(pageSize)
         });
     } catch (error) {
         console.error('Erreur lors de la récupération des périodes d\'enseignement :', error);

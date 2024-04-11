@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 // create
 export const createChapitre = async (req, res) => {
-    const { code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs, competences } = req.body;
+    const { code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
@@ -61,8 +61,7 @@ export const createChapitre = async (req, res) => {
             libelleEn,
             typesEnseignement,
             matiere,
-            objectifs,
-            competences
+            objectifs
         });
 
         // Enregistrer le nouveau chapitre dans la base de données
@@ -80,7 +79,7 @@ export const createChapitre = async (req, res) => {
 // update
 export const updateChapitre = async (req, res) => {
     const {chapitreId} = req.params;
-    const { code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs, competences } = req.body;
+    const { code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
@@ -155,7 +154,6 @@ export const updateChapitre = async (req, res) => {
         existingChapitre.typesEnseignement = typesEnseignement;
         existingChapitre.matiere = matiere;
         existingChapitre.objectifs = objectifs;
-        existingChapitre.competences = competences;
 
         // Enregistrer les modifications
         const updatedChapitre = await existingChapitre.save();

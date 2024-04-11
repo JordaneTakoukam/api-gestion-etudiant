@@ -19,7 +19,7 @@ const periodeEnseignementSchema = new Schema({
     dateDebut:{type:String, required:true},
     dateFin:{type:String, required:true},
     niveau:{ type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },
-    enseignements: [{ type: enseignementSchema, required: false }],
+    enseignements: [{ type: matiereEnseignementSchema, required: false }],
     date_creation:{ type: Date, required: true },
 });
 
