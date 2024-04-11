@@ -137,6 +137,7 @@ export const updatePeriodeEnseignement = async (req, res) => {
     try {
         // Vérifier si l'ID de la période d'enseignement est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(periodeEnseignementId)) {
+            console.log("periode "+periodeEnseignementId);
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -146,6 +147,7 @@ export const updatePeriodeEnseignement = async (req, res) => {
         // Vérifier si la période d'enseignement à mettre à jour existe dans la base de données
         const existingPeriode = await PeriodeEnseignement.findById(periodeEnseignementId);
         if (!existingPeriode) {
+            
             return res.status(404).json({ 
                 success: false, 
                 message: message.periode_non_trouve,
@@ -153,6 +155,7 @@ export const updatePeriodeEnseignement = async (req, res) => {
         }
 
         if (!mongoose.Types.ObjectId.isValid(niveau)) {
+            console.log("niveau");
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -161,12 +164,14 @@ export const updatePeriodeEnseignement = async (req, res) => {
 
         for (const enseignement of enseignements) {
             if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
+                console.log("type_ens");
                 return res.status(400).json({ 
                     success: false, 
                     message: message.identifiant_invalide,
                 });
             }
-            if (!mongoose.Types.ObjectId.isValid(enseignement.matiere)) {
+            if (!mongoose.Types.ObjectId.isValid(enseignement.matiere._id)) {
+                console.log("matiere");
                 return res.status(400).json({ 
                     success: false, 
                     message: message.identifiant_invalide,
@@ -303,7 +308,7 @@ export const deletePeriodeEnseignement = async (req, res) => {
     }
 }
 
-export const getPeriodesEnseignement = async (req, res) => {
+export const getPeriodesEnseignementWithPagination = async (req, res) => {
     const {niveauId} = req.params;
     const { annee, semestre, page = 1, pageSize = 10 } = req.query;
 
@@ -350,6 +355,55 @@ export const getPeriodesEnseignement = async (req, res) => {
                 currentPage: pageNumber,
                 totalItems: totalPeriodes,
                 pageSize:parseInt(pageSize)
+            } 
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des périodes d\'enseignement :', error);
+        res.status(500).json({ 
+            success: false, 
+            message: message.erreurServeur
+        });
+    }
+}
+
+export const getPeriodesEnseignement = async (req, res) => {
+    const {niveauId} = req.params;
+    const { annee, semestre } = req.query;
+
+    try {
+        // Vérifier si l'ID du niveau est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Identifiant du niveau invalide.'
+            });
+        }
+
+        // Conversion de la page et de la limite en nombres entiers
+        
+
+        // Calculer l'index de départ
+
+        // Rechercher les périodes d'enseignement avec pagination
+        const periodes = await PeriodeEnseignement.find({ 
+            niveau: niveauId,
+            annee: annee,
+            semestre: semestre,
+        })
+        .populate({
+            path: 'enseignements.matiere',
+            select: '_id code libelleFr libelleEn typesEnseignement'
+        })
+        
+
+        res.status(200).json({ 
+            success: true, 
+            data:{
+                periodes,
+                totalPages: 0,
+                currentPage: 0,
+                totalItems: 0,
+                pageSize:0
             } 
         });
     } catch (error) {
