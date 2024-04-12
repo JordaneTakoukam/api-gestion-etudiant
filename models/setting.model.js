@@ -3,8 +3,9 @@ import { codeLibelleSchema, communeSchema, cycleSchema, departementSchema, nivea
 import { string } from 'yup';
 
 const settingSchema = new Schema({
-    anneeCourante: { type: Number },
-    premiereAnnee: { type: Number },
+    anneeCourante:{type:Number},
+    premiereAnnee:{type:Number},
+    semestreCourant:{type:Number},
     services: [codeLibelleSchema],
     fonctions: [codeLibelleSchema],
     grades: [codeLibelleSchema],

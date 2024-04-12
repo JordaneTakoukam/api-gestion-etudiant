@@ -15,6 +15,7 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import evenementRoutes from "./routes/evenement.routes.js";
 import periodeRoutes from "./routes/periode.routes.js";
+import periodeEnseignementRoutes from "./routes/periode_enseigenement.routes.js"
 import matiereRoutes from "./routes/matiere.routes.js"; // matieres
 // routes de settings
 import settingRoute from "./routes/settings/_setting.routes.js";
@@ -32,6 +33,7 @@ import salleDeCourRoutes from "./routes/settings/salle_de_cour.routes.js";
 import typeEnseignementRoutes from "./routes/settings/type_enseignement.routes.js";
 import etatEvenementRoutes from "./routes/settings/etat_evenement.routes.js";
 import anneeRoutes from "./routes/settings/annee.routes.js";
+import semestreRoutes from "./routes/settings/semestre.routes.js";
 import roleRoutes from "./routes/settings/role.routes.js";
 
 
@@ -71,6 +73,7 @@ app.use("/api/v1/user/", userRoutes);
 app.use("/api/v1/matiere/", matiereRoutes);
 app.use("/api/v1/evenement/", evenementRoutes);
 app.use("/api/v1/periode/", periodeRoutes);
+app.use("/api/v1/periode-enseignement/", periodeEnseignementRoutes);
 
 app.use("/api/v1/settings", settingRoute);
 app.use("/api/v1/setting/service", serviceRoutes);
@@ -87,6 +90,7 @@ app.use("/api/v1/setting/salle-de-cour", salleDeCourRoutes);
 app.use("/api/v1/setting/type-enseignement", typeEnseignementRoutes);
 app.use("/api/v1/setting/etat-evenement", etatEvenementRoutes);
 app.use("/api/v1/setting/annee", anneeRoutes);
+app.use("/api/v1/setting/semestre", semestreRoutes);
 app.use("/api/v1/setting/role", roleRoutes);
 
 
