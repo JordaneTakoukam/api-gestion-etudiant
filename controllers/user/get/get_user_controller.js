@@ -28,7 +28,7 @@ const getAllUsersByRole = async (req, res, role) => {
         // Envoyer la réponse avec les données paginées
         res.json({
             success: true,
-            data: userData,
+            list: userData,
             currentPage: parseInt(page),
             totalPages: Math.ceil(totalUsers / parseInt(pageSize)),
             totalItems: totalUsers,

@@ -54,7 +54,7 @@ export const createEnseignantController = async (req, res) => {
         }
 
 
-        
+
         // veriifer le grade
         if (abscence) {
             if (!mongoose.Types.ObjectId.isValid(grades)) {
@@ -177,11 +177,14 @@ export const createEnseignantController = async (req, res) => {
         });
 
 
-        await newUser.save();
+        const newEnseignant = await newUser.save();
 
+        const userData = newEnseignant.toObject();
+        delete userData.mot_de_passe;
         res.json({
             success: true,
             message: message.creation_reuissi,
+            data: userData,
         });
 
     } catch (error) {

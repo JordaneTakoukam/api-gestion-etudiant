@@ -245,7 +245,22 @@ const message = {
     },
 
 
-
+    userNotFound: {
+        fr: "Utilisateur non trouvé.",
+        en: "User not found."
+    },
+    userUpdated: {
+        fr: "Utilisateur mis à jour avec succès.",
+        en: "User updated successfully."
+    },
+    userDeleted: {
+        fr: "Utilisateur supprimé avec succès.",
+        en: "User deleted successfully."
+    },
+    serverError: {
+        fr: "Erreur interne du serveur.",
+        en: "Internal server error."
+    },
 
 };
 

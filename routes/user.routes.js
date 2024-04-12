@@ -2,7 +2,7 @@ import express from "express";
 
 // controllers
 import { createDefaultSuperAdmin } from "../controllers/user/create/create_default_super_admin.controller.js";
-import { deleteUsers, getUser, getUsers, updateUser } from "../controllers/user/account.controller.js";
+import { deleteUser, updateUser } from "../controllers/user/update_and_delete.js";
 import { createAdminController } from "../controllers/user/create/create_admin_controller.js";
 import { createEtudiantController } from "../controllers/user/create/create_etudiant_controller.js";
 import { createEnseignantController } from "../controllers/user/create/create_enseignant_controller.js";
@@ -30,7 +30,7 @@ router.post("/create/create-etudiant", createEtudiantController);
 router.put("/update/:id", updateUser);
 
 // supprimer
-router.delete("/delete/:id", deleteUsers);
+router.delete("/delete/:id", deleteUser);
 
 
 

@@ -56,7 +56,7 @@ export const createDefaultSuperAdmin = async (req, res) => {
 
         const user = await newUser.save();
         try {
-            await sendPasswordOnEmail(user.nom, user.email, passwordGenerate);
+            sendPasswordOnEmail(user.nom, user.email, passwordGenerate);
         } catch (error) {
             console.error("Erreur lors de l'envoi de l'e-mail:", error);
             // return res.status(500).json({
@@ -67,10 +67,16 @@ export const createDefaultSuperAdmin = async (req, res) => {
             //     }
             // });
         }
+
+
+        const userData = user.toObject();
+        delete userData.mot_de_passe;
         res.json({
             success: true,
             message: message.creation_reuissi,
+            data: userData,
         });
+
 
     } catch (error) {
         console.error("Erreur :", error);

@@ -166,12 +166,18 @@ export const createEtudiantController = async (req, res) => {
         });
 
 
-        await newUser.save();
+        const newEtudiant = await newUser.save();
 
+
+        const userData = newEtudiant.toObject();
+        delete userData.mot_de_passe;
+        
         res.json({
             success: true,
             message: message.creation_reuissi,
+            data: userData,
         });
+
 
     } catch (error) {
         console.error("Erreur :", error);

@@ -168,21 +168,18 @@ export const createAdminController = async (req, res) => {
         const user = await newUser.save();
 
         try {
-            await sendPasswordOnEmail(user.nom, user.email, mot_de_passe);
+            // sendPasswordOnEmail(user.nom, user.email, mot_de_passe);
         } catch (error) {
             console.error("Erreur lors de l'envoi de l'e-mail:", error);
-            // return res.status(500).json({
-            //     success: false,
-            //     message: {
-            //         fr: "Une erreur est survenue lors de l'envoi de l'e-mail.",
-            //         en: "An error occurred while sending the email."
-            //     }
-            // });
+
         }
 
+        const userData = newUser.toObject();
+        delete userData.mot_de_passe;
         res.json({
             success: true,
             message: message.creation_reuissi,
+            data: userData,
         });
 
     } catch (error) {
