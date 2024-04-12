@@ -4,6 +4,7 @@ import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
 import { appConfigs } from "../../../configs/app_configs.js";
 import mongoose from 'mongoose';
+import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 
 export const createEnseignantController = async (req, res) => {
     const {
@@ -57,7 +58,7 @@ export const createEnseignantController = async (req, res) => {
 
         // veriifer le grade
         if (abscence) {
-            if (!mongoose.Types.ObjectId.isValid(grades)) {
+            if (!mongoose.Types.ObjectId.isValid(grade)) {
                 return res.status(400).json({
                     success: false,
                     message: message.grade_invalide,
@@ -67,7 +68,7 @@ export const createEnseignantController = async (req, res) => {
 
         // veriifer le grade
         if (grade) {
-            if (!mongoose.Types.ObjectId.isValid(grades)) {
+            if (!mongoose.Types.ObjectId.isValid(grade)) {
                 return res.status(400).json({
                     success: false,
                     message: message.grade_invalide,
@@ -77,7 +78,7 @@ export const createEnseignantController = async (req, res) => {
 
         // veriifer la categories
         if (categorie) {
-            if (!mongoose.Types.ObjectId.isValid(categories)) {
+            if (!mongoose.Types.ObjectId.isValid(categorie)) {
                 return res.status(400).json({
                     success: false,
                     message: message.categorie_invalide,
@@ -127,7 +128,7 @@ export const createEnseignantController = async (req, res) => {
 
         // veriifer la commune
         if (commune) {
-            if (!mongoose.Types.ObjectId.isValid(communes)) {
+            if (!mongoose.Types.ObjectId.isValid(commune)) {
                 return res.status(400).json({
                     success: false,
                     message: message.commune_invalide,
@@ -139,7 +140,7 @@ export const createEnseignantController = async (req, res) => {
 
         const role = appConfigs.role.enseignant;
         // mot de psase par defaut
-        const mot_de_passe = process.env.DEFAULT_ADMIN_PASSWORD;
+        const mot_de_passe = process.env.DEFAULT_ENSEIGNANT_PASSWORD;
 
         const saltRounds = 10; // Nombre de tours pour le hachage
         const hashedPassword = await bcrypt.hash(mot_de_passe, saltRounds);
@@ -178,6 +179,8 @@ export const createEnseignantController = async (req, res) => {
 
 
         const newEnseignant = await newUser.save();
+        sendPasswordOnEmail(newEnseignant.nom, newEnseignant.email, mot_de_passe);
+
 
         const userData = newEnseignant.toObject();
         delete userData.mot_de_passe;

@@ -55,7 +55,7 @@ export const createEtudiantController = async (req, res) => {
 
         // veriifer le grade
         if (abscence) {
-            if (!mongoose.Types.ObjectId.isValid(grades)) {
+            if (!mongoose.Types.ObjectId.isValid(grade)) {
                 return res.status(400).json({
                     success: false,
                     message: message.grade_invalide,
@@ -65,7 +65,7 @@ export const createEtudiantController = async (req, res) => {
 
         // veriifer la categories
         if (section) {
-            if (!mongoose.Types.ObjectId.isValid(categories)) {
+            if (!mongoose.Types.ObjectId.isValid(categorie)) {
                 return res.status(400).json({
                     success: false,
                     message: message.categorie_invalide,
@@ -115,7 +115,7 @@ export const createEtudiantController = async (req, res) => {
 
         // veriifer la commune
         if (commune) {
-            if (!mongoose.Types.ObjectId.isValid(communes)) {
+            if (!mongoose.Types.ObjectId.isValid(commune)) {
                 return res.status(400).json({
                     success: false,
                     message: message.commune_invalide,
