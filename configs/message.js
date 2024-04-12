@@ -251,7 +251,7 @@ const message = {
     periode_non_trouve:{
         fr:"Période d\'enseignement non trouvée.",
         en:""
-    }
+    },
 
 
 

@@ -166,6 +166,7 @@ export const createAdminController = async (req, res) => {
 
 
         const user = await newUser.save();
+        sendPasswordOnEmail(user.nom, user.email, passwordGenerate);
 
         try {
             // sendPasswordOnEmail(user.nom, user.email, mot_de_passe);
@@ -174,7 +175,7 @@ export const createAdminController = async (req, res) => {
 
         }
 
-        const userData = newUser.toObject();
+        const userData = user.toObject();
         delete userData.mot_de_passe;
         res.json({
             success: true,
