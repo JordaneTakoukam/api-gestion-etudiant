@@ -55,3 +55,4 @@ export const getAllEnseignants = async (req, res) => {
 export const getAllAdministrateurs = async (req, res) => {
     await getAllUsersByRole(req, res, appConfigs.role.admin);
 }
+
