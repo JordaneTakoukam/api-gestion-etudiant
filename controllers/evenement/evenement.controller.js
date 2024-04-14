@@ -385,6 +385,45 @@ export const getEvenementsByYear = async (req, res) => {
     }
 }
 
+//Récupérer la liste des évènements d'une année (a besoin de l'année en paramètre de la requête, de la page et du nombre d'élément a récupéré en query params)
+export const getAllEvenementsByYear = async (req, res) => {
+    const { annee } = req.params;
+
+    try {
+        // Vérifier si l'année est valide
+        if (!annee || isNaN(parseInt(annee))) {
+            return res.status(400).json({
+                success: false,
+                message: message.nombre_entier,
+            });
+        }
+
+        // Convertir l'année en format numérique
+        const numericAnnee = parseInt(annee);
+
+        // Rechercher les événements pour l'année spécifiée avec pagination
+        const evenements = await Evenement.find({ annee: numericAnnee });
+
+        res.json({
+            success: true,
+            message: message.liste_event,
+            data: {
+                evenements,
+                currentPage: 0,
+                totalPages: 0,
+                totalItems: 0,
+                pageSize : 0
+            },
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
+        });
+    }
+}
+
 //Récupérer la liste des évènement à venir (a besoin de l'année en paramètre de la requête et du nombre d'évènement en query params)
 export const getUpcommingEventsOfYear = async (req, res) => {
     try {
