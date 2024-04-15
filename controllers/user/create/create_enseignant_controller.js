@@ -525,3 +525,30 @@ export const getAllEnseignantsByFilter = async (req, res) => {
     }
 };
 
+export const getEnseignantsByNomPrenom = async (req, res) => {
+    const role = appConfigs.role.enseignant;
+    try {
+        // Construire la requête de base pour filtrer les enseignants
+        const query = {
+            roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
+        };
+
+        const enseignants = await User.find(query)
+                            .select("_id nom prenom");
+
+
+        res.json({
+            success: true,
+            data: {
+                enseignants,
+                currentPage:0,
+                totalPages: 0,
+                totalItems: 0,
+                pageSize:0,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des enseignants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};

@@ -480,7 +480,9 @@ export const updatePeriode = async (req, res) => {
             typeEnseignement,
             heureDebut,
             heureFin,
-            salleCours
+            salleCours,
+            enseignantPrincipal,
+            enseignantSuppleant
         }, { new: true });
         const populatedPeriodeCours = await Periode.populate(updatedPeriodeCours, [
             { path: 'matiere', select: '_id code' }, // Peupler avec l'_id et le code de la matière

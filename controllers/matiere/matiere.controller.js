@@ -1,4 +1,5 @@
 import Matiere from '../../models/matiere.model.js'
+import Chapitre from '../../models/chapitre.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 
