@@ -1,12 +1,13 @@
-import bcrypt from "bcrypt";
-import { DateTime } from "luxon";
 import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
 import { appConfigs } from "../../../configs/app_configs.js";
 import mongoose from 'mongoose';
 import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
+import bcrypt from "bcrypt";
+import { DateTime } from "luxon";
+import Absences from '../../../models/absence.model.js';
 
-export const createEnseignantController = async (req, res) => {
+export const createEnseignant = async (req, res) => {
     const {
         // info obligatoire
         nom,
@@ -23,50 +24,72 @@ export const createEnseignantController = async (req, res) => {
         date_entree,
 
         // autres (object Id)
-        abscence,
+        abscences,
+        niveaux,
+
         grade,
         categorie,
         fonction,
         service,
-
-        region,
-        departement,
         commune,
 
     } = req.body;
 
     try {
 
-        if (!email) {
+        // Vérifier que tous les champs obligatoires sont présents
+        if (!nom || !niveaux || !email || !genre) {
+            return res.status(400).json({ success: false, message: message.champ_obligatoire });
+        }
+
+        
+        // Vérifier si l'utilisateur existe déjà avec cet e-mail
+        const existingUserWithEmail = await User.findOne({ email });
+
+        if (existingUserWithEmail) {
             return res.status(400).json({
                 success: false,
-                message: message.emailRequis,
+                message: message.emailExiste,
             });
-        } else {
-            // Vérifier si l'utilisateur existe déjà avec cet e-mail
-            const existingUserWithEmail = await User.findOne({ email });
+        }
 
-            if (existingUserWithEmail) {
+        //vérifier si le matricule exite déjà
+        if(matricule){
+            const existingMatricule = await User.findOne({ matricule });
+
+            if (existingMatricule) {
                 return res.status(400).json({
                     success: false,
-                    message: message.emailExiste,
+                    message: message.enseignant_existe,
                 });
             }
         }
 
-
-
-        // veriifer le grade
-        if (abscence) {
-            if (!mongoose.Types.ObjectId.isValid(grade)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.grade_invalide,
-                });
+        if (abscences) {
+            for (const absence of abscences) {
+                if (!mongoose.Types.ObjectId.isValid(absence)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message.absence_invalide,
+                    });
+                }
             }
         }
 
-        // veriifer le grade
+        // verifier si le niveau
+        if (niveaux) {
+            for (const niveau of niveaux) {
+                if (!mongoose.Types.ObjectId.isValid(niveau.niveau)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message.niveau_invalide,
+                    });
+                }
+            }
+        }
+
+
+        // vérifier le grade
         if (grade) {
             if (!mongoose.Types.ObjectId.isValid(grade)) {
                 return res.status(400).json({
@@ -76,27 +99,7 @@ export const createEnseignantController = async (req, res) => {
             }
         }
 
-        // veriifer la categories
-        if (categorie) {
-            if (!mongoose.Types.ObjectId.isValid(categorie)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.categorie_invalide,
-                });
-            }
-        }
-
-        // veriifer la fonction
-        if (fonction) {
-            if (!mongoose.Types.ObjectId.isValid(fonction)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.fonction_invalide,
-                });
-            }
-        }
-
-        // veriifer le service
+        // vérifier le service
         if (service) {
             if (!mongoose.Types.ObjectId.isValid(service)) {
                 return res.status(400).json({
@@ -106,27 +109,27 @@ export const createEnseignantController = async (req, res) => {
             }
         }
 
-        // veriifer la region
-        if (region) {
-            if (!mongoose.Types.ObjectId.isValid(region)) {
+        //vérifier la catégorie
+        if (categorie) {
+            if (!mongoose.Types.ObjectId.isValid(categorie)) {
                 return res.status(400).json({
                     success: false,
-                    message: message.region_invalide,
+                    message: message.categorie_invalide,
                 });
             }
         }
 
-        // veriifer le departement
-        if (departement) {
-            if (!mongoose.Types.ObjectId.isValid(departement)) {
+        //vérifier la fonction
+        if (fonction) {
+            if (!mongoose.Types.ObjectId.isValid(fonction)) {
                 return res.status(400).json({
                     success: false,
-                    message: message.departement_invalide,
+                    message: message.fonction_invalide,
                 });
             }
         }
 
-        // veriifer la commune
+        // vérifier la commune
         if (commune) {
             if (!mongoose.Types.ObjectId.isValid(commune)) {
                 return res.status(400).json({
@@ -140,7 +143,7 @@ export const createEnseignantController = async (req, res) => {
 
         const role = appConfigs.role.enseignant;
         // mot de psase par defaut
-        const mot_de_passe = process.env.DEFAULT_ENSEIGNANT_PASSWORD;
+        const mot_de_passe = process.env.DEFAULT_ENSEIGNANT_PASSWORD
 
         const saltRounds = 10; // Nombre de tours pour le hachage
         const hashedPassword = await bcrypt.hash(mot_de_passe, saltRounds);
@@ -168,27 +171,30 @@ export const createEnseignantController = async (req, res) => {
             mot_de_passe: hashedPassword,
 
             // object Id
+            abscences,
+            niveaux,
+
             grade,
             categorie,
             fonction,
             service,
-            region,
-            departement,
             commune,
         });
 
 
         const newEnseignant = await newUser.save();
-        sendPasswordOnEmail(newEnseignant.nom, newEnseignant.email, mot_de_passe);
 
 
         const userData = newEnseignant.toObject();
+        sendPasswordOnEmail(userData.nom, userData.email, mot_de_passe);
         delete userData.mot_de_passe;
+        
         res.json({
             success: true,
-            message: message.creation_reuissi,
+            message: message.ajouter_avec_success,
             data: userData,
         });
+
 
     } catch (error) {
         console.error("Erreur :", error);
@@ -198,3 +204,324 @@ export const createEnseignantController = async (req, res) => {
         });
     }
 };
+
+export const updateEnseignant = async (req, res) => {
+    const {enseignantId}=req.params;
+    const {
+        // info obligatoire
+        nom,
+        genre,
+        email,
+
+        // autre info necessaire
+        photo_profil,
+        contact,
+        matricule,
+        prenom,
+        date_naiss,
+        lieu_naiss,
+        date_entree,
+
+        // autres (object Id)
+        abscences,
+        niveaux,
+
+        grade,
+        categorie,
+        fonction,
+        service,
+        commune,
+
+    } = req.body;
+
+    try {
+
+        // Vérifier que tous les champs obligatoires sont présents
+        if (!nom || !niveaux || !email || !genre) {
+            return res.status(400).json({ success: false, message: message.champ_obligatoire });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(enseignantId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide
+            });
+        }
+
+        
+        // Vérifier si l'étudiant à modifier existe dans la base de données
+        const existingEnseignant = await User.findById(enseignantId);
+        if (!existingEnseignant) {
+            return res.status(404).json({ 
+                success: false, 
+                message: message.enseignant_non_trouvee
+            });
+        }
+
+        
+        if(existingEnseignant.email!==email){
+            const existingUserWithEmail = await User.findOne({ email });
+            if (existingUserWithEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.emailExiste,
+                });
+            }
+        }
+            
+        //vérifier si le matricule exite déjà
+        if (existingEnseignant.matricule !== matricule) {
+            const existingMatricule = await User.findOne({ matricule });
+            if (existingMatricule) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.enseignant_existe,
+                });
+            }
+        }
+
+        if (abscences) {
+            for (const absence of abscences) {
+                if (!mongoose.Types.ObjectId.isValid(absence)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message.absence_invalide,
+                    });
+                }
+            }
+        }
+
+        // verifier si le niveau
+        if (niveaux) {
+            for (const niveau of niveaux) {
+                if (!mongoose.Types.ObjectId.isValid(niveau.niveau)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message.niveau_invalide,
+                    });
+                }
+            }
+        }
+
+
+        // vérifier le grade
+        if (grade) {
+            if (!mongoose.Types.ObjectId.isValid(grade)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.grade_invalide,
+                });
+            }
+        }
+
+        // vérifier le service
+        if (service) {
+            if (!mongoose.Types.ObjectId.isValid(service)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.service_invalide,
+                });
+            }
+        }
+
+        //vérifier la catégorie
+        if (categorie) {
+            if (!mongoose.Types.ObjectId.isValid(categorie)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.categorie_invalide,
+                });
+            }
+        }
+
+        //vérifier la fonction
+        if (fonction) {
+            if (!mongoose.Types.ObjectId.isValid(fonction)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.fonction_invalide,
+                });
+            }
+        }
+
+        // vérifier la commune
+        if (commune) {
+            if (!mongoose.Types.ObjectId.isValid(commune)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.commune_invalide,
+                });
+            }
+        }
+
+
+        // Créer un nouvel utilisateur avec tous les champs fournis
+        existingEnseignant.nom = nom;
+        existingEnseignant.prenom = prenom;
+        existingEnseignant.matricule = matricule;
+        existingEnseignant.niveaux = niveaux;
+        existingEnseignant.email = email;
+        existingEnseignant.genre = genre;
+        existingEnseignant.date_naiss = date_naiss;
+        existingEnseignant.lieu_naiss = lieu_naiss;
+        existingEnseignant.photo_profil = photo_profil;
+        existingEnseignant.contact = contact;
+        existingEnseignant.date_entree = date_entree;
+        existingEnseignant.grade = grade;
+        existingEnseignant.categorie = categorie;
+        existingEnseignant.fonction = fonction;
+        existingEnseignant.service = service;
+        existingEnseignant.commune = commune;
+
+        const updateEnseignant = await existingEnseignant.save();
+        const userData = updateEnseignant.toObject();
+        delete userData.mot_de_passe;
+        res.json({
+            success: true,
+            message: message.mis_a_jour,
+            data: userData,
+        });
+
+
+    } catch (error) {
+        console.error("Erreur :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
+        });
+    }
+};
+
+export const deleteEnseignant = async (req, res) => {
+    const { enseignantId } = req.params;
+
+    try {
+        // Vérifier si l'ID de la enseignant est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(enseignantId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide
+            });
+        }
+
+        // Supprimer tous les chapitres liés à la matière
+        await Absences.deleteMany({ enseignant: enseignantId });
+        
+        // Supprimer la enseignant par son ID
+        const deletedEnseignant = await User.findByIdAndDelete(enseignantId);
+        if (!deletedEnseignant) {
+            return res.status(404).json({
+                success: false,
+                message: message.enseignant_non_trouvee
+            });
+        }
+
+        res.json({
+            success: true,
+            message: message.supprimer_avec_success
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
+        });
+    }
+}
+
+
+export const getEnseignantsByFilter = async (req, res) => {
+    const { page = 1, pageSize = 10, grade, categorie, service, fonction } = req.query;
+    const role = appConfigs.role.enseignant;
+    try {
+        // Construire la requête de base pour filtrer les enseignants
+        const query = {
+            roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
+        };
+
+        // Ajouter les filtres supplémentaires si disponibles
+        if (grade && mongoose.Types.ObjectId.isValid(grade)) {
+            query.grade = grade;
+        }
+
+        if (categorie && mongoose.Types.ObjectId.isValid(categorie)) {
+            query.categorie = categorie;
+        }
+
+        if (service && mongoose.Types.ObjectId.isValid(service)) {
+            query.service = service;
+        }
+
+        if (fonction && mongoose.Types.ObjectId.isValid(fonction)) {
+            query.fonction = fonction;
+        }
+
+        const skip = (page - 1) * pageSize;
+
+        const enseignants = await User.find(query)
+            .skip(skip)
+            .limit(Number(pageSize));
+
+        const totalEnseignants = await User.countDocuments(query);
+        
+        res.json({
+            success: true,
+            data: {
+                enseignants,
+                currentPage: page,
+                totalPages: Math.ceil(totalEnseignants / pageSize),
+                totalItems: totalEnseignants,
+                pageSize:pageSize
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des enseignants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
+export const getAllEnseignantsByFilter = async (req, res) => {
+    const {grade, categorie, service, fonction } = req.query;
+    const role = appConfigs.role.enseignant;
+    try {
+        // Construire la requête de base pour filtrer les enseignants
+        const query = {
+            roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
+        };
+
+        // Ajouter les filtres supplémentaires si disponibles
+        if (grade && mongoose.Types.ObjectId.isValid(grade)) {
+            query.grade = grade;
+        }
+
+        if (categorie && mongoose.Types.ObjectId.isValid(categorie)) {
+            query.categorie = categorie;
+        }
+
+        if (service && mongoose.Types.ObjectId.isValid(service)) {
+            query.service = service;
+        }
+
+        if (fonction && mongoose.Types.ObjectId.isValid(fonction)) {
+            query.fonction = fonction;
+        }
+
+        const enseignants = await User.find(query);
+
+
+        res.json({
+            success: true,
+            data: {
+                enseignants,
+                currentPage:0,
+                totalPages: 0,
+                totalItems: 0,
+                pageSize:0,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des enseignants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+

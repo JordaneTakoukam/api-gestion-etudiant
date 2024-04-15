@@ -482,7 +482,7 @@ export const getEtudiantsByLevelAndYear = async (req, res) => {
       console.error('Erreur lors de la récupération des étudiants :', error);
       res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
-  };
+};
   
 
 export const getAllEtudiantsByLevelAndYear = async (req, res) => {
