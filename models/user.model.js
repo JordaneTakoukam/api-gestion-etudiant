@@ -34,19 +34,19 @@ const userSchema = new Schema({
     photo_profil: { type: String, default: null },
     mot_de_passe: { type: String, required: true },
 
+    abscences: [{
+            absence:{ type: mongoose.Schema.Types.ObjectId, ref: 'Absence', required: false },
+    }],
+    niveaux:[{
+        niveau:{ type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: false },
+        annee:{type:Number}
+    }],
 
-    abscence: { type: String, default: null },
-    section: { type: String, default: null },
-    cycle: { type: String, default: null },
-    niveau: { type: String, default: null },
-
-    grade: { type: String, default: null },
-    categorie: { type: String, default: null },
-    fonction: { type: String, default: null },
-    service: { type: String, default: null },
-    region: { type: String, default: null },
-    departement: { type: String, default: null },
-    commune: { type: String, default: null },
+    grade: { type: mongoose.Schema.Types.ObjectId, ref: 'Grade', required: false },
+    categorie: { type: mongoose.Schema.Types.ObjectId, ref: 'Categorie', required: false },
+    fonction: { type: mongoose.Schema.Types.ObjectId, ref: 'Fonction', required: false },
+    service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: false },
+    commune: { type: mongoose.Schema.Types.ObjectId, ref: 'Commune', required: false },
 });
 
 const User = mongoose.model('User', userSchema, 'users');

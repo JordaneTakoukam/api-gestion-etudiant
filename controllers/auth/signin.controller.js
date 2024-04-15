@@ -62,7 +62,7 @@ export const signin = async (req, res) => {
     }
 
     catch (e) {
-        console.error("Erreur interne au serveur :", error);
+        console.error("Erreur interne au serveur : "+e);
         res.status(500).json({
             success: false,
             message: message.erreurServeur,

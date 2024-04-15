@@ -7,8 +7,8 @@ export const appConfigs = {
         etudiant: 'etudiant',
     },
     genre: {
-        masculin: "m",
-        feminin: "f",
+        masculin: "M",
+        feminin: "F",
     },
 
     defaultSuperUser: {

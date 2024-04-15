@@ -67,6 +67,10 @@ const message = {
         fr: "Le niveau est invalide!",
         en: ""
     },
+    absence_invalide: {
+        fr: "L'absence est invalide'!",
+        en: ""
+    },
     grade_invalide: {
         fr: "Le grade est invalide!",
         en: ""
@@ -209,6 +213,15 @@ const message = {
     },
     matiere_non_trouvee: {
         fr: "Cette matière n'existe pas",
+        en: ""
+    },
+
+    etudiant_non_trouvee: {
+        fr: "Cette étudiant n'existe pas",
+        en: ""
+    },
+    matiere_existe: {
+        fr: "Un utilisateur avec le même matricule existe déjà",
         en: ""
     },
     chapitre_non_trouve: {
