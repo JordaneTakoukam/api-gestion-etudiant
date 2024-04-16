@@ -251,6 +251,88 @@ export const updateObjectifEtat = async (req, res) => {
     }
 };
 
+export const getProgressionGlobalEnseignants = async (req, res) => {
+    try {
+        // Compter le nombre total d'objectifs des chapitres avec l'état 1
+        const totalObjectifsAvecEtat1 = await Chapitre.countDocuments({ 'objectifs.etat': 1 });
+
+        // Compter le nombre total d'objectifs
+        const totalObjectifs = await Chapitre.aggregate([
+            { $unwind: '$objectifs' },
+            { $count: 'totalObjectifs' }
+        ]);
+
+        // Récupérer le nombre total d'objectifs à partir du résultat de l'agrégation
+        const totalObjectifsCount = totalObjectifs.length > 0 ? totalObjectifs[0].totalObjectifs : 0;
+
+        // Calculer la progression globale
+        const progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifsCount;
+        res.json({
+            success: true,
+            data: (progressionGlobale*100),
+            
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors du calcul de la progression globale des enseignants :', error);
+        return { success: false, message: 'Une erreur est survenue lors du calcul de la progression globale des enseignants.' };
+    }
+};
+
+export const getProgressionGlobalEnseignantsNiveau = async (req, res) => {
+    try {
+        // Compter le nombre total d'objectifs des chapitres avec l'état 1
+        const totalObjectifsAvecEtat1 = await Chapitre.countDocuments({ 'objectifs.etat': 1 });
+
+        // Compter le nombre total d'objectifs
+        const totalObjectifs = await Chapitre.aggregate([
+            { $unwind: '$objectifs' },
+            { $count: 'totalObjectifs' }
+        ]);
+
+        // Récupérer le nombre total d'objectifs à partir du résultat de l'agrégation
+        const totalObjectifsCount = totalObjectifs.length > 0 ? totalObjectifs[0].totalObjectifs : 0;
+
+        // Calculer la progression globale
+        const progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifsCount;
+        res.json({
+            success: true,
+            data: (progressionGlobale*100),
+            
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors du calcul de la progression globale des enseignants :', error);
+        return { success: false, message: 'Une erreur est survenue lors du calcul de la progression globale des enseignants.' };
+    }
+};
+
+export const getChapitres = async (req, res) => {
+
+    try {
+        // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
+        const chapitres = await Chapitre.find();
+        
+        
+
+        res.status(200).json({ 
+            success: true, 
+            data: {
+                chapitres ,
+                totalPages: 0,
+                currentPage: 0,
+                totalItems: 0,
+                pageSize:0
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        res.status(500).json({ success: false, message: message.erreurServeur });
+    }
+};
+
+
+
 // read
 export const readChapitre = async (req, res) => { }
 

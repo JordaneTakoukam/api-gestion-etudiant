@@ -7,11 +7,6 @@ const objectifSchema = new mongoose.Schema({
     etat: { type: Number, required: true, enum: [0, 1] }
 });
 
-const competenceSchema = new mongoose.Schema({
-    code: { type: String, required: true },
-    libelleFr: { type: String, required: true },
-    libelleEn: { type: String, required: true }
-});
 
 const chapitreSchema = new mongoose.Schema({
     code: { type: String, required: true },
@@ -23,7 +18,6 @@ const chapitreSchema = new mongoose.Schema({
     }],
     matiere: { type: mongoose.Schema.Types.ObjectId, ref: 'Matiere', required: true },
     objectifs: [objectifSchema],
-    competences: [competenceSchema]
 });
 
 const Chapitre = mongoose.model('Chapitre', chapitreSchema, 'chapitre');

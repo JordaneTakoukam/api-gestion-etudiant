@@ -555,7 +555,6 @@ export const getEnseignantsByNomPrenom = async (req, res) => {
 
 export const getTotalEnseignants = async (req, res) => {
     try {
-        console.log("getEnseignant");
         const role = appConfigs.role.enseignant;
         const query= {
             roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant

@@ -223,7 +223,6 @@ export const updateEtudiant = async (req, res) => {
         date_entree,
 
         // autres (object Id)
-        abscences,
         niveaux,
 
         grade,
@@ -280,16 +279,6 @@ export const updateEtudiant = async (req, res) => {
             }
         }
 
-        if (abscences) {
-            for (const absence of abscences) {
-                if (!mongoose.Types.ObjectId.isValid(absence)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: message.absence_invalide,
-                    });
-                }
-            }
-        }
 
         // verifier si le niveau
         if (niveaux) {
@@ -516,6 +505,56 @@ export const getAllEtudiantsByLevelAndYear = async (req, res) => {
         //         (niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee)
         //     );
         // });
+
+        res.json({
+            success: true,
+            data: {
+                etudiants,
+                currentPage: 0,
+                totalPages: 0,
+                totalItems:0,
+                pageSize:0
+            },
+            
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
+export const getFindOneEtudiant = async (req, res) => {
+    const { _id} = req.params;
+    const {annee} = req.query;
+
+    try {
+
+        // Vérifier si l'ID du niveau est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide
+            });
+        }
+
+        const query = {
+            _id:_id,
+            'niveaux': {
+                $elemMatch: {
+                
+                annee: Number(annee),
+                },
+            },
+        };
+
+        const etudiants = await User.findOne(query);
+
+        // Filtrer les niveaux qui ne correspondent pas à l'année et au niveau de recherche
+        etudiants.forEach((etudiant) => {
+            etudiant.niveaux = etudiant.niveaux.filter(
+                (annee) => niveau.annee === Number(annee)
+            );
+        });
 
         res.json({
             success: true,
