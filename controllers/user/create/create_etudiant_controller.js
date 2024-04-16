@@ -534,3 +534,32 @@ export const getAllEtudiantsByLevelAndYear = async (req, res) => {
     }
 };
 
+export const getTotalEtudiantsByYear = async (req, res) => {
+    const {annee}=req.query;
+    try {
+        // Construire la requête en utilisant $elemMatch pour correspondre exactement à l'année dans 'niveaux'
+        let role = appConfigs.role.etudiant;
+        const query = {
+            roles: { $in: [role] },
+            niveaux: {
+                $elemMatch: { annee: annee }
+            }
+        };
+
+        const etudiants = await User.find(query);
+
+        
+        const totalEtudiants = etudiants.length;
+        res.json({
+            success: true,
+            data: totalEtudiants,
+            
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        return { success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' };
+    }
+};
+
+

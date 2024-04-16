@@ -4,8 +4,8 @@ import express from "express";
 import { createDefaultSuperAdmin } from "../controllers/user/create/create_default_super_admin.controller.js";
 import { deleteUser, updateUser } from "../controllers/user/update_and_delete.js";
 import { createAdminController } from "../controllers/user/create/create_admin_controller.js";
-import { createEtudiant, updateEtudiant, deleteEtudiant, getEtudiantsByLevelAndYear, getAllEtudiantsByLevelAndYear} from "../controllers/user/create/create_etudiant_controller.js";
-import { createEnseignant, updateEnseignant, deleteEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter, getEnseignantsByNomPrenom} from "../controllers/user/create/create_enseignant_controller.js";
+import { createEtudiant, updateEtudiant, deleteEtudiant, getEtudiantsByLevelAndYear, getAllEtudiantsByLevelAndYear, getTotalEtudiantsByYear} from "../controllers/user/create/create_etudiant_controller.js";
+import { createEnseignant, updateEnseignant, deleteEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter, getEnseignantsByNomPrenom, getTotalEnseignants} from "../controllers/user/create/create_enseignant_controller.js";
 import { getAllAdministrateurs, getAllEnseignants, getAllEtudiants } from "../controllers/user/get/get_user_controller.js";
 
 // middlewares
@@ -24,6 +24,9 @@ router.get("/getAllEtudiantsByLevelAndYear/:niveauId", getAllEtudiantsByLevelAnd
 router.get("/getEnseignantsByFilter", getEnseignantsByFilter);
 router.get("/getAllEnseignantsByFilter", getAllEnseignantsByFilter);
 router.get("/getEnseignantsByNomPrenom", getEnseignantsByNomPrenom);
+
+router.get("/getTotalEtudiantsByYear", getTotalEtudiantsByYear);
+router.get("/getTotalEnseignants", getTotalEnseignants);
 
 // creer
 router.post("/create/unique/super-admin", createDefaultSuperAdmin);

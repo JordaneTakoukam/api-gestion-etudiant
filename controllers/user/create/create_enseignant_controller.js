@@ -552,3 +552,23 @@ export const getEnseignantsByNomPrenom = async (req, res) => {
         res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 };
+
+export const getTotalEnseignants = async (req, res) => {
+    try {
+        console.log("getEnseignant");
+        const role = appConfigs.role.enseignant;
+        const query= {
+            roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
+        };
+        const enseignants = await User.find(query);
+        const totalEnseignants = enseignants.length;
+
+        res.json({
+            success: true,
+            data: totalEnseignants,
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étu :', error);
+        return { success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' };
+    }
+};
