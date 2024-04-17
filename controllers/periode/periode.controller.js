@@ -613,14 +613,137 @@ export const getPeriodesByNiveau = async (req, res) => {
     }
 }
 
-
 export const getPeriodesAVenirByNiveau = async (req, res) => {
     const { niveauId } = req.params;
     const { nbElement = 5, annee = 2024, semestre = 1 } = req.query;
-
+    
     try {
         // Récupérer toutes les périodes de cours pour le niveau spécifié
-        const periodes = await Periode.find({ niveau: niveauId})
+       // Création du filtre initial pour le niveau
+       const filter = { niveau: niveauId };
+
+       // Si une année est spécifiée dans la requête, l'utiliser
+       if (annee && !isNaN(annee)) {
+           filter.annee = parseInt(annee);
+           const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
+           if (!periodesCurrentYear) {
+               // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+               let found = false;
+               let previousYear = parseInt(annee) - 1;
+               while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                   const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
+                   if (periodesPreviousYear) {
+                       filter.annee = previousYear;
+                       found = true;
+                   } else {
+                       previousYear--;
+                   }
+               }
+           } 
+       }
+
+       // Si un semestre est spécifié dans la requête, l'utiliser
+       if (semestre && !isNaN(semestre)) {
+           filter.semestre = parseInt(semestre);
+       }
+
+
+       // Rechercher les périodes en fonction du filtre
+       const periodes = await Periode.find(filter)
+           .populate({
+               path: 'matiere',
+               select: 'code'
+           })
+           .populate({
+               path: 'enseignantPrincipal',
+               select: 'nom prenom'
+           })
+           .populate({
+               path: 'enseignantSuppleant',
+               select: 'nom prenom'
+           })
+           .exec();
+           
+
+        // Déterminer le jour actuel
+        const now = new Date();
+        const currentDayIndex = now.getDay(); // 0 pour dimanche, 1 pour lundi, ..., 6 pour samedi
+
+        // Diviser les périodes en groupes par jour de la semaine
+        const periodesParJour = {};
+        for (let i = 0; i < 7; i++) {
+            periodesParJour[i] = [];
+        }
+        periodes.forEach(periode => {
+            const [heure, minutes] = periode.heureDebut.split(':');
+            const heureDebut = new Date();
+            heureDebut.setHours(parseInt(heure));
+            heureDebut.setMinutes(parseInt(minutes));
+            const jourIndex = periode.jour === 'Lundi' ? 1 :
+                periode.jour === 'Mardi' ? 2 :
+                periode.jour === 'Mercredi' ? 3 :
+                periode.jour === 'Jeudi' ? 4 :
+                periode.jour === 'Vendredi' ? 5 :
+                periode.jour === 'Samedi' ? 6 :
+                0; // Dimanche
+            if (heureDebut > now) {
+                periodesParJour[jourIndex].push(periode);
+            }
+        });
+        
+        // Concaténer les groupes de périodes dans l'ordre de la semaine, en commençant par le jour actuel
+        let periodesAVenir = [];
+        for (let i = currentDayIndex; i <= 6; i++) {
+            periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
+        }
+        for (let i = 0; i < currentDayIndex; i++) {
+            periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
+        }
+        
+        // Filtrer les périodes null
+        periodesAVenir = periodesAVenir.filter(periode => periode !== null);
+        
+        // Limiter le nombre de périodes à renvoyer
+        const periodesAVenirLimitees = periodesAVenir.slice(0, nbElement);
+        
+        res.status(200).json({ 
+            success: true,
+            data: { periodes: periodesAVenirLimitees }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des périodes de cours à venir pour le niveau :', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Une erreur est survenue lors de la récupération des périodes de cours à venir.'
+        });
+    }
+}
+
+export const getPeriodesAVenirByEnseignant = async (req, res) => {
+    const { enseignantId } = req.params;
+    const { nbElement = 5, annee = 2024, semestre = 1 } = req.query;
+    
+    try {
+        // Récupérer toutes les périodes de cours pour l'enseignant spécifié
+        const filter = { 
+            $or: [
+                { enseignantPrincipal: enseignantId },
+                { enseignantSuppleant: enseignantId }
+            ]
+        };
+
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+        }
+
+        // Si un semestre est spécifié dans la requête, l'utiliser
+        if (semestre && !isNaN(semestre)) {
+            filter.semestre = parseInt(semestre);
+        }
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter)
             .populate({
                 path: 'matiere',
                 select: 'code'
@@ -632,7 +755,8 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
             .populate({
                 path: 'enseignantSuppleant',
                 select: 'nom prenom'
-            });
+            })
+            .exec();
 
         // Déterminer le jour actuel
         const now = new Date();
@@ -662,10 +786,10 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
 
         // Concaténer les groupes de périodes dans l'ordre de la semaine, en commençant par le jour actuel
         let periodesAVenir = [];
-        for (let i = currentDayIndex; i <= 7; i++) {
+        for (let i = currentDayIndex; i <= 6; i++) {
             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
         }
-        for (let i = 1; i < currentDayIndex; i++) {
+        for (let i = 0; i < currentDayIndex; i++) {
             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
         }
 
@@ -674,19 +798,21 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
 
         // Limiter le nombre de périodes à renvoyer
         const periodesAVenirLimitees = periodesAVenir.slice(0, nbElement);
-
+        
         res.status(200).json({ 
             success: true,
-            data: periodesAVenirLimitees
+            data: { periodes: periodesAVenirLimitees }
         });
     } catch (error) {
-        console.error('Erreur lors de la récupération des périodes de cours à venir pour le niveau :', error);
+        console.error('Erreur lors de la récupération des périodes de cours à venir pour l\'enseignant :', error);
         res.status(500).json({ 
             success: false,
-            message: message.erreurServeur
+            message: 'Une erreur est survenue lors de la récupération des périodes de cours à venir.'
         });
     }
 }
+
+
 
 
 

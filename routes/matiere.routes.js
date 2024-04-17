@@ -1,6 +1,6 @@
 import express from "express";
 import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination} from "../controllers/matiere/matiere.controller.js";
-import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants } from "../controllers/matiere/chapitre/chapitre.controller.js";
+import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant } from "../controllers/matiere/chapitre/chapitre.controller.js";
 
 // controllers
 
@@ -30,6 +30,8 @@ router.delete("/delete/:matiereId", deleteMatiere);
 // create
 router.post("/chapitre/create", createChapitre);
 router.get("/chapitre/getProgressionGlobalEnseignants", getProgressionGlobalEnseignants);
+router.get("/chapitre/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveau);
+router.get("/chapitre/getProgressionGlobalEnseignant/:enseignantId", getProgressionGlobalEnseignant);
 router.get("/chapitre/getChapitres", getChapitres);
 
 
