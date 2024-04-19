@@ -6,6 +6,7 @@ import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 import bcrypt from "bcrypt";
 import { DateTime } from "luxon";
 import Absences from '../../../models/absence.model.js';
+import Periode from '../../../models/periode.model.js';
 
 export const createEnseignant = async (req, res) => {
     const {
@@ -571,3 +572,71 @@ export const getTotalEnseignants = async (req, res) => {
         return { success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' };
     }
 };
+
+
+export const getNiveauxByEnseignant = async (req, res) => {
+    const { enseignantId } = req.params;
+    const { annee, semestre } = req.query;
+
+    try {
+        // Vérifier si l'ID de l'enseignant est valide
+        if (!mongoose.Types.ObjectId.isValid(enseignantId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide,
+            });
+        }
+
+        // Création du filtre initial pour les périodes
+        const filter = { 
+            $or: [
+                { enseignantPrincipal: enseignantId },
+                { enseignantSuppleant: enseignantId }
+            ]
+        };
+
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+            let periodesCurrentYear = await Periode.findOne(filter).exec();
+            if (!periodesCurrentYear) {
+                // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+                let found = false;
+                let previousYear = parseInt(annee) - 1;
+                while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                    periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                    if (periodesCurrentYear) {
+                        filter.annee = previousYear;
+                        found = true;
+                    } else {
+                        previousYear--;
+                    }
+                }
+            } 
+        }
+
+        // Si un semestre est spécifié dans la requête, l'utiliser
+        if (semestre && !isNaN(semestre)) {
+            filter.semestre = parseInt(semestre);
+        }
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).distinct('niveau').exec();
+        const niveaux = periodes.map(periode => ({ niveau: periode, annee: annee }));
+        // console.log(niveaux)
+        // Envoyer la réponse avec les données
+        res.status(200).json({ 
+            success: true,
+            data:niveaux
+            
+        });
+    } catch (error) {
+        // Gérer les erreurs
+        console.error('Erreur lors de la récupération des niveaux par enseignant :', error);
+        res.status(500).json({ 
+            success: false, 
+            message: message.erreurServeur 
+        });
+    }
+};
+

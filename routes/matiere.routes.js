@@ -1,5 +1,5 @@
 import express from "express";
-import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination} from "../controllers/matiere/matiere.controller.js";
+import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau} from "../controllers/matiere/matiere.controller.js";
 import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant } from "../controllers/matiere/chapitre/chapitre.controller.js";
 
 // controllers
@@ -17,6 +17,7 @@ router.get("/get/:id", readMatiere);
 router.get("/get/:params", readMatieres);
 router.get("/getMatieresByNiveau/:niveauId", getMatieresByNiveau);
 router.get("/getMatieresByNiveauWithPagination/:niveauId", getMatieresByNiveauWithPagination);
+router.get("/getMatieresByEnseignantNiveau/:niveauId", getMatieresByEnseignantNiveau);
 
 
 // update

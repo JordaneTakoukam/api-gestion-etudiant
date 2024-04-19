@@ -6,6 +6,7 @@ import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 import bcrypt from "bcrypt";
 import { DateTime } from "luxon";
 import Absences from '../../../models/absence.model.js';
+import Setting from '../../../models/setting.model.js';
 
 export const createEtudiant = async (req, res) => {
     const {
@@ -212,6 +213,7 @@ export const updateEtudiant = async (req, res) => {
         nom,
         genre,
         email,
+        roles,
 
         // autre info necessaire
         photo_profil,
@@ -232,7 +234,7 @@ export const updateEtudiant = async (req, res) => {
         commune,
 
     } = req.body;
-
+    console.log(roles);
     try {
 
         // Vérifier que tous les champs obligatoires sont présents
@@ -361,6 +363,7 @@ export const updateEtudiant = async (req, res) => {
         existingEtudiant.fonction = fonction;
         existingEtudiant.service = service;
         existingEtudiant.commune = commune;
+        existingEtudiant.roles = roles;
 
         const updateEtudiant = await existingEtudiant.save();
         const userData = updateEtudiant.toObject();
@@ -380,6 +383,8 @@ export const updateEtudiant = async (req, res) => {
         });
     }
 };
+
+
 
 export const deleteEtudiant = async (req, res) => {
     const { etudiantId } = req.params;
@@ -448,12 +453,12 @@ export const getEtudiantsByLevelAndYear = async (req, res) => {
         .skip(skip)
         .limit(Number(pageSize));
   
-      // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
-    //   etudiants.forEach((etudiant) => {
-    //     etudiant.niveaux = etudiant.niveaux.filter(
-    //       (niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee)
-    //     );
-    //   });
+    //   Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
+      etudiants.forEach((etudiant) => {
+        etudiant.niveaux = etudiant.niveaux.filter(
+          (niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee)
+        );
+      });
   
       const totalEtudiants = await User.countDocuments(query);
   
@@ -598,6 +603,101 @@ export const getTotalEtudiantsByYear = async (req, res) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des étudiants :', error);
         return { success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' };
+    }
+};
+
+export const getTotalEtudiantsByNiveau = async (req, res) => {
+    const {niveaux, annee}=req.query;
+    try {
+        // Construire la requête en utilisant $elemMatch pour correspondre exactement à l'année dans 'niveaux'
+        let role = appConfigs.role.etudiant;
+        
+
+        const etudiantsParNiveau = {};
+        let totalEtudiant=0;
+        
+        // Pour chaque niveau enseigné par l'enseignant
+        // console.log(niveaux)
+        if(niveaux){
+            
+            for (const niveau of niveaux) {
+                const query = {
+                    roles: { $in: [role] },
+                    niveaux: {
+                        $elemMatch: { niveau:niveau.niveau, annee: annee }
+                    }
+                };
+                // Récupérer les étudiants associés à ce niveau pour l'année donnée
+                const etudiants = await User.find(query);
+                // Compter le nombre d'étudiants pour ce niveau
+                const nombreEtudiants = etudiants.length;
+                // Stocker le nombre d'étudiants dans l'objet avec la clé du niveau
+                etudiantsParNiveau[niveau._id] = nombreEtudiants;
+                totalEtudiant+=nombreEtudiants;
+            }
+        }
+
+        
+        res.json({
+            success: true,
+            data: {
+                etudiantsParNiveau,
+                totalEtudiant
+            },
+            
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        return { success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' };
+    }
+};
+
+export const getNbEtudiantsParSection = async (req, res) => {
+    try {
+        const { annee } = req.query;   
+
+        // Récupérer tous les étudiants ayant des niveaux pour l'année donnée
+        const etudiants = await User.find({ 'niveaux.annee': annee }).select('niveaux');
+        const settings = await Setting.find().select('sections cycles niveaux');
+        
+        // Récupérer toutes les sections à partir des paramètres de l'objet `settings`
+        const sections = settings[0].sections.map(section => section._id.toString());
+
+        // Construire un objet pour stocker le nombre d'étudiants par section
+        const etudiantsParSection = {};
+
+        // Parcourir chaque section
+        for (const sectionId of sections) {
+            // Initialiser le compteur à 0 pour chaque section
+            etudiantsParSection[sectionId] = 0;
+        }
+
+        // Parcourir chaque étudiant
+        for (const etudiant of etudiants) {
+            // Rechercher le niveau de l'étudiant courant pour l'année donnée
+            const niveauEtudiant = etudiant.niveaux.find(niveau => niveau.annee == annee);
+            if (niveauEtudiant) {
+                // Trouver le cycle correspondant au niveau de l'étudiant
+                const niveau = settings[0].niveaux.find(niveau => niveau._id.toString() === niveauEtudiant.niveau.toString());
+                if (niveau) {
+                    // Trouver la section correspondant au cycle
+                    const cycle = settings[0].cycles.find(cycle => cycle._id.toString() === niveau.cycle.toString());
+                    if (cycle) {
+                        // Incrémenter le compteur de la section correspondante
+                        etudiantsParSection[cycle.section.toString()]++;
+                    }
+                }
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: etudiantsParSection
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' });
     }
 };
 

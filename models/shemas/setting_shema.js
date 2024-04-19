@@ -43,6 +43,7 @@ export const niveauSchema = new Schema({
     libelleEn: { type: String, required: true },
 });
 
+
 export const salleSchema = new Schema({
     date_creation: { type: Date, required: true },
     code: { type: String, required: true },
@@ -50,7 +51,6 @@ export const salleSchema = new Schema({
     libelleEn: { type: String, required: true },
     nbPlace:{type: Number, required:true}
 });
-
 
 
 
