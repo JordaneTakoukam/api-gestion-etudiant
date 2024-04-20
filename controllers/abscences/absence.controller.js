@@ -65,6 +65,8 @@ export const ajouterAbsence = async (req, res) => {
     }
 };
 
+
+
 // Contrôleur pour retirer une absence à un utilisateur
 export const retirerAbsence = async (req, res) => {
     const userId = req.params.userId;
@@ -97,3 +99,6 @@ export const retirerAbsence = async (req, res) => {
         res.status(500).json({ success: false, message: { fr: messagesFr.erreur_retrait_absence, en: messagesEn.erreur_retrait_absence } });
     }
 };
+
+
+

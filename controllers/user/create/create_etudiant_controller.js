@@ -171,7 +171,7 @@ export const createEtudiant = async (req, res) => {
             mot_de_passe: hashedPassword,
 
             // object Id
-            abscences,
+            absences : [],
             niveaux,
 
             grade,
@@ -384,43 +384,6 @@ export const updateEtudiant = async (req, res) => {
 };
 
 
-
-export const deleteEtudiant = async (req, res) => {
-    const { etudiantId } = req.params;
-
-//     try {
-//         // Vérifier si l'ID de la etudiant est un ObjectId valide
-//         if (!mongoose.Types.ObjectId.isValid(etudiantId)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: message.identifiant_invalide
-//             });
-//         }
-
-//         // Supprimer tous les chapitres liés à la matière
-//         await Absences.deleteMany({ etudiant: etudiantId });
-
-//         // Supprimer la etudiant par son ID
-//         const deletedEtudiant = await User.findByIdAndDelete(etudiantId);
-//         if (!deletedEtudiant) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: message.etudiant_non_trouvee
-//             });
-//         }
-
-//         res.json({
-//             success: true,
-//             message: message.supprimer_avec_success
-//         });
-//     } catch (error) {
-//         console.error("Erreur interne au serveur :", error);
-//         res.status(500).json({
-//             success: false,
-//             message: message.erreurServeur
-//         });
-//     }
-// }
 
 
 export const getEtudiantsByLevelAndYear = async (req, res) => {
