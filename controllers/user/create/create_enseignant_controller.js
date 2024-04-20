@@ -392,42 +392,7 @@ export const updateEnseignant = async (req, res) => {
     }
 };
 
-export const deleteEnseignant = async (req, res) => {
-    const { enseignantId } = req.params;
 
-    try {
-        // Vérifier si l'ID de la enseignant est un ObjectId valide
-        if (!mongoose.Types.ObjectId.isValid(enseignantId)) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide
-            });
-        }
-
-        // Supprimer tous les chapitres liés à la matière
-        await Absences.deleteMany({ enseignant: enseignantId });
-        
-        // Supprimer la enseignant par son ID
-        const deletedEnseignant = await User.findByIdAndDelete(enseignantId);
-        if (!deletedEnseignant) {
-            return res.status(404).json({
-                success: false,
-                message: message.enseignant_non_trouvee
-            });
-        }
-
-        res.json({
-            success: true,
-            message: message.supprimer_avec_success
-        });
-    } catch (error) {
-        console.error("Erreur interne au serveur :", error);
-        res.status(500).json({
-            success: false,
-            message: message.erreurServeur
-        });
-    }
-}
 
 
 export const getEnseignantsByFilter = async (req, res) => {

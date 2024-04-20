@@ -4,8 +4,8 @@ import express from "express";
 import { createDefaultSuperAdmin } from "../controllers/user/create/create_default_super_admin.controller.js";
 import { deleteUser, updateUser } from "../controllers/user/update_and_delete.js";
 import { createAdminController } from "../controllers/user/create/create_admin_controller.js";
-import { createEtudiant, updateEtudiant, deleteEtudiant, getEtudiantsByLevelAndYear, getAllEtudiantsByLevelAndYear} from "../controllers/user/create/create_etudiant_controller.js";
-import { createEnseignant, updateEnseignant, deleteEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter } from "../controllers/user/create/create_enseignant_controller.js";
+import { createEtudiant, updateEtudiant, getEtudiantsByLevelAndYear, getAllEtudiantsByLevelAndYear} from "../controllers/user/create/create_etudiant_controller.js";
+import { createEnseignant, updateEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter } from "../controllers/user/create/create_enseignant_controller.js";
 import { getAllAdministrateurs, getAllEnseignants, getAllEtudiants } from "../controllers/user/get/get_user_controller.js";
 
 // middlewares
@@ -37,8 +37,8 @@ router.put("/update/update-enseignant/:enseignantId", updateEnseignant);
 
 // supprimer
 router.delete("/delete/:id", deleteUser);
-router.delete("/delete/delete-etudiant/:etudiantId", deleteEtudiant);
-router.delete("/delete/delete-enseignant/:enseignantId", deleteEnseignant);
+// router.delete("/delete/delete-etudiant/:etudiantId", deleteEtudiant);
+// router.delete("/delete/delete-enseignant/:enseignantId", deleteEnseignant);
 
 
 

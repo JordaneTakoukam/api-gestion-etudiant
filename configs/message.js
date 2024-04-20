@@ -256,14 +256,14 @@ const message = {
         fr: "Format de l'heure invalide. Utilisez HH:MM.",
         en: ""
     },
-    heure_invalide:{
-        fr:"Format de l'heure invalide. Utilisez HH:MM.",
-        en:""
+    heure_invalide: {
+        fr: "Format de l'heure invalide. Utilisez HH:MM.",
+        en: ""
     },
 
-    periode_non_trouve:{
-        fr:"Période d\'enseignement non trouvée.",
-        en:""
+    periode_non_trouve: {
+        fr: "Période d\'enseignement non trouvée.",
+        en: ""
     },
 
 
@@ -286,6 +286,21 @@ const message = {
         en: "Internal server error."
     },
 
+
+    alert_ajouter_success: {
+        fr: "Alerte ajoutée avec succès"
+    },
+    alert_supprimer_sucess: {
+        fr: "Alerte supprimée avec succès"
+    },
+    alert_non_trouver: {
+        fr: "Alerte non trouvée"
+    },
+
+   page_non_existante: {
+        fr: "La page demandée n'existe pas.",
+        en: "The requested page does not exist."
+    }
 };
 
 export { message };

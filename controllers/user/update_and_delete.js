@@ -32,13 +32,21 @@ export const updateUser = async (req, res) => {
     }
 };
 
-// Supprimer un utilisateur
+
 export const deleteUser = async (req, res) => {
+    const { id } = req.params;
+
     try {
-        const { id } = req.params;
+        // Vérifier si l'ID de l'utilisateur est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
 
-        const user = await User.findByIdAndDelete(id);
-
+        // Vérifier si l'utilisateur existe
+        const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -46,15 +54,24 @@ export const deleteUser = async (req, res) => {
             });
         }
 
+        // Supprimer chaque absence liée à l'utilisateur
+        for (const absenceId of user.absences) {
+            await Absence.findByIdAndDelete(absenceId);
+        }
+
+        // Supprimer l'utilisateur par son ID
+        await User.findByIdAndDelete(id);
+
         res.json({
             success: true,
             message: message.userDeleted,
         });
     } catch (error) {
-        console.error("Erreur lors de la suppression de l'utilisateur :", error);
+        console.error("Erreur interne au serveur :", error);
         res.status(500).json({
             success: false,
-            message: message.serverError,
+            message: message.erreurServeur,
         });
     }
-};
+}
+

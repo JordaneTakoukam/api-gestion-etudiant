@@ -35,6 +35,7 @@ import etatEvenementRoutes from "./routes/settings/etat_evenement.routes.js";
 import anneeRoutes from "./routes/settings/annee.routes.js";
 import semestreRoutes from "./routes/settings/semestre.routes.js";
 import roleRoutes from "./routes/settings/role.routes.js";
+import abscenceRoutes from "./routes/absence.routes.js";
 
 
 
@@ -92,6 +93,10 @@ app.use("/api/v1/setting/etat-evenement", etatEvenementRoutes);
 app.use("/api/v1/setting/annee", anneeRoutes);
 app.use("/api/v1/setting/semestre", semestreRoutes);
 app.use("/api/v1/setting/role", roleRoutes);
+
+// new
+app.use("/api/v1/absence", abscenceRoutes);
+app.use("/api/v1/alerte", abscenceRoutes);
 
 
 

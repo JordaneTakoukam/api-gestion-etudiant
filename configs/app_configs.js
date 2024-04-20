@@ -15,7 +15,7 @@ export const appConfigs = {
         nom: "Arturo",
         prenom: "Palace",
         email: "super.admin@gmail.com",
-        genre: "m",
+        genre: "M",
         defautlPassword: process.env.DEFAULT_SUPER_ADMIN_PASSWORD,
     },
     user: "suport.resetpass@gmail.com",

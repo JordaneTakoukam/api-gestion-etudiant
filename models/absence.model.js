@@ -1,16 +1,16 @@
-import { Timestamp } from 'mongodb';
 import mongoose, { Schema } from 'mongoose';
 
 const absenceSchema = new Schema({
-    semestre: { type: Number, required: true }, // Semestre (ex: Semestre 1, Semestre 2)
-    annee: { type: Number, required: true }, // Année académique
-    dateAbscence:{type:Date, required:true},
+    dateCreation: { type: Date, default: Date.now },
+    semestre: { type: String, required: true }, // Semestre (ex: Semestre 1, Semestre 2)
+    annee: { type: String, required: true }, // Année académique
+    dateAbsence: { type: Date, required: true },
     heureDebut: { type: String, required: true }, // Heure de début de la période de cours
     heureFin: { type: String, required: true }, // Heure de fin de la période de cours
-    users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },],
-    
+    // users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },],
+
 });
 
-const Absences = mongoose.model('Absence', absenceSchema, 'absences'); // emploi de temps
+const Absence = mongoose.model('Absence', absenceSchema, 'absences');
 
-export default Absences;
+export default Absence;

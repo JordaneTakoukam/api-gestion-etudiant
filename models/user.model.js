@@ -34,12 +34,10 @@ const userSchema = new Schema({
     photo_profil: { type: String, default: null },
     mot_de_passe: { type: String, required: true },
 
-    abscences: [{
-            absence:{ type: mongoose.Schema.Types.ObjectId, ref: 'Absence', required: false },
-    }],
-    niveaux:[{
-        niveau:{ type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: false },
-        annee:{type:Number}
+    absences: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Absence', required: false }],
+    niveaux: [{
+        niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: false },
+        annee: { type: Number }
     }],
 
     grade: { type: mongoose.Schema.Types.ObjectId, ref: 'Grade', required: false },

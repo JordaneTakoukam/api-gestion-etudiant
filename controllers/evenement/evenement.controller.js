@@ -2,7 +2,6 @@ import Evenement from '../../models/evenement.model.js'
 import { message } from '../../configs/message.js';
 import { DateTime } from 'luxon';
 import mongoose from 'mongoose';
-import { verifierEntier } from '../../fonctions/fonctions.js';
 
 // create
 export const createEvenement = async (req, res) => {

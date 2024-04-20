@@ -42,7 +42,7 @@ export const createEtudiant = async (req, res) => {
             return res.status(400).json({ success: false, message: message.champ_obligatoire });
         }
 
-        
+
         // Vérifier si l'utilisateur existe déjà avec cet e-mail
         const existingUserWithEmail = await User.findOne({ email });
 
@@ -54,7 +54,7 @@ export const createEtudiant = async (req, res) => {
         }
 
         //vérifier si le matricule exite déjà
-        if(matricule){
+        if (matricule) {
             const existingMatricule = await User.findOne({ matricule });
 
             if (existingMatricule) {
@@ -188,7 +188,7 @@ export const createEtudiant = async (req, res) => {
         const userData = newEtudiant.toObject();
         sendPasswordOnEmail(userData.nom, userData.email, mot_de_passe);
         delete userData.mot_de_passe;
-        
+
         res.json({
             success: true,
             message: message.ajouter_avec_success,
@@ -206,7 +206,7 @@ export const createEtudiant = async (req, res) => {
 };
 
 export const updateEtudiant = async (req, res) => {
-    const {etudiantId}=req.params;
+    const { etudiantId } = req.params;
     const {
         // info obligatoire
         nom,
@@ -223,7 +223,7 @@ export const updateEtudiant = async (req, res) => {
         date_entree,
 
         // autres (object Id)
-        abscences,
+        absences,
         niveaux,
 
         grade,
@@ -242,24 +242,24 @@ export const updateEtudiant = async (req, res) => {
         }
 
         if (!mongoose.Types.ObjectId.isValid(etudiantId)) {
-            return res.status(400).json({ 
-                success: false, 
+            return res.status(400).json({
+                success: false,
                 message: message.identifiant_invalide
             });
         }
 
-        
+
         // Vérifier si l'étudiant à modifier existe dans la base de données
         const existingEtudiant = await User.findById(etudiantId);
         if (!existingEtudiant) {
-            return res.status(404).json({ 
-                success: false, 
+            return res.status(404).json({
+                success: false,
                 message: message.etudiant_non_trouvee
             });
         }
 
-        
-        if(existingEtudiant.email!==email){
+
+        if (existingEtudiant.email !== email) {
             const existingUserWithEmail = await User.findOne({ email });
             if (existingUserWithEmail) {
                 return res.status(400).json({
@@ -268,7 +268,7 @@ export const updateEtudiant = async (req, res) => {
                 });
             }
         }
-            
+
         //vérifier si le matricule exite déjà
         if (existingEtudiant.matricule !== matricule) {
             const existingMatricule = await User.findOne({ matricule });
@@ -280,8 +280,8 @@ export const updateEtudiant = async (req, res) => {
             }
         }
 
-        if (abscences) {
-            for (const absence of abscences) {
+        if (absences) {
+            for (const absence of absences) {
                 if (!mongoose.Types.ObjectId.isValid(absence)) {
                     return res.status(400).json({
                         success: false,
@@ -392,102 +392,102 @@ export const updateEtudiant = async (req, res) => {
     }
 };
 
-export const deleteEtudiant = async (req, res) => {
-    const { etudiantId } = req.params;
+// export const deleteEtudiant = async (req, res) => {
+//     const { etudiantId } = req.params;
 
-    try {
-        // Vérifier si l'ID de la etudiant est un ObjectId valide
-        if (!mongoose.Types.ObjectId.isValid(etudiantId)) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide
-            });
-        }
+//     try {
+//         // Vérifier si l'ID de la etudiant est un ObjectId valide
+//         if (!mongoose.Types.ObjectId.isValid(etudiantId)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: message.identifiant_invalide
+//             });
+//         }
 
-        // Supprimer tous les chapitres liés à la matière
-        await Absences.deleteMany({ etudiant: etudiantId });
-        
-        // Supprimer la etudiant par son ID
-        const deletedEtudiant = await User.findByIdAndDelete(etudiantId);
-        if (!deletedEtudiant) {
-            return res.status(404).json({
-                success: false,
-                message: message.etudiant_non_trouvee
-            });
-        }
+//         // Supprimer tous les chapitres liés à la matière
+//         await Absences.deleteMany({ etudiant: etudiantId });
 
-        res.json({
-            success: true,
-            message: message.supprimer_avec_success
-        });
-    } catch (error) {
-        console.error("Erreur interne au serveur :", error);
-        res.status(500).json({
-            success: false,
-            message: message.erreurServeur
-        });
-    }
-}
+//         // Supprimer la etudiant par son ID
+//         const deletedEtudiant = await User.findByIdAndDelete(etudiantId);
+//         if (!deletedEtudiant) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: message.etudiant_non_trouvee
+//             });
+//         }
+
+//         res.json({
+//             success: true,
+//             message: message.supprimer_avec_success
+//         });
+//     } catch (error) {
+//         console.error("Erreur interne au serveur :", error);
+//         res.status(500).json({
+//             success: false,
+//             message: message.erreurServeur
+//         });
+//     }
+// }
 
 
 export const getEtudiantsByLevelAndYear = async (req, res) => {
     const { niveauId } = req.params;
     const { annee, page = 1, pageSize = 10 } = req.query;
-  
+
     try {
-      // Vérifier si l'ID du niveau est un ObjectId valide
-      if (!mongoose.Types.ObjectId.isValid(niveauId)) {
-        return res.status(400).json({
-          success: false,
-          message: message.identifiant_invalide,
+        // Vérifier si l'ID du niveau est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        const skip = (page - 1) * pageSize;
+
+        // Construire la requête en utilisant $elemMatch pour correspondre exactement au niveau et à l'année dans 'niveaux'
+        const query = {
+            'niveaux': {
+                $elemMatch: {
+                    niveau: niveauId,
+                    annee: Number(annee),
+                },
+            },
+        };
+
+        const etudiants = await User.find(query)
+            .skip(skip)
+            .limit(Number(pageSize));
+
+        // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
+        //   etudiants.forEach((etudiant) => {
+        //     etudiant.niveaux = etudiant.niveaux.filter(
+        //       (niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee)
+        //     );
+        //   });
+
+        const totalEtudiants = await User.countDocuments(query);
+
+        res.json({
+            success: true,
+            data: {
+                etudiants,
+                currentPage: page,
+                totalPages: Math.ceil(totalEtudiants / pageSize),
+                totalItems: totalEtudiants,
+                pageSize,
+            },
         });
-      }
-  
-      const skip = (page - 1) * pageSize;
-  
-      // Construire la requête en utilisant $elemMatch pour correspondre exactement au niveau et à l'année dans 'niveaux'
-      const query = {
-        'niveaux': {
-          $elemMatch: {
-            niveau: niveauId,
-            annee: Number(annee),
-          },
-        },
-      };
-  
-      const etudiants = await User.find(query)
-        .skip(skip)
-        .limit(Number(pageSize));
-  
-      // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
-    //   etudiants.forEach((etudiant) => {
-    //     etudiant.niveaux = etudiant.niveaux.filter(
-    //       (niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee)
-    //     );
-    //   });
-  
-      const totalEtudiants = await User.countDocuments(query);
-  
-      res.json({
-        success: true,
-        data: {
-          etudiants,
-          currentPage: page,
-          totalPages: Math.ceil(totalEtudiants / pageSize),
-          totalItems: totalEtudiants,
-          pageSize,
-        },
-      });
     } catch (error) {
-      console.error('Erreur lors de la récupération des étudiants :', error);
-      res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 };
-  
+
 
 export const getAllEtudiantsByLevelAndYear = async (req, res) => {
-    const { niveauId} = req.params;
-    const {annee} = req.query;
+    const { niveauId } = req.params;
+    const { annee } = req.query;
 
     try {
 
@@ -502,8 +502,8 @@ export const getAllEtudiantsByLevelAndYear = async (req, res) => {
         const query = {
             'niveaux': {
                 $elemMatch: {
-                niveau: niveauId,
-                annee: Number(annee),
+                    niveau: niveauId,
+                    annee: Number(annee),
                 },
             },
         };
@@ -523,10 +523,10 @@ export const getAllEtudiantsByLevelAndYear = async (req, res) => {
                 etudiants,
                 currentPage: 0,
                 totalPages: 0,
-                totalItems:0,
-                pageSize:0
+                totalItems: 0,
+                pageSize: 0
             },
-            
+
         });
     } catch (error) {
         console.error('Erreur lors de la récupération des étudiants :', error);
