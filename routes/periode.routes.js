@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { createPeriode, deletePeriode, readPeriode, readPeriodes, updatePeriode, getPeriodesByNiveau, getPeriodesAVenirByNiveau} from "../controllers/periode/periode.controller.js";
+import { createPeriode, deletePeriode, readPeriode, readPeriodes, updatePeriode, getPeriodesByNiveau, getPeriodesAVenirByNiveau, getPeriodesAVenirByEnseignant} from "../controllers/periode/periode.controller.js";
 
 // middlewares
 
@@ -15,7 +15,8 @@ router.post("/create", createPeriode);
 router.get("/get/:id", readPeriode);
 router.get("/get/:params", readPeriode);
 router.get("/getPeriodesByNiveau/:niveauId", getPeriodesByNiveau);
-router.get("/getPeriodesAVenirByNiveau/:niveauId", getPeriodesAVenirByNiveau)
+router.get("/getPeriodesAVenirByNiveau/:niveauId", getPeriodesAVenirByNiveau);
+router.get("/getPeriodesAVenirByEnseignant/:enseignantId", getPeriodesAVenirByEnseignant);
 
 
 // update

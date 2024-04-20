@@ -1,4 +1,5 @@
 import Matiere from '../../models/matiere.model.js'
+import Chapitre from '../../models/chapitre.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 
@@ -312,6 +313,46 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
         res.status(500).json({ success: false, message: message.erreurServeur });
     }
 };
+
+export const getMatieresByEnseignantNiveau = async (req, res) => {
+    const niveauId = req.params.niveauId;
+    const { enseignantId } = req.query;
+
+    try {
+        // Récupération des matières avec pagination
+        const matieres = await Matiere.find({ 
+            niveau: niveauId, 
+            $or: [{ 'typesEnseignement.enseignantPrincipal': enseignantId }, 
+            { 'typesEnseignement.enseignantSuppleant': enseignantId }
+        ] })
+            .populate({
+                path: 'typesEnseignement.enseignantPrincipal',
+                select: '_id nom prenom'
+            })
+            .populate({
+                path: 'typesEnseignement.enseignantSuppleant',
+                select: '_id nom prenom'
+            })
+            .populate('chapitres')
+            
+            
+
+        res.status(200).json({ 
+            success: true, 
+            data:{
+                matieres,
+                totalPages: 0,
+                currentPage: 0,
+                totalItems: 0,
+                pageSize: 0,
+            } 
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières par niveau.' });
+    }
+};
+
 
 
 

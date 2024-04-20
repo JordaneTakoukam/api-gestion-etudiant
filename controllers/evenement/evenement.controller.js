@@ -439,7 +439,7 @@ export const getUpcommingEventsOfYear = async (req, res) => {
 
 
         // Récupérer les 10 premiers événements
-        const events = await Evenement.find({
+        const evenements = await Evenement.find({
             dateDebut: { $gte: currentDate } // Événements commençant à partir de la date du jour et jusqu'à la fin de l'année spécifiée
         })
         .sort({ dateDebut: 1 }) // Trier les événements par date de début croissante
@@ -448,7 +448,7 @@ export const getUpcommingEventsOfYear = async (req, res) => {
         res.json({
             success: true,
             message: message.event_a_venir,
-            data: events,
+            data: {evenements},
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
