@@ -46,7 +46,8 @@ export const ajouterAbsence = async (req, res) => {
             annee,
             dateAbsence,
             heureDebut,
-            heureFin
+            heureFin,
+            user:userId
         });
 
         // Enregistrer l'absence dans la base de données

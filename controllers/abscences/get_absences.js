@@ -3,6 +3,30 @@ import Absence from "../../models/absence.model.js";
 import User from "../../models/user.model.js";
 import { appConfigs } from "../../configs/app_configs.js";
 
+export const getAbsencesByUserAndFilter = async (req, res) => {
+    const {userId}=req.params;
+    const { semestre = 1, annee = 2024 } = req.query;
+    console.log(userId+" "+semestre+" "+annee)
+    try {
+        // Rechercher les absences de l'utilisateur correspondant au semestre et à l'année
+        const absences = await Absence.find({user:userId, annee:annee, semestre:semestre});
+        console.log(absences)
+        res.json({
+            success: true,
+            data: {
+                absences: absences
+            }
+        });
+    } catch (error) {
+        console.error("Erreur interne au serveur :", error);
+        res.status(500).json({
+            success: false,
+            message: "Erreur interne au serveur."
+        });
+    }
+};
+
+
 export const getAbsencesWithEnseignantsByFilter = async (req, res) => {
     let { semestre = 1, annee = 2024, page = 1, pageSize = 10 } = req.query; // Default values for semester, year, and pagination
 

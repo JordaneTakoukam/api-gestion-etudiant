@@ -1,6 +1,6 @@
 import express from "express";
 import { ajouterAbsence, retirerAbsence } from "../controllers/abscences/absence.controller.js";
-import { getAbsencesWithEnseignantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent } from "../controllers/abscences/get_absences.js";
+import {getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent } from "../controllers/abscences/get_absences.js";
 
 
 // controllers
@@ -9,7 +9,7 @@ import { getAbsencesWithEnseignantsByFilter, getAbsencesWithEtudiantsByFilter, g
 
 const router = express.Router();
 
-
+router.get("/getAbsencesByUserAndFilter/:userId", getAbsencesByUserAndFilter);
 router.get("/getAbsencesWithEnseignantsByFilter", getAbsencesWithEnseignantsByFilter);
 router.get("/getAbsencesWithEtudiantsByFilter", getAbsencesWithEtudiantsByFilter);
 router.get("/getTotalHoursOfAbsenceByTeacher", getTotalHoursOfAbsenceByTeacher);

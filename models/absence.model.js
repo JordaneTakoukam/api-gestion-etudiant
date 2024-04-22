@@ -7,7 +7,7 @@ const absenceSchema = new Schema({
     dateAbsence: { type: Date, required: true },
     heureDebut: { type: String, required: true }, // Heure de début de la période de cours
     heureFin: { type: String, required: true }, // Heure de fin de la période de cours
-    // users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },],
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
 
 });
 
