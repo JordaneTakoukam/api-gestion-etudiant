@@ -5,7 +5,7 @@ import { appConfigs } from "../../configs/app_configs.js";
 
 
 export const getAbsencesWithEnseignantsByFilter = async (req, res) => {
-    const { semestre = "1", annee = "2024/2025", page = 1, pageSize = 10 } = req.query; // Valeurs par défaut pour le semestre, l'année et la pagination
+    const { semestre = 1, annee = 2024, page = 1, pageSize = 10 } = req.query; // Valeurs par défaut pour le semestre, l'année et la pagination
 
     try {
         // Rechercher les enseignants avec absences correspondant au semestre et à l'année
@@ -86,7 +86,7 @@ export const getAbsencesWithEnseignantsByFilter = async (req, res) => {
 
 
 export const getAbsencesWithEtudiantsByFilter = async (req, res) => {
-    const { semestre = "1", annee = "2024/2025", page = 1, pageSize = 10 } = req.query; // Valeurs par défaut pour le semestre, l'année et la pagination
+    const { semestre = 1, annee = 2024, page = 1, pageSize = 10 } = req.query; // Valeurs par défaut pour le semestre, l'année et la pagination
 
     try {
         // Rechercher les étudiants avec absences correspondant au semestre et à l'année
