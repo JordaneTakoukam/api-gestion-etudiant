@@ -73,6 +73,20 @@ export const retirerAbsence = async (req, res) => {
     const absenceId = req.params.absenceId;
 
     try {
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.userNotFound,
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(absenceId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.absence_invalide,
+            });
+        }
         // Vérifier si l'utilisateur existe
         const utilisateur = await User.findById(userId);
         if (!utilisateur) {
