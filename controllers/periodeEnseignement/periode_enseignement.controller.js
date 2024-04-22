@@ -1,8 +1,10 @@
 import PeriodeEnseignement from '../../models/periode_enseignement.model.js'
+import Matiere from '../../models/matiere.model.js';
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 import { DateTime } from 'luxon';
 const { ObjectId } = mongoose.Types;
+import moment from 'moment';
 
 // create
 
@@ -366,12 +368,12 @@ export const getPeriodesEnseignementWithPagination = async (req, res) => {
     }
 }
 
+
 export const getPeriodesEnseignement = async (req, res) => {
-    const {niveauId} = req.params;
+    const { niveauId } = req.params;
     const { annee, semestre } = req.query;
 
     try {
-        // Vérifier si l'ID du niveau est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(niveauId)) {
             return res.status(400).json({ 
                 success: false, 
@@ -379,40 +381,59 @@ export const getPeriodesEnseignement = async (req, res) => {
             });
         }
 
-        // Conversion de la page et de la limite en nombres entiers
-        
-
-        // Calculer l'index de départ
-
-        // Rechercher les périodes d'enseignement avec pagination
         const periodes = await PeriodeEnseignement.find({ 
             niveau: niveauId,
             annee: annee,
             semestre: semestre,
-        })
-        .populate({
-            path: 'enseignements.matiere',
-            select: '_id code libelleFr libelleEn typesEnseignement'
-        })
-        
+        });
+
+        periodes.forEach(periode => {
+            periode.dateDebut = moment(periode.dateDebut).toDate();
+            periode.dateFin = moment(periode.dateFin).toDate();
+        });
+
+        await Promise.all(periodes.map(async (periode) => {
+            await Promise.all(periode.enseignements.map(async (enseignement) => {
+                const enseignementPopulated = await Matiere.populate(enseignement, {
+                    path: 'matiere',
+                    select: '_id code libelleFr libelleEn typesEnseignement', 
+                    populate: {
+                        path: 'typesEnseignement.enseignantPrincipal',
+                        select: '_id nom prenom email',
+                        populate: {
+                            path: 'absences',
+                            select: '_id dateAbsence heureDebut heureFin',
+                            match: { 
+                                dateAbsence: { 
+                                    $gte: periode.dateDebut,
+                                    $lte: periode.dateFin
+                                }
+                            }
+                        }
+                    }
+                });
+                enseignement.matiere = enseignementPopulated.matiere;
+            }));
+        }));
 
         res.status(200).json({ 
             success: true, 
-            data:{
+            data: {
                 periodes,
                 totalPages: 0,
                 currentPage: 0,
                 totalItems: 0,
-                pageSize:0
+                pageSize: 0
             } 
         });
     } catch (error) {
         console.error('Erreur lors de la récupération des périodes d\'enseignement :', error);
         res.status(500).json({ 
             success: false, 
-            message: message.erreurServeur
+            message: 'Erreur interne du serveur.'
         });
     }
 }
+
 
 
