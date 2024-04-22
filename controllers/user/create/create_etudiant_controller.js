@@ -663,4 +663,119 @@ export const getNbEtudiantsParSection = async (req, res) => {
     }
 };
 
+export const getNbAbsencesParSection = async (req, res) => {
+    try {
+        const { annee, semestre } = req.query;
+
+        // Récupérer tous les étudiants ayant des niveaux pour l'année donnée
+        const etudiants =await User.aggregate([
+            {
+                $match: { roles: { $in: [appConfigs.role.etudiant] }, 'niveaux.annee': annee }
+            },
+            {
+                $lookup: {
+                    from: "absences",
+                    localField: "absences",
+                    foreignField: "_id",
+                    as: "absences"
+                }
+            },
+            {
+                $addFields: {
+                    totalHoursOfAbsence: {
+                        $sum: {
+                            $map: {
+                                input: {
+                                    $filter: {
+                                        input: "$absences",
+                                        as: "absence",
+                                        cond: {
+                                            $and: [
+                                                { $eq: ["$$absence.semestre", semestre] },
+                                                { $eq: ["$$absence.annee", annee] }
+                                            ]
+                                        }
+                                    }
+                                },
+                                as: "absence",
+                                in: {
+                                    $subtract: [
+                                        {
+                                            $add: [
+                                                { $toInt: { $substrCP: ["$$absence.heureFin", 0, 2] } }, // Convertir les heures de fin en décimal
+                                                { $divide: [{ $toInt: { $substrCP: ["$$absence.heureFin", 3, 2] } }, 60] } // Convertir les minutes de fin en décimal
+                                            ]
+                                        },
+                                        {
+                                            $add: [
+                                                { $toInt: { $substrCP: ["$$absence.heureDebut", 0, 2] } }, // Convertir les heures de début en décimal
+                                                { $divide: [{ $toInt: { $substrCP: ["$$absence.heureDebut", 3, 2] } }, 60] } // Convertir les minutes de début en décimal
+                                            ]
+                                        }
+                                    ]
+                                } // Calculer la durée de chaque absence
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    nom: 1,
+                    prenom: 1,
+                    niveaux:1,
+                    totalHoursOfAbsence: 1
+                }
+            }
+        ]);
+
+        const settings = await Setting.find().select('sections cycles niveaux');
+        
+        // Récupérer toutes les sections à partir des paramètres de l'objet `settings`
+        const sections = settings[0].sections.map(section => section._id.toString());
+
+        // Construire un objet pour stocker le nombre d'étudiants par section
+        const absencesEtudiantsParSection = {};
+
+        // Parcourir chaque section
+        for (const sectionId of sections) {
+            // Initialiser le compteur à 0 pour chaque section
+            absencesEtudiantsParSection[sectionId] = 0;
+        }
+
+        // Parcourir chaque étudiant
+        for (const etudiant of etudiants) {
+            // Rechercher le niveau de l'étudiant courant pour l'année donnée
+            const niveauEtudiant = etudiant.niveaux.find(niveau => niveau.annee == annee);
+            if (niveauEtudiant) {
+                // Trouver le cycle correspondant au niveau de l'étudiant
+                const niveau = settings[0].niveaux.find(niveau => niveau._id.toString() === niveauEtudiant.niveau.toString());
+                if (niveau) {
+                    // Trouver la section correspondant au cycle
+                    const cycle = settings[0].cycles.find(cycle => cycle._id.toString() === niveau.cycle.toString());
+                    if (cycle) {
+                        // Incrémenter le compteur de la section correspondante
+                        let responseData;
+                        if (Number.isInteger(totalHoursOfAbsence)) {
+                            responseData = etudiant.totalHoursOfAbsence;
+                        } else {
+                            responseData = etudiant.totalHoursOfAbsence.toFixed(2);
+                        }
+                        absencesEtudiantsParSection[cycle.section.toString()] += parseFloat(responseData);
+                    }
+                }
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: absencesEtudiantsParSection
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' });
+    }
+};
+
 
