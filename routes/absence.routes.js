@@ -1,6 +1,6 @@
 import express from "express";
 import { ajouterAbsence, retirerAbsence } from "../controllers/abscences/absence.controller.js";
-import {getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent } from "../controllers/abscences/get_absences.js";
+import {getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter,getAllAbsencesWithEnseignantsByFilter,getAllAbsencesWithEtudiantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent } from "../controllers/abscences/get_absences.js";
 
 
 // controllers
@@ -11,7 +11,9 @@ const router = express.Router();
 
 router.get("/getAbsencesByUserAndFilter/:userId", getAbsencesByUserAndFilter);
 router.get("/getAbsencesWithEnseignantsByFilter", getAbsencesWithEnseignantsByFilter);
-router.get("/getAbsencesWithEtudiantsByFilter", getAbsencesWithEtudiantsByFilter);
+router.get("/getAllAbsencesWithEnseignantsByFilter", getAllAbsencesWithEnseignantsByFilter);
+router.get("/getAbsencesWithEtudiantsByFilter/:niveauId", getAbsencesWithEtudiantsByFilter);
+router.get("/getAllAbsencesWithEtudiantsByFilter", getAllAbsencesWithEtudiantsByFilter);
 router.get("/getTotalHoursOfAbsenceByTeacher", getTotalHoursOfAbsenceByTeacher);
 router.get("/getTotalHoursOfAbsenceByStudent", getTotalHoursOfAbsenceByStudent);
 router.post("/create/:userId", ajouterAbsence);
