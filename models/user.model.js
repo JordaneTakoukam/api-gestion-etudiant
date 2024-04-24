@@ -1,30 +1,44 @@
 import mongoose, { Schema } from 'mongoose';
-import { keyRoleApp } from '../configs/key_role.js';
+import { keyRoleApp, statusCompte } from '../configs/key_role.js';
+import { ObjectId } from 'mongodb';
 
 const validRoles = [
-    keyRoleApp.superAdmin,
-    keyRoleApp.admin,
-    keyRoleApp.enseignant,
-    keyRoleApp.delegue,
-    keyRoleApp.etudiant
+  keyRoleApp.superAdmin,
+  keyRoleApp.admin,
+  keyRoleApp.user,
 ];
 
 const userSchema = new Schema({
-    role: { type: String, required: true },
-    dateCreation: { type: Date, required: true },
-    commune: { type: String, default: null },
-    categorie: { type: String, default: null  },
-    service: { type: String, default: null },
-    grade: { type: String, default: null },
-    matricule: { type: String, default: null },
-    nom: { type: String, required: true },
-    prenom: { type: String, default: null },
-    genre: { type: String, required: true },
-    dateNaiss: { type: Date, default: null },
-    lieuNaiss: { type: String, default: null },
-    contact: { type: String, default: null },
-    email: { type: String, required: true },
-    motDePasse: { type: String, required: true }
+  role: {
+    type: String,
+    required: true,
+    default: keyRoleApp.user,
+    validate: {
+      validator: function (v) {
+        return validRoles.includes(v);
+      },
+      message: (props) => `${props.value} n'est pas un rôle valide`,
+    },
+  },
+  nom_et_prenom: { type: String, required: true },
+  email: { type: String, required: true, unique: true }, // Add unique constraint
+  mot_de_passe: { type: String, required: true }, // Consider using password hashing
+  contact: { type: String, default: '' },
+  statut: { type: String, default: statusCompte.non_verifier },
+  date_creation: { type: Date, default: Date.now() },
+  historique_connexion: [{ type: Date, default: null }],
+
+  verification: {
+    code: { type: String, required: true },
+    expirationDate: { type: Date, required: true },
+  },
+
+  abonnement: {
+    label: { type: String, default: '' },
+    date_debut: { type: Date, default: null },
+    date_fin: { type: Date, default: null },
+    id_abonnement: { type: ObjectId, default: null },
+  },
 });
 
 const User = mongoose.model('User', userSchema, 'users');

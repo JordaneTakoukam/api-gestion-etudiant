@@ -4,7 +4,6 @@ import cors from "cors";
 import session from "express-session";
 import path from "path";
 
-//
 // connexion a mongodb online
 import connectMongoDB from "./database/mongodb.connection.js";
 
@@ -13,22 +12,8 @@ import connectMongoDB from "./database/mongodb.connection.js";
 import defaultRoute from "./routes/_default.route.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
-import calendarRoutes from "./routes/calendar.routes.js";
-import scheduleRoutes from "./routes/schedule.routes.js";
-import subjectRoutes from "./routes/subject.routes.js"; // matieres
-// routes de settings
-import serviceRoutes from "./routes/settings/service.routes.js";
-import fonctionRoutes from "./routes/settings/fonction.routes.js";
-import gradeRoutes from "./routes/settings/grade.routes.js";
-import categorieRoutes from "./routes/settings/categorie.routes.js";
-import regionRoutes from "./routes/settings/region.routes.js";
-import departementRoutes from "./routes/settings/departement.routes.js";
-import communeRoutes from "./routes/settings/commune.routes.js";
-import sectionRoutes from "./routes/settings/section.routes.js";
-import cycleRoutes from "./routes/settings/cycle.routes.js";
-import niveauRoutes from "./routes/settings/niveau.routes.js";
-import salleDeCourRoutes from "./routes/settings/salle_de_cour.routes.js";
-
+import batimentRoutes from "./routes/batiment.routes.js";
+import locauxRoutes from "./routes/local.routes.js";
 
 
 // Crée une nouvelle instance de l'application Express
@@ -56,43 +41,33 @@ app.use(session({
 
 // Définir le chemin vers le répertoire des images
 const staticsPath = path.join('./');
-app.use("/profile_images", express.static(path.join(staticsPath, "profile_images")));
+app.use("/_images/batiments", express.static(path.join(staticsPath, "batiments")));
+app.use("/_images/locaux", express.static(path.join(staticsPath, "locaux")));
 
 //
 // routes de l'api
 app.use("/", defaultRoute);
 app.use("/api/v1/auth/", authRoutes);
 app.use("/api/v1/user/", userRoutes);
-app.use("/api/v1/subject/", subjectRoutes);
-app.use("/api/v1/calendar/", calendarRoutes);
-app.use("/api/v1/schedule/", scheduleRoutes);
-app.use("/api/v1/setting/service", serviceRoutes);
-app.use("/api/v1/setting/fonction", fonctionRoutes);
-app.use("/api/v1/setting/grade", gradeRoutes);
-app.use("/api/v1/setting/categorie", categorieRoutes);
-app.use("/api/v1/setting/region", regionRoutes);
-app.use("/api/v1/setting/departement", departementRoutes);
-app.use("/api/v1/setting/commune", communeRoutes);
-app.use("/api/v1/setting/section", sectionRoutes);
-app.use("/api/v1/setting/cycle", cycleRoutes);
-app.use("/api/v1/setting/niveau", niveauRoutes);
-app.use("/api/v1/setting/salle-de-cour", salleDeCourRoutes);
+app.use("/api/v1/batiment/", batimentRoutes);
+app.use("/api/v1/local/", locauxRoutes);
 
 
 
 
-// connectMongoDB(process.env.MONGODB_URL)
-//     .then(() => {
-app.listen(
-    process.env.PORT || 8085,
-    async () => {
-        console.log(`🚀💥 Serveur en cours d\'exécution sur http://localhost:${process.env.PORT} `);
+
+connectMongoDB(process.env.MONGODB_URL)
+    .then(() => {
+        app.listen(
+            process.env.PORT || 8085,
+            async () => {
+                console.log(`🚀💥 Serveur en cours d\'exécution sur http://localhost:${process.env.PORT} `);
+            });
+    })
+    .catch((error) => {
+        console.log(error);
+        process.exit(1); // Quitter le processus en cas d'echec
     });
-// })
-// .catch((error) => {
-//     console.log(error);
-//     process.exit(1); // Quitter le processus en cas d'echec
-// });
 
 
 

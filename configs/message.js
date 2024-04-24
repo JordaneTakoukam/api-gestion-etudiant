@@ -1,14 +1,17 @@
 const message = {
-    erreurServeur:  "Erreur interne du serveur !",
-    emailExiste:  "Cette adresse e-mail est déjà enregistrée !",
+
+    superAdminDejaExistant: "Un compte super-admin est existe déjà !",
+
+
+    emailExiste: {
+        fr: "Cette adresse e-mail est déjà enregistrée !",
+        en: "Cette adresse e-mail est déjà enregistrée !"
+    },
 
     superAdminCreerAvecSuccess: {
         fr: "Super Administrateur créer avec succès !",
     },
 
-    superAdminDejaExistant: {
-        fr: "Un compte super-admin est existe déjà !",
-    },
     inscriptReuissie: {
         fr: "Inscription effectuée avec succès !",
         en: "Registration successful!"
@@ -18,8 +21,8 @@ const message = {
         en: "Login successful!"
     },
     userNonTrouver: {
-        fr: "Utilisateur non trouvé !",
-        en: "User not found!"
+        fr: "Utilisateur non trouvé pour cette email !",
+        en: "User not found for this email !"
     },
     motDePasseIncorrect: {
         fr: "Mot de passe incorrect !",
@@ -40,7 +43,7 @@ const message = {
         fr: "Token invalide !",
         en: "Invalid token!"
     },
-  
+
 
     motDePasseChange: {
         fr: "Mot de passe changé avec succès !",
@@ -51,11 +54,18 @@ const message = {
     invalidInput: {
         fr: "Entrée invalide.",
         en: "Invalid input."
-    }
+    },
 
 
     // =======================================
 
+
+    erreurServeur: "Erreur interne du serveur !",
+    ajouterAvecSuccess: "Ajouter avec succès",
+    recupererAvecSuccess: "Recupérer avec succès",
+    modifierAvecSuccess: "Modifier avec succès",
+    supprimerAvecSuccess: "Supprimer avec succès",
+    existeDeja: "Existe avec succès",
 
 };
 

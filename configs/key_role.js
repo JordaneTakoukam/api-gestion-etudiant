@@ -1,9 +1,14 @@
 export const keyRoleApp = {
-    superAdmin: 'super-admin',
+    superAdmin: 'super_admin',
     admin: 'admin',
-    enseignant: 'enseignant',
-    delegue: 'delegue',
-    etudiant: 'etudiant',
+    user: 'user',
+}
+
+
+export const statusCompte = {
+    verifier: 'verifier',
+    non_verifier: 'non_verifier',
+    suspendu: 'suspendu',
 }
 
 
