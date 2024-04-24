@@ -2,7 +2,7 @@ import { message } from "../../configs/message.js";
 import Batiment from "../../models/batiment.model.js";
 
 
-export const getById = async (req, res) => {
+export const getBatimentById = async (req, res) => {
     const { batimentId } = req.params;
 
     try {
@@ -26,12 +26,26 @@ export const getById = async (req, res) => {
 
 //
 export const getAllBatiment = async (req, res) => {
+    const { page = 1, pageSize = 10 } = req.query;
+
+    const startIndex = (page - 1) * pageSize;
+
     try {
-        const batiments = await Batiment.find();
+        const batiments = await Batiment.find().skip(startIndex).limit(parseInt(pageSize));
+
+        const totalBatiment = await Batiment.countDocuments();
+        const totalPages = Math.ceil(totalBatiment / parseInt(pageSize));
+
 
         res.status(200).json({
             success: true,
-            data: batiments,
+            data: {
+                listData: batiments,
+                totalPages: totalPages,
+                currentPage: page,
+                totalItems: totalBatiment,
+                pageSize: pageSize
+            }
         });
     } catch (error) {
         console.error("Erreur :", error);
