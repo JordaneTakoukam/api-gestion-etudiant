@@ -6,7 +6,7 @@ import { io } from "../../server.js";
 
 // Contrôleur pour signaler une absence
 export const signalerAbsence = async (req, res) => {
-    const { userId, role, motif, description, dateAbsence } = req.body;
+    const { userId, role, motif, titre, description, date_debut_absence, date_fin_absence, } = req.body;
 
     try {
         // Vérifier si l'ID de l'user est valide
@@ -31,24 +31,31 @@ export const signalerAbsence = async (req, res) => {
         const nouveauSignalement = new SignalementAbsence({
             role: role,
             userId: userId,
-            motif: motif,
-            description: description,
-            dateAbsence: dateAbsence,
+            motif,
+            titre,
+            description,
+            date_debut_absence,
+            date_fin_absence,
         });
 
 
         // Enregistrer le signalement d'absence dans la base de données
-        // const reponse = await nouveauSignalement.save();
-
+        await nouveauSignalement.save();
 
         const dataReturn = {
             nom: user.nom,
             prenom: user.prenom,
             userId: nouveauSignalement.userId,
+
+            role: nouveauSignalement.role,
+
             motif: nouveauSignalement.motif,
+            titre: nouveauSignalement.titre,
             description: nouveauSignalement.description,
-            dateAbsence: nouveauSignalement.dateAbsence,
+
             date_creation: nouveauSignalement.date_creation,
+            date_debut_absence: nouveauSignalement.date_debut_absence,
+            date_fin_absence: nouveauSignalement.date_fin_absence,
         }
 
         io.emit("message", { message: dataReturn });
