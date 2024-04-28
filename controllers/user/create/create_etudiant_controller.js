@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 import bcrypt from "bcrypt";
 import { DateTime } from "luxon";
-import Absences from '../../../models/absence.model.js';
+import Absences from '../../../models/absences/absence.model.js';
 import Setting from '../../../models/setting.model.js';
 
 export const createEtudiant = async (req, res) => {
