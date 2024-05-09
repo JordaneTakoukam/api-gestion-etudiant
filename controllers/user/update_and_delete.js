@@ -1,5 +1,7 @@
 import User from '../../models/user.model.js';
+import Absence from '../../models/absence.model.js';
 import { message } from '../../configs/message.js';
+import mongoose from 'mongoose';
 
 // Mettre à jour un utilisateur existant
 export const updateUser = async (req, res) => {

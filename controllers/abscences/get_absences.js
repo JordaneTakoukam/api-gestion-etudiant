@@ -343,79 +343,52 @@ export const getAllAbsencesWithEnseignantsByFilter = async (req, res) => {
 };
 
 export const getAllAbsencesWithEtudiantsByFilter = async (req, res) => {
-    const { semestre = 1, annee = 2024 } = req.query; // Valeurs par défaut pour le semestre, l'année et la pagination
+    const { niveauId } = req.params;
+    const { annee = 2024, semestre = 1 } = req.query;
 
     try {
-        // Rechercher les étudiants avec absences correspondant au semestre et à l'année
-        const etudiantsWithFilteredAbsences = await User.aggregate([
-            {
-                $match: { roles: { $in: [appConfigs.role.etudiant] } }
+        // Vérifier si l'ID du niveau est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+        // Construire la requête en utilisant $elemMatch pour correspondre exactement au niveau et à l'année dans 'niveaux',
+        // et en ajoutant un filtre pour le semestre et l'année dans 'absences'
+        const query = {
+            'niveaux': {
+                $elemMatch: {
+                    niveau: niveauId,
+                    annee: Number(annee),
+                },
             },
-            {
-                $lookup: {
-                    from: "absences",
-                    localField: "absences",
-                    foreignField: "_id",
-                    as: "absences"
-                }
-            },
-            {
-                $addFields: {
-                    absences: {
-                        $filter: {
-                            input: "$absences",
-                            as: "absence",
-                            cond: {
-                                $and: [
-                                    { $eq: ["$$absence.semestre", semestre] },
-                                    { $eq: ["$$absence.annee", annee] }
-                                ]
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $project: {
-                    verificationCode: 0,
-                    roles: 0,
-                    date_creation: 0,
-                    mot_de_passe: 0,
-                    grade: 0,
-                    categorie: 0,
-                    fonction: 0,
-                    service: 0,
-                    commune: 0,
-                    __v: 0,
-                    niveaux: 0,
-                    historique_connexion: 0
-                }
-            }
-        ]);
 
-        // Pagination
-        // const totalEtudiants = etudiantsWithFilteredAbsences.length;
-        // const totalPages = Math.ceil(totalEtudiants / parseInt(pageSize));
-        // const startIndex = (parseInt(page) - 1) * parseInt(pageSize);
-        // const endIndex = parseInt(page) * parseInt(pageSize);
-        // const etudiantsPerPage = etudiantsWithFilteredAbsences.slice(startIndex, endIndex);
+        };
+
+        const etudiants = await User.find(query).populate('absences');
+
+        // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
+        etudiants.forEach((etudiant) => {
+            etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee));
+            etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
+        });
+        
+
 
         res.json({
             success: true,
             data: {
-                etudiants: etudiantsWithFilteredAbsences,
+                etudiants,
                 currentPage: 0,
                 totalPages: 0,
                 totalItems: 0,
-                pageSize: 0
-            }
+                pageSize:0,
+            },
         });
     } catch (error) {
-        console.error("Erreur interne au serveur :", error);
-        res.status(500).json({
-            success: false,
-            message: message.erreurServeur,
-        });
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 };
 

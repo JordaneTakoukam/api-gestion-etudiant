@@ -65,16 +65,16 @@ export const createEtudiant = async (req, res) => {
             }
         }
 
-        if (abscences) {
-            for (const absence of abscences) {
-                if (!mongoose.Types.ObjectId.isValid(absence)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: message.absence_invalide,
-                    });
-                }
-            }
-        }
+        // if (absences) {
+        //     for (const absence of absences) {
+        //         if (!mongoose.Types.ObjectId.isValid(absence)) {
+        //             return res.status(400).json({
+        //                 success: false,
+        //                 message: message.absence_invalide,
+        //             });
+        //         }
+        //     }
+        // }
 
         // verifier si le niveau
         if (niveaux) {
@@ -416,11 +416,11 @@ export const getEtudiantsByLevelAndYear = async (req, res) => {
             .limit(Number(pageSize));
 
         // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
-        //   etudiants.forEach((etudiant) => {
-        //     etudiant.niveaux = etudiant.niveaux.filter(
-        //       (niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee)
-        //     );
-        //   });
+          etudiants.forEach((etudiant) => {
+            etudiant.niveaux = etudiant.niveaux.filter(
+              (niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee)
+            );
+          });
 
         const totalEtudiants = await User.countDocuments(query);
 

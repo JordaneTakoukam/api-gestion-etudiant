@@ -13,7 +13,7 @@ router.get("/getAbsencesByUserAndFilter/:userId", getAbsencesByUserAndFilter);
 router.get("/getAbsencesWithEnseignantsByFilter", getAbsencesWithEnseignantsByFilter);
 router.get("/getAllAbsencesWithEnseignantsByFilter", getAllAbsencesWithEnseignantsByFilter);
 router.get("/getAbsencesWithEtudiantsByFilter/:niveauId", getAbsencesWithEtudiantsByFilter);
-router.get("/getAllAbsencesWithEtudiantsByFilter", getAllAbsencesWithEtudiantsByFilter);
+router.get("/getAllAbsencesWithEtudiantsByFilter/:niveauId", getAllAbsencesWithEtudiantsByFilter);
 router.get("/getTotalHoursOfAbsenceByTeacher", getTotalHoursOfAbsenceByTeacher);
 router.get("/getTotalHoursOfAbsenceByStudent", getTotalHoursOfAbsenceByStudent);
 router.post("/create/:userId", ajouterAbsence);
