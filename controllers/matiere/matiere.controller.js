@@ -1,11 +1,12 @@
 import Matiere from '../../models/matiere.model.js'
+import Periode from '../../models/periode.model.js'
 import Chapitre from '../../models/chapitre.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 
 // create
 export const createMatiere = async (req, res) => { 
-    const { code, libelleFr, libelleEn, niveau, prerequisFr, prerequisEn, approchePedFr, approchePedEn, evaluationAcquisFr, evaluationAcquisEn, typesEnseignement, chapitres } = req.body;
+    const { code, libelleFr, libelleEn, niveau, prerequisFr, prerequisEn, approchePedFr, approchePedEn, evaluationAcquisFr, evaluationAcquisEn, typesEnseignement, chapitres, objectifs } = req.body;
 
     try {
 
@@ -55,6 +56,17 @@ export const createMatiere = async (req, res) => {
             }
         }
 
+        if (objectifs) {
+            for (const objectif of objectifs) {
+                if (!mongoose.Types.ObjectId.isValid(objectif)) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: message.identifiant_invalide,
+                    });
+                }
+            }
+        }
+
         // Vérifier si le code de existe déjà
         const existingCode = await Matiere.findOne({ code: code });
         if (existingCode) {
@@ -94,7 +106,8 @@ export const createMatiere = async (req, res) => {
             evaluationAcquisFr,
             evaluationAcquisEn,
             typesEnseignement,
-            chapitres
+            chapitres,
+            objectifs
         });
 
         // Enregistrer la nouvelle matière dans la base de données
@@ -113,7 +126,7 @@ export const createMatiere = async (req, res) => {
 // update
 export const updateMatiere = async (req, res) => {
     const { matiereId } = req.params; // Récupérer l'ID de la matière depuis les paramètres de la requête
-    const { code, libelleFr, libelleEn, niveau, prerequisFr, prerequisEn, approchePedFr, approchePedEn, evaluationAcquisFr, evaluationAcquisEn, typesEnseignement, chapitres } = req.body;
+    const { code, libelleFr, libelleEn, niveau, prerequisFr, prerequisEn, approchePedFr, approchePedEn, evaluationAcquisFr, evaluationAcquisEn, typesEnseignement, chapitres, objectifs } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
@@ -184,6 +197,7 @@ export const updateMatiere = async (req, res) => {
         existingMatiere.evaluationAcquisEn = evaluationAcquisEn;
         existingMatiere.typesEnseignement = typesEnseignement;
         existingMatiere.chapitres = chapitres;
+        existingMatiere.objectifs = objectifs;
 
         // Enregistrer les modifications dans la base de données
         const updatedMatiere = await existingMatiere.save();
@@ -251,7 +265,8 @@ export const getMatieresByNiveau = async (req, res) => {
         }).populate({
             path: 'typesEnseignement.enseignantSuppleant',
             select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
-        }).populate('chapitres');
+        }).populate('chapitres')
+        .populate('objectifs');
         
         
 
@@ -290,6 +305,7 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
                 select: '_id nom prenom'
             })
             .populate('chapitres')
+            .populate('objectifs')
             .skip(startIndex)
             .limit(parseInt(pageSize));
             
@@ -316,25 +332,55 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
 
 export const getMatieresByEnseignantNiveau = async (req, res) => {
     const niveauId = req.params.niveauId;
-    const { enseignantId } = req.query;
+    const { enseignantId, annee, semestre } = req.query;
 
     try {
         // Récupération des matières avec pagination
-        const matieres = await Matiere.find({ 
-            niveau: niveauId, 
-            $or: [{ 'typesEnseignement.enseignantPrincipal': enseignantId }, 
-            { 'typesEnseignement.enseignantSuppleant': enseignantId }
-        ] })
-            .populate({
-                path: 'typesEnseignement.enseignantPrincipal',
-                select: '_id nom prenom'
-            })
-            .populate({
-                path: 'typesEnseignement.enseignantSuppleant',
-                select: '_id nom prenom'
-            })
-            .populate('chapitres')
-            
+        
+
+        const filter = { 
+            niveau: niveauId,
+            $or: [
+                { enseignantPrincipal: enseignantId },
+                { enseignantSuppleant: enseignantId }
+            ]
+        };
+
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+            let periodesCurrentYear = await Periode.findOne(filter).exec();
+            if (!periodesCurrentYear) {
+                // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+                let found = false;
+                let previousYear = parseInt(annee) - 1;
+                while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                    periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                    if (periodesCurrentYear) {
+                        filter.annee = previousYear;
+                        found = true;
+                    } else {
+                        previousYear--;
+                    }
+                }
+            } 
+        }
+
+        // Si un semestre est spécifié dans la requête, l'utiliser
+        if (semestre && !isNaN(semestre)) {
+            filter.semestre = parseInt(semestre);
+        }
+
+        
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('matiere').exec();
+
+        // Extraire les identifiants uniques des matières
+        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+        // Récupérer les détails de chaque matière à partir des identifiants uniques
+        const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
             
 
         res.status(200).json({ 

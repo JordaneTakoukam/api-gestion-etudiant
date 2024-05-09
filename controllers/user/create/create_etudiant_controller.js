@@ -233,7 +233,7 @@ export const updateEtudiant = async (req, res) => {
         commune,
 
     } = req.body;
-    console.log(roles);
+    // console.log(roles);
     try {
 
         // Vérifier que tous les champs obligatoires sont présents
@@ -553,7 +553,6 @@ export const getTotalEtudiantsByYear = async (req, res) => {
         };
 
         const etudiants = await User.find(query);
-        console.log(etudiants);
         
         const totalEtudiants = etudiants.length;
         res.json({

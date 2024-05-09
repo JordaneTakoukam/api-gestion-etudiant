@@ -16,7 +16,8 @@ const matiereSchema = new Schema({
         enseignantPrincipal: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false},
         enseignantSuppleant: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false}
     }],
-    chapitres: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chapitre', required: false }]
+    chapitres: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chapitre', required: false }],
+    objectifs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Objectif', required: false }]
 
 });
 

@@ -1,5 +1,5 @@
 import User from '../../models/user.model.js';
-import Absence from '../../models/absence.model.js';
+import Absence from '../../models/absences/absence.model.js';
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 

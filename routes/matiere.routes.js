@@ -1,6 +1,7 @@
 import express from "express";
 import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau} from "../controllers/matiere/matiere.controller.js";
 import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant } from "../controllers/matiere/chapitre/chapitre.controller.js";
+import { createObjectif, deleteObjectif, readObjectif, readObjectifs, updateObjectif, updateObjectifEtatObj,getObjectifs, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj } from "../controllers/matiere/objectif/objectif.controller.js";
 
 // controllers
 
@@ -49,5 +50,26 @@ router.put("/chapitre/update/:chapitreId", updateChapitre);
 router.delete("/chapitre/delete/:chapitreId", deleteChapitre);
 router.put("/chapitre/update_etat/:chapitreId", updateObjectifEtat);
 
+// objectif associer a une matiere
+// create
+router.post("/objectif/create", createObjectif);
+router.get("/objectif/getProgressionGlobalEnseignants", getProgressionGlobalEnseignantsObj);
+router.get("/objectif/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveauObj);
+router.get("/objectif/getProgressionGlobalEnseignant/:enseignantId", getProgressionGlobalEnseignantObj);
+router.get("/objectif/getObjectifs", getObjectifs);
+
+
+//  read
+router.get("/objectif/get/:id", readObjectif);
+router.get("/objectif/get/:params", readObjectifs);
+
+
+
+// update
+router.put("/objectif/update/:objectifId", updateObjectif);
+
+// delete
+router.delete("/objectif/delete/:objectifId", deleteObjectif);
+router.put("/objectif/update_etat/:objectifId", updateObjectifEtatObj);
 
 export default router;
