@@ -4,6 +4,8 @@ import cors from "cors";
 import session from "express-session";
 import path from "path";
 
+import { createServer } from "http";
+import { Server } from "socket.io";
 //
 // connexion a mongodb online
 import connectMongoDB from "./database/mongodb.connection.js";
@@ -66,10 +68,13 @@ app.use(session({
 const staticsPath = path.join('./');
 app.use("/profile_images", express.static(path.join(staticsPath, "profile_images")));
 
+
+const httpServer = createServer(app);
+
 //
 // routes de l'api
-app.use("/", defaultRoute);
 app.use("/api/v1/auth/", authRoutes);
+app.use("/", defaultRoute);
 app.use("/api/v1/user/", userRoutes);
 app.use("/api/v1/matiere/", matiereRoutes);
 app.use("/api/v1/evenement/", evenementRoutes);
@@ -99,11 +104,27 @@ app.use("/api/v1/absence", abscenceRoutes);
 app.use("/api/v1/alerte", abscenceRoutes);
 
 
+// Initialise Socket.io après la connexion à MongoDB
+export const io = new Server(httpServer,
+    {
+        cors: {
+            origin: "http://localhost:5173", // Autoriser les requêtes provenant de cette URL
+            methods: ["GET", "POST"] // Autoriser uniquement les méthodes GET et POST
+        }
+    });
 
 
 connectMongoDB(process.env.MONGODB_URL)
     .then(() => {
-        app.listen(
+
+
+        // Gestion des connexions Socket.io
+        io.on("connection", (socket) => {
+            console.log("Nouvelle connexion socket établie :", socket.id);
+            // Ajoute ici la logique de gestion des événements Socket.io si nécessaire
+        });
+
+        httpServer.listen(
             process.env.PORT || 8085,
             async () => {
                 console.log(`🚀💥 Serveur en cours d\'exécution sur http://localhost:${process.env.PORT} `);

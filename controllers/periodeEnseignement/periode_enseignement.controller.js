@@ -139,7 +139,7 @@ export const updatePeriodeEnseignement = async (req, res) => {
     try {
         // Vérifier si l'ID de la période d'enseignement est un ObjectId valide
         if (!mongoose.Types.ObjectId.isValid(periodeEnseignementId)) {
-            console.log("periode "+periodeEnseignementId);
+            // console.log("periode "+periodeEnseignementId);
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -157,7 +157,7 @@ export const updatePeriodeEnseignement = async (req, res) => {
         }
 
         if (!mongoose.Types.ObjectId.isValid(niveau)) {
-            console.log("niveau");
+            // console.log("niveau");
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -166,7 +166,7 @@ export const updatePeriodeEnseignement = async (req, res) => {
 
         for (const enseignement of enseignements) {
             if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
-                console.log("type_ens");
+                // console.log("type_ens");
                 return res.status(400).json({ 
                     success: false, 
                     message: message.identifiant_invalide,

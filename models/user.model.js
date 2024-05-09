@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import { appConfigs } from '../configs/app_configs.js';
 
-const validRoles = [
+export const validRoles = [
     appConfigs.role.superAdmin,
     appConfigs.role.admin,
     appConfigs.role.enseignant,
