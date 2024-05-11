@@ -83,4 +83,16 @@ export function generateConfirmationCode() {
     return code;
 }
 
+export function formatDate(date){
+    const dateStr = date;
+    const dateObj = new Date(dateStr);
+  
+    const year = dateObj.getFullYear();
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0'); // +1 car les mois sont indexés à partir de 0
+    const day = dateObj.getDate().toString().padStart(2, '0');
+  
+    const formattedDate = `${year}-${month}-${day}`;
+    return formattedDate;
+  }
+
 

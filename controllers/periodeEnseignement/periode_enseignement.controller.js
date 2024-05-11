@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { DateTime } from 'luxon';
 const { ObjectId } = mongoose.Types;
 import moment from 'moment';
+import { formatDate } from '../../fonctions/fonctions.js';
 
 // create
 
@@ -369,6 +370,72 @@ export const getPeriodesEnseignementWithPagination = async (req, res) => {
 }
 
 
+// export const getPeriodesEnseignement = async (req, res) => {
+//     const { niveauId } = req.params;
+//     const { annee, semestre } = req.query;
+
+//     try {
+//         if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+//             return res.status(400).json({ 
+//                 success: false, 
+//                 message: 'Identifiant du niveau invalide.'
+//             });
+//         }
+
+//         const periodes = await PeriodeEnseignement.find({ 
+//             niveau: niveauId,
+//             annee: annee,
+//             semestre: semestre,
+//         });
+
+//         periodes.forEach(periode => {
+//             periode.dateDebut = moment(periode.dateDebut).toDate();
+//             periode.dateFin = moment(periode.dateFin).toDate();
+//         });
+
+//         await Promise.all(periodes.map(async (periode) => {
+//             await Promise.all(periode.enseignements.map(async (enseignement) => {
+//                 const enseignementPopulated = await Matiere.populate(enseignement, {
+//                     path: 'matiere',
+//                     select: '_id code libelleFr libelleEn typesEnseignement', 
+//                     populate: {
+//                         path: 'typesEnseignement.enseignantPrincipal',
+//                         select: '_id nom prenom email',
+//                         populate: {
+//                             path: 'absences',
+//                             select: '_id dateAbsence heureDebut heureFin',
+//                             match: { 
+//                                 dateAbsence: { 
+//                                     $gte: periode.dateDebut,
+//                                     $lte: periode.dateFin
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 });
+//                 enseignement.matiere = enseignementPopulated.matiere;
+//             }));
+//         }));
+
+//         res.status(200).json({ 
+//             success: true, 
+//             data: {
+//                 periodes,
+//                 totalPages: 0,
+//                 currentPage: 0,
+//                 totalItems: 0,
+//                 pageSize: 0
+//             } 
+//         });
+//     } catch (error) {
+//         console.error('Erreur lors de la récupération des périodes d\'enseignement :', error);
+//         res.status(500).json({ 
+//             success: false, 
+//             message: 'Erreur interne du serveur.'
+//         });
+//     }
+// }
+
 export const getPeriodesEnseignement = async (req, res) => {
     const { niveauId } = req.params;
     const { annee, semestre } = req.query;
@@ -396,23 +463,21 @@ export const getPeriodesEnseignement = async (req, res) => {
             await Promise.all(periode.enseignements.map(async (enseignement) => {
                 const enseignementPopulated = await Matiere.populate(enseignement, {
                     path: 'matiere',
-                    select: '_id code libelleFr libelleEn typesEnseignement', 
+                    select: '_id code libelleFr libelleEn', 
                     populate: {
-                        path: 'typesEnseignement.enseignantPrincipal',
-                        select: '_id nom prenom email',
-                        populate: {
-                            path: 'absences',
-                            select: '_id dateAbsence heureDebut heureFin',
-                            match: { 
-                                dateAbsence: { 
-                                    $gte: periode.dateDebut,
-                                    $lte: periode.dateFin
-                                }
-                            }
-                        }
+                        path: 'objectifs', 
                     }
                 });
                 enseignement.matiere = enseignementPopulated.matiere;
+                // Calculer le nombre de séances pratiquées pour chaque matière
+                enseignement.nbSeancesPratiquees = enseignement.matiere.objectifs.reduce((acc, obj) => {
+                    
+                    if (obj.date_etat && obj.etat==1 && formatDate(obj.date_etat) >= formatDate(periode.dateDebut) && formatDate(obj.date_etat) <= formatDate(periode.dateFin)) {
+                        
+                        acc.add(moment(obj.date_etat).format('YYYY-MM-DD'));
+                    }
+                    return acc;
+                }, new Set()).size;
             }));
         }));
 
@@ -434,6 +499,7 @@ export const getPeriodesEnseignement = async (req, res) => {
         });
     }
 }
+
 
 
 

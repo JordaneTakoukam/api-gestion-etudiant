@@ -4,7 +4,8 @@ import mongoose, { Schema } from 'mongoose';
 const matiereEnseignementSchema = new Schema({
     matiere: { type: mongoose.Schema.Types.ObjectId, ref: 'Matiere', required: true },
     typeEnseignement: { type: mongoose.Schema.Types.ObjectId, ref: 'TypeEnseignement', required: true },
-    nombreSeance: { type: Number, required: true }
+    nombreSeance: { type: Number, required: true },
+    nbSeancesPratiquees:{type:Number, default:0}
 });
 
 const enseignementSchema = new Schema({
