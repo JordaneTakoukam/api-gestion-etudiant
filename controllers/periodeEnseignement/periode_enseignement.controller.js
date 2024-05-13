@@ -31,12 +31,12 @@ export const createPeriodeEnseignement = async (req, res) => {
 
         for (const enseignement of enseignements) {
             
-                if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
-                    return res.status(400).json({ 
-                        success: false, 
-                        message: message.identifiant_invalide,
-                    });
-                }
+                // if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
+                //     return res.status(400).json({ 
+                //         success: false, 
+                //         message: message.identifiant_invalide,
+                //     });
+                // }
                 if (!mongoose.Types.ObjectId.isValid(enseignement.matiere)) {
                     return res.status(400).json({ 
                         success: false, 
@@ -166,13 +166,13 @@ export const updatePeriodeEnseignement = async (req, res) => {
         }
 
         for (const enseignement of enseignements) {
-            if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
-                // console.log("type_ens");
-                return res.status(400).json({ 
-                    success: false, 
-                    message: message.identifiant_invalide,
-                });
-            }
+            // if (!mongoose.Types.ObjectId.isValid(enseignement.typeEnseignement)) {
+            //     // console.log("type_ens");
+            //     return res.status(400).json({ 
+            //         success: false, 
+            //         message: message.identifiant_invalide,
+            //     });
+            // }
             if (!mongoose.Types.ObjectId.isValid(enseignement.matiere._id)) {
                 console.log("matiere");
                 return res.status(400).json({ 
@@ -261,11 +261,13 @@ export const updatePeriodeEnseignement = async (req, res) => {
 
         // Enregistrer les modifications dans la base de données
         const updatedPeriode = await existingPeriode.save();
+        // Recherche des enseignements mis à jour avec les nouveaux IDs
+        const updatedEnseignements = await PeriodeEnseignement.findById(updatedPeriode._id).populate('enseignements.matiere', '_id code libelleFr libelleEn');
 
         res.status(200).json({ 
             success: true, 
             message: message.mis_a_jour,
-            data: updatedPeriode
+            data: updatedEnseignements
         });
     } catch (error) {
         console.error('Erreur lors de la mise à jour de la période d\'enseignement :', error);

@@ -201,11 +201,14 @@ export const updateMatiere = async (req, res) => {
 
         // Enregistrer les modifications dans la base de données
         const updatedMatiere = await existingMatiere.save();
+        const updatedEnseignements = await Matiere.findById(updatedMatiere._id)
+                                    .populate('typesEnseignement.enseignantPrincipal', '_id nom prenom')
+                                    .populate('typesEnseignement.enseignantSuppleant', '_id nom prenom');
 
         res.status(200).json({ 
             success: true, 
             message: message.mis_a_jour,
-            data: updatedMatiere
+            data: updatedEnseignements
         });
     } catch (error) {
         console.error('Erreur lors de la mise à jour de la matière :', error);
