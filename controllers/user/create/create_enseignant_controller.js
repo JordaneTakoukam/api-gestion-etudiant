@@ -7,6 +7,9 @@ import bcrypt from "bcrypt";
 import { DateTime } from "luxon";
 import Absences from '../../../models/absences/absence.model.js';
 import Periode from '../../../models/periode.model.js';
+import Setting from '../../../models/setting.model.js';
+import { formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../../fonctions/fonctions.js';
+import cheerio from 'cheerio';
 
 export const createEnseignant = async (req, res) => {
     const {
@@ -393,9 +396,6 @@ export const updateEnseignant = async (req, res) => {
     }
 };
 
-
-
-
 export const getEnseignantsByFilter = async (req, res) => {
     const { page = 1, pageSize = 10, grade, categorie, service, fonction } = req.query;
     const role = appConfigs.role.enseignant;
@@ -538,7 +538,6 @@ export const getTotalEnseignants = async (req, res) => {
     }
 };
 
-
 export const getNiveauxByEnseignant = async (req, res) => {
     const { enseignantId } = req.params;
     const { annee, semestre } = req.query;
@@ -602,6 +601,90 @@ export const getNiveauxByEnseignant = async (req, res) => {
             success: false, 
             message: message.erreurServeur 
         });
+    }
+};
+
+export const generateListEnseignant = async (req, res)=>{
+    const {grade, categorie, service, fonction } = req.query;
+    const role = appConfigs.role.enseignant;
+    const query = {
+        roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
+    };
+    // Ajouter les filtres supplémentaires si disponibles
+    if (grade && mongoose.Types.ObjectId.isValid(grade)) {
+        query.grade = grade;
+    }
+
+    if (categorie && mongoose.Types.ObjectId.isValid(categorie)) {
+        query.categorie = categorie;
+    }
+
+    if (service && mongoose.Types.ObjectId.isValid(service)) {
+        query.service = service;
+    }
+
+    if (fonction && mongoose.Types.ObjectId.isValid(fonction)) {
+        query.fonction = fonction;
+    }
+
+    const enseignants = await User.find(query);
+    
+    const htmlContent = await fillTemplate(enseignants, './templates/template_liste_enseignant_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+}
+
+async function fillTemplate (enseignants, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        
+        const userTable = $('#table-enseignant');
+        const rowTemplate = $('.row_template');
+        let i = 1;
+        let settings = await Setting.find().select('grades categories fonctions services');
+        let setting = null;
+        if(settings.length>0){
+            setting=settings[0]
+        }
+        
+        for (const enseignant of enseignants) {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#num').text(i);
+            clonedRow.find('#matricule').text(enseignant.matricule!=null?enseignant.matricule:"");
+            clonedRow.find('#nom').text(enseignant.nom);
+            clonedRow.find('#prenom').text(enseignant.prenom);
+            clonedRow.find('#genre').text(enseignant.genre);
+            clonedRow.find('#e-mail').text(enseignant.email);
+            clonedRow.find('#grade').text("");
+            clonedRow.find('#categorie').text("");
+            clonedRow.find('#service').text("");
+            clonedRow.find('#fonction').text("");
+            if(enseignant.grade!=null && setting){
+                clonedRow.find('#grade').text(setting.grades.find((grade)=>grade._id.toString()===enseignant.grade.toString())?.libelleFr??"");
+            }
+            if(enseignant.categorie!=null && setting){
+                clonedRow.find('#categorie').text(setting.categories.find((categorie)=>categorie._id.toString()===enseignant.categorie.toString())?.libelleFr??"");
+            }
+            if(enseignant.service!=null && setting){
+                clonedRow.find('#service').text(setting.services.find((service)=>service._id.toString()===enseignant.service.toString())?.libelleFr??"");
+            }
+            if(enseignant.fonction!=null && setting){
+                clonedRow.find('#fonction').text(setting.fonctions.find((fonction)=>fonction._id.toString()===enseignant.fonction.toString())?.libelleFr??"");
+            }
+            
+            
+            userTable.append(clonedRow);
+            i++;
+        }
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
     }
 };
 

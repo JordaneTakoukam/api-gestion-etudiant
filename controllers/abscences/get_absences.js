@@ -3,6 +3,8 @@ import Absence from "../../models/absences/absence.model.js";
 import User from "../../models/user.model.js";
 import { appConfigs } from "../../configs/app_configs.js";
 import mongoose from 'mongoose';
+import cheerio from 'cheerio';
+import { nbTotalAbsences, formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from "../../fonctions/fonctions.js";
 
 export const getAbsencesByUserAndFilter = async (req, res) => {
     const {userId}=req.params;
@@ -342,6 +344,102 @@ export const getAllAbsencesWithEnseignantsByFilter = async (req, res) => {
     }
 };
 
+export const generateListAbsenceEnseignant = async (req, res)=>{
+    let { semestre = 1, annee = 2024 } = req.query; // Default values for semester, year, and pagination
+
+    // Convert semestre and annee to numbers
+    semestre = parseInt(semestre);
+    annee = parseInt(annee);
+
+    let enseignantsWithFilteredAbsences = await User.aggregate([
+        {
+            $match: { roles: { $in: [appConfigs.role.enseignant] } }
+        },
+        {
+            $lookup: {
+                from: "absences",
+                localField: "absences",
+                foreignField: "_id",
+                as: "absences"
+            }
+        },
+        {
+            $addFields: {
+                absences: {
+                    $filter: {
+                        input: "$absences",
+                        as: "absence",
+                        cond: {
+                            $and: [
+                                { $eq: ["$$absence.semestre", semestre] },
+                                { $eq: ["$$absence.annee", annee] }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                verificationCode: 0,
+                roles: 0,
+                date_creation: 0,
+                mot_de_passe: 0,
+                grade: 0,
+                categorie: 0,
+                fonction: 0,
+                service: 0,
+                commune: 0,
+                __v: 0,
+                niveaux: 0,
+                historique_connexion: 0
+            }
+        }
+    ]);
+
+    // Sort the enseignantsWithFilteredAbsences array in descending order by the length of absences array
+    enseignantsWithFilteredAbsences.forEach(enseignant => {
+        // Sorting the absences array by the dateAbsence field in ascending order
+        enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
+    });
+    const htmlContent = await fillTemplateE(enseignantsWithFilteredAbsences, './templates/template_liste_absences_enseignant_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+}
+
+async function fillTemplateE (enseignants, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        
+        const userTable = $('#table-enseignant');
+        const rowTemplate = $('.row_template');
+        let i = 1;
+        for (const enseignant of enseignants) {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#num').text(i);
+            clonedRow.find('#matricule').text(enseignant.matricule!=null?enseignant.matricule:"");
+            clonedRow.find('#nom').text(enseignant.nom);
+            clonedRow.find('#prenom').text(enseignant.prenom);
+            clonedRow.find('#genre').text(enseignant.genre);
+            clonedRow.find('#e-mail').text(enseignant.email);
+            clonedRow.find('#date-naiss').text(enseignant.date_naiss!=null?formatDateFr(enseignant.date_naiss):"");
+            clonedRow.find('#lieu-naiss').text(enseignant.lieu_naiss!=null?enseignant.lieu_naiss:"");
+            clonedRow.find('#absences').text(nbTotalAbsences(enseignant.absences));
+            userTable.append(clonedRow);
+            i++;
+        }
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+};
+
 export const getAllAbsencesWithEtudiantsByFilter = async (req, res) => {
     const { niveauId } = req.params;
     const { annee = 2024, semestre = 1 } = req.query;
@@ -389,6 +487,75 @@ export const getAllAbsencesWithEtudiantsByFilter = async (req, res) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des étudiants :', error);
         res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
+export const generateListAbsenceEtudiant = async (req, res)=>{
+    const { niveauId } = req.params;
+    const { annee = 2024, semestre = 1 } = req.query;
+
+    // Vérifier si l'ID du niveau est un ObjectId valide
+    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+        return res.status(400).json({
+            success: false,
+            message: message.identifiant_invalide,
+        });
+    }
+    // Construire la requête en utilisant $elemMatch pour correspondre exactement au niveau et à l'année dans 'niveaux',
+    // et en ajoutant un filtre pour le semestre et l'année dans 'absences'
+    const query = {
+        'niveaux': {
+            $elemMatch: {
+                niveau: niveauId,
+                annee: Number(annee),
+            },
+        },
+
+    };
+
+    const etudiants = await User.find(query).populate('absences');
+
+    // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
+    etudiants.forEach((etudiant) => {
+        etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee));
+        etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
+    });
+    
+    const htmlContent = await fillTemplate(etudiants, './templates/template_liste_absences_etudiant_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+}
+
+async function fillTemplate (etudiants, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        
+        const userTable = $('#table-etudiant');
+        const rowTemplate = $('.row_template');
+        let i = 1;
+        for (const etudiant of etudiants) {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#num').text(i);
+            clonedRow.find('#matricule').text(etudiant.matricule!=null?etudiant.matricule:"");
+            clonedRow.find('#nom').text(etudiant.nom);
+            clonedRow.find('#prenom').text(etudiant.prenom);
+            clonedRow.find('#genre').text(etudiant.genre);
+            clonedRow.find('#e-mail').text(etudiant.email);
+            clonedRow.find('#date-naiss').text(etudiant.date_naiss!=null?formatDateFr(etudiant.date_naiss):"");
+            clonedRow.find('#lieu-naiss').text(etudiant.lieu_naiss!=null?etudiant.lieu_naiss:"");
+            clonedRow.find('#absences').text(nbTotalAbsences(etudiant.absences));
+            userTable.append(clonedRow);
+            i++;
+        }
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
     }
 };
 

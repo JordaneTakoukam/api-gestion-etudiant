@@ -465,10 +465,10 @@ export const getUpcommingEventsOfYear = async (req, res) => {
 export const generateListEvent = async (req, res)=>{
     const { annee = 2024 } = req.params;
     const evenements = await Evenement.find({ annee: annee });
-    const htmlContent = await fillTemplate(evenements, './templates/template_calendrier.html', 2024);
+    const htmlContent = await fillTemplate(evenements, './templates/template_calendrier_fr.html', annee);
 
     // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res);
+    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
 }
 
 async function fillTemplate (evenements, filePath, annee) {

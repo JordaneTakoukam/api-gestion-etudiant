@@ -7,6 +7,8 @@ import bcrypt from "bcrypt";
 import { DateTime } from "luxon";
 import Absences from '../../../models/absences/absence.model.js';
 import Setting from '../../../models/setting.model.js';
+import { formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../../fonctions/fonctions.js';
+import cheerio from 'cheerio';
 
 export const createEtudiant = async (req, res) => {
     const {
@@ -384,8 +386,6 @@ export const updateEtudiant = async (req, res) => {
 };
 
 
-
-
 export const getEtudiantsByLevelAndYear = async (req, res) => {
     const { niveauId } = req.params;
     const { annee, page = 1, pageSize = 10 } = req.query;
@@ -743,6 +743,65 @@ export const getNbAbsencesParSection = async (req, res) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des étudiants :', error);
         res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' });
+    }
+};
+
+export const generateListEtudiant = async (req, res)=>{
+    const { niveauId } = req.params;
+    const { annee } = req.query;
+    
+    // Vérifier si l'ID du niveau est un ObjectId valide
+    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+        return res.status(400).json({
+            success: false,
+            message: message.identifiant_invalide
+        });
+    }
+    const query = {
+        'niveaux': {
+            $elemMatch: {
+                niveau: niveauId,
+                annee: Number(annee),
+            },
+        },
+    };
+
+    const etudiants = await User.find(query);
+    
+    const htmlContent = await fillTemplate(etudiants, './templates/template_liste_etudiant_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+}
+
+async function fillTemplate (etudiants, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        
+        const userTable = $('#table-etudiant');
+        const rowTemplate = $('.row_template');
+        let i = 1;
+        for (const etudiant of etudiants) {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#num').text(i);
+            clonedRow.find('#matricule').text(etudiant.matricule!=null?etudiant.matricule:"");
+            clonedRow.find('#nom').text(etudiant.nom);
+            clonedRow.find('#prenom').text(etudiant.prenom);
+            clonedRow.find('#genre').text(etudiant.genre);
+            clonedRow.find('#e-mail').text(etudiant.email);
+            clonedRow.find('#date-naiss').text(etudiant.date_naiss!=null?formatDateFr(etudiant.date_naiss):"");
+            clonedRow.find('#lieu-naiss').text(etudiant.lieu_naiss!=null?etudiant.lieu_naiss:"");
+            userTable.append(clonedRow);
+            i++;
+        }
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
     }
 };
 

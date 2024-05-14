@@ -4,8 +4,8 @@ import express from "express";
 import { createDefaultSuperAdmin } from "../controllers/user/create/create_default_super_admin.controller.js";
 import { deleteUser, updateUser } from "../controllers/user/update_and_delete.js";
 import { createAdminController } from "../controllers/user/create/create_admin_controller.js";
-import { createEtudiant, updateEtudiant, getEtudiantsByLevelAndYear, getAllEtudiantsByLevelAndYear, getTotalEtudiantsByYear, getTotalEtudiantsByNiveau, getNbEtudiantsParSection, getNbAbsencesParSection } from "../controllers/user/create/create_etudiant_controller.js";
-import { createEnseignant, updateEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter, getEnseignantsByNomPrenom, getTotalEnseignants, getNiveauxByEnseignant } from "../controllers/user/create/create_enseignant_controller.js";
+import { createEtudiant, updateEtudiant, getEtudiantsByLevelAndYear, getAllEtudiantsByLevelAndYear, getTotalEtudiantsByYear, getTotalEtudiantsByNiveau, getNbEtudiantsParSection, getNbAbsencesParSection, generateListEtudiant} from "../controllers/user/create/create_etudiant_controller.js";
+import { createEnseignant, updateEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter, getEnseignantsByNomPrenom, getTotalEnseignants, getNiveauxByEnseignant, generateListEnseignant } from "../controllers/user/create/create_enseignant_controller.js";
 import { getAllAdministrateurs, getAllEnseignants, getAllEtudiants } from "../controllers/user/get/get_user_controller.js";
 
 // middlewares
@@ -23,10 +23,12 @@ router.get("/getNbAbsencesParSection", getNbAbsencesParSection);
 // router.get("/getUsersByRoleNomPrenom/:role",getUsersByRoleNomPrenom);
 router.get("/getEtudiantsByLevelAndYear/:niveauId", getEtudiantsByLevelAndYear);
 router.get("/getAllEtudiantsByLevelAndYear/:niveauId", getAllEtudiantsByLevelAndYear);
+router.get("/generateListEtudiant/:niveauId", generateListEtudiant);
 
 router.get("/getEnseignantsByFilter", getEnseignantsByFilter);
 router.get("/getAllEnseignantsByFilter", getAllEnseignantsByFilter);
 router.get("/getEnseignantsByNomPrenom", getEnseignantsByNomPrenom);
+router.get("/generateListEnseignant", generateListEnseignant);
 
 router.get("/getTotalEtudiantsByYear", getTotalEtudiantsByYear);
 router.get("/getTotalEtudiantsByNiveau", getTotalEtudiantsByNiveau);

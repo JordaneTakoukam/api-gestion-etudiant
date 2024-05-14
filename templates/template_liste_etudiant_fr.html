@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body{
+            font-family: Arial, sans-serif; 
+            font-size: 13px;
+            text-align: justify;
+        }
+        #table-etudiant{
+            border-collapse: collapse;
+            width: 1030px;
+        }
+        td, th{
+            border: 1px solid black;
+        }
+        #table-header{
+            width: 1030px;
+            text-align: center;
+            border: none;
+            font-size: 11px;
+        }
+
+    
+        #header-french, #header-english, #header-logo{
+            border: none;
+        }
+
+        #header-english{
+            width: 220px;
+        }
+
+        #header-french, #header-english{
+            width: 250px;
+        }
+
+        #header-logo{
+            width: 300px;
+        }
+
+        .devise{
+            font-style: italic;
+        }
+
+        .num{
+            width: 20px;
+        }
+
+        
+
+       
+    </style>
+</head>
+    <body >
+        
+        <table id="table-header">
+            <tr>
+                <td id="header-french">
+                    REPUBLIQUE DU CAMEROUN<br>
+                    <span class="devise">Paix - Travail - Patrie</span><br>**********<br>
+                    ECOLE NATIONALE D'ADMINISTRATION ET DE MAGISTRATURE<br>**********<br>
+                    DIRECTION GENERALE<br>**********<br>
+                    DIRECTION DES AFFAIRES ACADEMIQUES<br>**********<br>
+                </td>
+                <td id="header-logo"></td>
+                <td id="header-english">
+                    REPUBLIC OF CAMEROON<br>
+                    <span class="devise">Peace - Work - Fatherland</span><br>**********<br>
+                    NATIONAL SCHOOL OF ADMINISTRATION AND MAGISTRACY<br>**********<br>
+                    DIRECTORALE GENERAL<br>**********<br>
+                    DEPARTEMENT OF ACADEMIC AFFAIRS<br>**********
+                </td>
+            </tr>
+        </table>
+        
+       
+        <table id="table-etudiant">
+            <thead>
+                <tr>
+                    <th class="header-etudiant num" >N°</th>
+                    <th class="header-etudiant" >Matricule</th>
+                    <th class="header-etudiant" >Nom</th>
+                    <th class="header-etudiant" >Prénom</th>
+                    <th class="header-etudiant" >Genre</th>
+                    <th class="header-etudiant" >E-mail</th>
+                    <th class="header-etudiant" >Date de naissance</th>
+                    <th class="header-etudiant" >Lieu de naissance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row_template">
+                    <td id="num" ></td>
+                    <td id="matricule" ></td>
+                    <td id="nom" ></td>
+                    <td id="prenom" ></td>
+                    <td id="genre"></td>
+                    <td id="e-mail"></td>
+                    <td id="date-naiss"></td>
+                    <td id="lieu-naiss"></td>
+                </tr>
+            </tbody>
+            
+        </table>    
+   </body>
+</html>
