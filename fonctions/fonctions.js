@@ -1,5 +1,8 @@
 import * as crypto from 'crypto';
 import { message } from '../configs/message.js';
+import { create } from 'html-pdf';
+import { readFile } from 'fs';
+
 
 
 // generer le mot de passes
@@ -33,13 +36,6 @@ export function generateRandomPassword() {
     return randomId;
 }
 
-
-
-
-
-
-
-
 export function encrypt(value, secretKey) {
     // Generate a random initialization vector (IV) for CBC mode
     const iv = crypto.randomBytes(16);
@@ -68,8 +64,6 @@ export function verifierEntier(value, res) {
     }
 }
 
-
-
 export function generateConfirmationCode() {
     let code = '';
     const length = 6;
@@ -93,6 +87,50 @@ export function formatDate(date){
   
     const formattedDate = `${year}-${month}-${day}`;
     return formattedDate;
-  }
+}
+
+export function formatYear(year) {
+    return `${year}-${year + 1}`;
+}
+
+export function loadHTML(filePath) {
+    return new Promise((resolve, reject) => {
+        readFile(filePath, 'utf8', (err, data) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data);
+            }
+        });
+    });
+}
+
+export function generatePDFAndSendToBrowser(htmlContent, res) {
+    const options = {
+        format: 'A4', // Format de page
+        border: {
+            top: '10mm',    // Marge supérieure
+            right: '10mm',  // Marge droite
+            bottom: '10mm', // Marge inférieure
+            left: '10mm'    // Marge gauche
+        }
+    };
+    console.log(htmlContent);
+    create(htmlContent, options).toStream((err, stream) => {
+        if (err) {
+            console.error('Erreur lors de la génération du PDF :', err);
+            res.status(500).json({
+                success: false,
+                message: 'Erreur lors de la génération du PDF'
+            });
+        } else {
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': 'attachment; filename=evenements.pdf' // Nom du fichier PDF
+            });
+            stream.pipe(res);
+        }
+    });
+}
 
 

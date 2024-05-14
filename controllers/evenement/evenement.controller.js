@@ -2,6 +2,9 @@ import Evenement from '../../models/evenement.model.js'
 import { message } from '../../configs/message.js';
 import { DateTime } from 'luxon';
 import mongoose from 'mongoose';
+import { formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import cheerio from 'cheerio';
+
 
 // create
 export const createEvenement = async (req, res) => {
@@ -458,6 +461,41 @@ export const getUpcommingEventsOfYear = async (req, res) => {
         });
     }
 }
+
+export const generateListEvent = async (req, res)=>{
+    const { annee = 2024 } = req.params;
+    const evenements = await Evenement.find({ annee: annee });
+    const htmlContent = await fillTemplate(evenements, './templates/template_calendrier.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res);
+}
+
+async function fillTemplate (evenements, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        body.find('.annee').text(formatYear(annee));
+        const userTable = $('#table-calendrier');
+        const rowTemplate = $('.row_template');
+        
+        for (const event of evenements) {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#libelle').text(event.libelleFr);
+            clonedRow.find('#periode').text(event.periodeFr);
+            clonedRow.find('#personnel').text(event.personnelFr);
+            clonedRow.find('#description_observation').text(event.descriptionObservationFr);
+            userTable.append(clonedRow);
+        }
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+};
 
 
 

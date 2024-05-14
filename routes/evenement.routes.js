@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { createEvenement, deleteEvenement, readEvenement, readEvenements, updateEvenement, getEvenementsByYear, getAllEvenementsByYear, getUpcommingEventsOfYear } from "../controllers/evenement/evenement.controller.js";
+import { createEvenement, deleteEvenement, readEvenement, readEvenements, updateEvenement, getEvenementsByYear, getAllEvenementsByYear, getUpcommingEventsOfYear, generateListEvent } from "../controllers/evenement/evenement.controller.js";
 
 // middlewares
 
@@ -17,6 +17,7 @@ router.get("/get/:params", readEvenements);
 router.get("/getByYearByPage/:annee", getEvenementsByYear);
 router.get("/getAllEvenementsByYear/:annee", getAllEvenementsByYear);
 router.get("/getFirstTenEventsOfYear/:annee", getUpcommingEventsOfYear);
+router.get("/generateListEvent/:annee", generateListEvent);
 
 
 
