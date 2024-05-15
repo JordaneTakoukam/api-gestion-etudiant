@@ -6,7 +6,8 @@ import { DateTime } from 'luxon';
 const { ObjectId } = mongoose.Types;
 import moment from 'moment';
 import { formatDate } from '../../fonctions/fonctions.js';
-
+import { calculateProgress, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import cheerio from 'cheerio';
 // create
 
 export const createPeriodeEnseignement = async (req, res) => {
@@ -174,7 +175,7 @@ export const updatePeriodeEnseignement = async (req, res) => {
             //     });
             // }
             if (!mongoose.Types.ObjectId.isValid(enseignement.matiere._id)) {
-                console.log("matiere");
+                
                 return res.status(400).json({ 
                     success: false, 
                     message: message.identifiant_invalide,
@@ -457,8 +458,8 @@ export const getPeriodesEnseignement = async (req, res) => {
         });
 
         periodes.forEach(periode => {
-            periode.dateDebut = moment(periode.dateDebut).toDate();
-            periode.dateFin = moment(periode.dateFin).toDate();
+            periode.dateDebut = moment(new Date(periode.dateDebut)).toDate();
+            periode.dateFin = moment(new Date(periode.dateFin)).toDate();
         });
 
         await Promise.all(periodes.map(async (periode) => {
@@ -501,6 +502,141 @@ export const getPeriodesEnseignement = async (req, res) => {
         });
     }
 }
+
+export const generateListPeriodeEnseignement = async (req, res)=>{
+    const { niveauId } = req.params;
+    const { annee, semestre } = req.query;
+
+    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Identifiant du niveau invalide.'
+        });
+    }
+
+    const periodes = await PeriodeEnseignement.find({ 
+        niveau: niveauId,
+        annee: annee,
+        semestre: semestre,
+    });
+
+    periodes.forEach(periode => {
+        periode.dateDebut = moment(periode.dateDebut).toDate();
+        periode.dateFin = moment(periode.dateFin).toDate();
+    });
+
+    await Promise.all(periodes.map(async (periode) => {
+        await Promise.all(periode.enseignements.map(async (enseignement) => {
+            const enseignementPopulated = await Matiere.populate(enseignement, {
+                path: 'matiere',
+                select: '_id code libelleFr libelleEn', 
+                populate: {
+                    path: 'objectifs', 
+                }
+            });
+            enseignement.matiere = enseignementPopulated.matiere;
+            // Calculer le nombre de séances pratiquées pour chaque matière
+            enseignement.nbSeancesPratiquees = enseignement.matiere.objectifs.reduce((acc, obj) => {
+                
+                if (obj.date_etat && obj.etat==1 && formatDate(obj.date_etat) >= formatDate(periode.dateDebut) && formatDate(obj.date_etat) <= formatDate(periode.dateFin)) {
+                    
+                    acc.add(moment(obj.date_etat).format('YYYY-MM-DD'));
+                }
+                return acc;
+            }, new Set()).size;
+        }));
+    }));
+
+    const htmlContent = await fillTemplate(periodes, './templates/template_periode_enseignement_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+}
+
+async function fillTemplate (periodes, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        
+        const userTable = $('#table-periode-enseignement');
+        const rowTemplate = $('.row_template');
+        const periodTemplate=$('.periode_template')
+        
+        for (const periode of periodes) {
+            const clonedRowPeriod = periodTemplate.clone();
+            clonedRowPeriod.find('#title-periode').text(periode.periodeFr);
+            userTable.append(clonedRowPeriod);
+            if(periode.enseignements){
+                for(const enseignement of periode.enseignements){   
+                    const clonedRow = rowTemplate.clone();
+                    clonedRow.find('#matiere').text(enseignement.matiere.code+":"+enseignement.matiere.libelleFr);
+                    clonedRow.find('#periode-enseignement').text(enseignement.nombreSeance);
+                    userTable.append(clonedRow);
+                }
+            }
+        }
+        periodTemplate.first().remove();
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+};
+
+
+export const generateProgressionPeriodeEnseignement = async (req, res)=>{
+    const {periode}=req.query;
+    const htmlContent = await fillTemplateProg(periode, './templates/template_progression_periode_enseignement_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+}
+
+async function fillTemplateProg (periode, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        body.find('#title-periode').text(periode.periodeFr);
+        const userTable = $('#table-periode-enseignement');
+        
+        const matTemplate = $('.matiere_template');
+        const elemTemplate = $('.elem_template'); 
+        const rowTemplate = $('.row_template');
+
+        
+        if(periode.enseignements){
+            for(const enseignement of periode.enseignements){   
+                const clonedMat = matTemplate.clone();
+                
+                clonedMat.find('#title-matiere').text(enseignement.matiere.code+":"+enseignement.matiere.libelleFr);
+                userTable.append(clonedMat);
+                const clonedElm = elemTemplate.clone();
+                userTable.append(clonedElm);
+                const clonedRow = rowTemplate.clone();
+                clonedRow.find('#nb-seance').text(enseignement.nombreSeance);
+                clonedRow.find('#nb-seance-pra').text(enseignement.nbSeancesPratiquees);
+                const gap=enseignement.nombreSeance-enseignement.nbSeancesPratiquees;
+                clonedRow.find('#gap').text(gap);
+                const taux = ((enseignement.nbSeancesPratiquees/ enseignement.nombreSeance) * 100).toFixed(2)
+                clonedRow.find('#taux').text(taux+" %");
+                userTable.append(clonedRow);
+            }
+        }
+        
+        matTemplate.first().remove();
+        elemTemplate.first().remove();
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+};
 
 
 

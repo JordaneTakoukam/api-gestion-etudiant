@@ -196,6 +196,25 @@ export function nbTotalAbsences(listeAbsences) {
       return formatHour.toString();
     }
     return '0';
-  }
+}
+
+export function calculateProgress (matiere) {
+    let totalObjectifs = 0;
+    let objectifsAvecEtat1 = 0;
+    if(matiere && matiere.objectifs){
+        totalObjectifs = matiere.objectifs.length;
+        matiere.objectifs.forEach((objectif) => {
+            if (objectif.etat == 1) {
+                objectifsAvecEtat1++;
+            }
+        });
+    }
+    
+
+    const progress = totalObjectifs === 0 ? 0 : (objectifsAvecEtat1 / totalObjectifs) * 100;
+
+    return parseFloat(progress.toFixed(2));
+}
+
 
 

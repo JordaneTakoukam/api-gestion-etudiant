@@ -13,7 +13,7 @@ export const getAbsencesByUserAndFilter = async (req, res) => {
     try {
         // Rechercher les absences de l'utilisateur correspondant au semestre et à l'année
         const absences = await Absence.find({user:userId, annee:annee, semestre:semestre});
-        console.log(absences)
+        
         res.json({
             success: true,
             data: {

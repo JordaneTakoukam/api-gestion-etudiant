@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body{
+            font-family: Arial, sans-serif; 
+            font-size: 13px;
+            text-align: justify;
+        }
+        #table-periode-enseignement{
+            border-collapse: collapse;
+            width: 700px;
+        }
+        td, th{
+            border: 1px solid black;
+        }
+        #table-header{
+            width: 700px;
+            text-align: center;
+            border: none;
+            font-size: 11px;
+        }
+
+    
+        #header-french, #header-english, #header-logo{
+            border: none;
+        }
+
+        #header-english{
+            width: 220px;
+        }
+
+        #header-french, #header-english{
+            width: 250px;
+        }
+
+        #header-logo{
+            width: 300px;
+        }
+
+        .devise{
+            font-style: italic;
+        }
+
+        #doc-header, .decide{
+            text-align: center;
+        }
+
+        .bold-underline{
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        sup, #directeur{
+            font-weight: bold;
+        }
+
+        #title-periode, #title-matiere{
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .row_template, .elem_template{
+            text-align: center;
+        }
+
+       
+    </style>
+</head>
+    <body >
+        
+        <table id="table-header">
+            <tr>
+                <td id="header-french">
+                    REPUBLIQUE DU CAMEROUN<br>
+                    <span class="devise">Paix - Travail - Patrie</span><br>**********<br>
+                    ECOLE NATIONALE D'ADMINISTRATION ET DE MAGISTRATURE<br>**********<br>
+                    DIRECTION GENERALE<br>**********<br>
+                    DIRECTION DES AFFAIRES ACADEMIQUES<br>**********<br>
+                </td>
+                <td id="header-logo"></td>
+                <td id="header-english">
+                    REPUBLIC OF CAMEROON<br>
+                    <span class="devise">Peace - Work - Fatherland</span><br>**********<br>
+                    NATIONAL SCHOOL OF ADMINISTRATION AND MAGISTRACY<br>**********<br>
+                    DIRECTORALE GENERAL<br>**********<br>
+                    DEPARTEMENT OF ACADEMIC AFFAIRS<br>**********
+                </td>
+            </tr>
+        </table>
+        
+        <table id="table-periode-enseignement">
+            <thead>
+                <tr>
+                    <th id="title-periode" colspan="4"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="matiere_template">
+                    <td id="title-matiere" colspan="4"></td>
+                </tr>
+                <tr class="elem_template">
+                    <td>Nombre de séance</td>
+                    <td>Nombre de séance pratiqué</td>
+                    <td>Gap</td>
+                    <td>Taux de présence relatif</td>
+                </tr>
+                <tr class="row_template">
+                    <td id="nb-seance" ></td>
+                    <td id="nb-seance-pra" ></td>
+                    <td id="gap" ></td>
+                    <td id="taux" ></td>
+
+                </tr>
+            </tbody>
+            
+        </table>    
+   </body>
+</html>

@@ -3,6 +3,9 @@ import Periode from '../../models/periode.model.js'
 import Chapitre from '../../models/chapitre.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
+import Setting from '../../models/setting.model.js';
+import { calculateProgress, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import cheerio from 'cheerio';
 
 // create
 export const createMatiere = async (req, res) => { 
@@ -289,6 +292,43 @@ export const getMatieresByNiveau = async (req, res) => {
     }
 };
 
+export const generateListMatByNiveau = async (req, res)=>{
+    const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+
+    // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
+    const matieres = await Matiere.find({niveau:niveauId}).populate({
+        path: 'typesEnseignement.enseignantPrincipal',
+        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
+    }).populate({
+        path: 'typesEnseignement.enseignantSuppleant',
+        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
+    }).populate('chapitres')
+    .populate('objectifs');
+    
+    const htmlContent = await fillTemplateListMat(matieres, './templates/template_liste_matiere_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+}
+
+export const generateProgressByNiveau = async (req, res)=>{
+    const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+
+    // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
+    const matieres = await Matiere.find({niveau:niveauId}).populate({
+        path: 'typesEnseignement.enseignantPrincipal',
+        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
+    }).populate({
+        path: 'typesEnseignement.enseignantSuppleant',
+        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
+    }).populate('chapitres')
+    .populate('objectifs');
+    const htmlContent = await fillTemplate(matieres, './templates/template_progression_matiere_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+}
+
 export const getMatieresByNiveauWithPagination = async (req, res) => {
     const niveauId = req.params.niveauId;
     const { page = 1, pageSize = 10 } = req.query;
@@ -399,6 +439,229 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des matières par niveau :', error);
         res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières par niveau.' });
+    }
+};
+
+export const generateListMatByEnseignantNiveau = async (req, res)=>{
+    const niveauId = req.params.niveauId;
+    const { enseignantId, annee, semestre } = req.query;
+
+    const filter = { 
+        niveau: niveauId,
+        $or: [
+            { enseignantPrincipal: enseignantId },
+            { enseignantSuppleant: enseignantId }
+        ]
+    };
+
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee);
+        let periodesCurrentYear = await Periode.findOne(filter).exec();
+        if (!periodesCurrentYear) {
+            // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+            let found = false;
+            let previousYear = parseInt(annee) - 1;
+            while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                if (periodesCurrentYear) {
+                    filter.annee = previousYear;
+                    found = true;
+                } else {
+                    previousYear--;
+                }
+            }
+        } 
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+    
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter).select('matiere').exec();
+
+    // Extraire les identifiants uniques des matières
+    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+    // Récupérer les détails de chaque matière à partir des identifiants uniques
+    const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
+
+    
+    const htmlContent = await fillTemplateListMat(matieres, './templates/template_liste_matiere_fr.html', annee);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+}
+
+export const generateProgressByEnseignant = async (req, res)=>{
+    const niveauId = req.params.niveauId;
+    const { enseignantId, annee, semestre } = req.query;
+
+    const filter = { 
+        niveau: niveauId,
+        $or: [
+            { enseignantPrincipal: enseignantId },
+            { enseignantSuppleant: enseignantId }
+        ]
+    };
+
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee);
+        let periodesCurrentYear = await Periode.findOne(filter).exec();
+        if (!periodesCurrentYear) {
+            // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+            let found = false;
+            let previousYear = parseInt(annee) - 1;
+            while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                if (periodesCurrentYear) {
+                    filter.annee = previousYear;
+                    found = true;
+                } else {
+                    previousYear--;
+                }
+            }
+        } 
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+    
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter).select('matiere').exec();
+
+    // Extraire les identifiants uniques des matières
+    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+    // Récupérer les détails de chaque matière à partir des identifiants uniques
+    const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
+    
+    const htmlContent = await fillTemplate(matieres, './templates/template_progression_matiere_fr.html', 2024);
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+}
+
+async function fillTemplateListMat (matieres, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        
+        const userTable = $('#table-matiere');
+        const matTemplate=$('.matiere_template');
+        const appTemplate=$('.app_template');
+        const preTemplate=$('.pre_template');
+        const evaTemplate=$('.eva_template');
+        const compTemplate=$('.comp_template');
+        const rowTemplate = $('.row_template');
+        let settings = await Setting.find().select('typesEnseignement');
+        let setting = null;
+        if(settings.length>0){
+            setting=settings[0]
+        }
+        for (const matiere of matieres) {
+            const clonedRowMat = matTemplate.clone();
+            clonedRowMat.find('#title-matiere').text(matiere.libelleFr);
+            userTable.append(clonedRowMat);
+            
+            if(matiere.chapitres){
+                for(const chapitre of matiere.chapitres){
+                    const clonedRow = rowTemplate.clone();
+                    clonedRow.find('#title-chapitre').text(chapitre.libelleFr);
+                    if(chapitre.typesEnseignement!=null && setting){
+                        for(const typeEns of chapitre.typesEnseignement){
+                            let type = setting.typesEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).code.toString().toLowerCase();
+                            if(type){
+                                clonedRow.find('#'+type).text(typeEns.volumeHoraire);
+                            }
+                            
+                            // if(setting.typeEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).code.toString().toLowerCase()==='cm'){
+                            //     clonedRow.find('#cm').text(typeEns.volumeHoraire);
+                            // }
+                            // if(setting.typeEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).libelleFr.toString().toLowerCase()==='td'){
+                            //     clonedRow.find('#td').text(typeEns.volumeHoraire);
+                            // }
+                            userTable.append(clonedRow);
+                        }
+
+                    }
+                }
+            }
+
+            const clonedRowApp = appTemplate.clone();
+            clonedRowApp.find('#approche-ped').text(matiere.approchePedFr)
+            userTable.append(clonedRowApp);
+
+            const clonedRowPre = preTemplate.clone();
+            clonedRowPre.find('#prerequis').text(matiere.prerequisFr)
+            userTable.append(clonedRowPre);
+
+            const clonedRowEva = evaTemplate.clone();
+            clonedRowEva.find('#evaluation').text(matiere.evaluationAcquisFr)
+            userTable.append(clonedRowEva);
+            let objectifs="";
+            if(matiere.objectifs){
+                for(const objectif of matiere.objectifs){
+                    if (objectifs.length > 0) {
+                        objectifs = objectifs + "," +objectif.libelleFr;
+                    } else {
+                        objectifs = objectif.libelleFr;
+                    }
+                }
+            }
+
+            const clonedRowComp = compTemplate.clone();
+            clonedRowComp.find('#competence').text(objectifs)
+            userTable.append(clonedRowComp);
+            
+            
+            
+        }
+        matTemplate.first().remove();
+        appTemplate.first().remove();
+        preTemplate.first().remove();
+        evaTemplate.first().remove();
+        compTemplate.first().remove();
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+};
+
+async function fillTemplate (matieres, filePath, annee) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        
+        const userTable = $('#table-progression');
+        const rowTemplate = $('.row_template');
+        
+        for (const matiere of matieres) {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#matiere').text(matiere.code+":"+matiere.libelleFr);
+            clonedRow.find('#progression').text(calculateProgress(matiere)+" %");
+            userTable.append(clonedRow);
+        }
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
     }
 };
 

@@ -3,6 +3,9 @@ import Matiere from '../../models/matiere.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 import moment from 'moment';
+import Setting from '../../models/setting.model.js';
+import { formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import cheerio from 'cheerio';
 
 // Définir la locale française pour moment
 moment.locale('fr');
@@ -863,6 +866,127 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
         });
     }
 }
+
+
+export const generateEmploisDuTemps = async (req, res) => {
+    const { niveauId } = req.params;
+    const { annee, semestre } = req.query;
+
+    // Vérifier si l'ID du niveau est valide
+    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+        return res.status(400).json({ 
+            success: false, 
+            message: message.identifiant_invalide,
+        });
+    }
+
+    // Création du filtre initial pour le niveau
+    const filter = { niveau: niveauId };
+
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee);
+        const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
+        if (!periodesCurrentYear) {
+            // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+            let found = false;
+            let previousYear = parseInt(annee) - 1;
+            while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
+                if (periodesPreviousYear) {
+                    filter.annee = previousYear;
+                    found = true;
+                } else {
+                    previousYear--;
+                }
+            }
+        } 
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter)
+        .populate({
+            path: 'matiere',
+            select: 'code'
+        })
+        .populate({
+            path: 'enseignantPrincipal',
+            select: 'nom prenom'
+        })
+        .populate({
+            path: 'enseignantSuppleant',
+            select: 'nom prenom'
+        })
+        .exec();
+
+    // Remplir le template avec les données récupérées
+    const htmlContent = await fillTemplateEmplois(periodes, './templates/template_emplois_temps_fr.html');
+
+    // Générer le PDF à partir du contenu HTML
+    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+}
+
+
+
+function getUniqueTimeSlots(periodes) {
+    const timeSlots = new Set();
+    periodes.forEach(periode => {
+        const slot = `${periode.heureDebut}-${periode.heureFin}`;
+        timeSlots.add(slot);
+    });
+    return Array.from(timeSlots).sort();
+}
+
+async function fillTemplateEmplois(periodes, filePath) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const tbody = $('#table-emplois tbody');
+        
+        const timeSlots = getUniqueTimeSlots(periodes);
+        
+        timeSlots.forEach(slot => {
+            const [startTime, endTime] = slot.split('-');
+            const row = $('<tr></tr>');
+            row.append(`<td>${startTime} - ${endTime}</td>`);
+            
+            for (let day = 1; day <= 7; day++) {
+                const cell = $(`<td class="time-slot" data-time="${slot}" data-day="${day}"></td>`);
+                row.append(cell);
+            }
+            
+            tbody.append(row);
+        });
+        
+        let settings = await Setting.find().select('salleDeCours typesEnseignement');
+        let setting = null;
+        if(settings.length>0){
+            setting=settings[0]
+        }
+        periodes.forEach(periode => {
+            const slot = `${periode.heureDebut}-${periode.heureFin}`;
+            const timeSlot = $(`.time-slot[data-time="${slot}"][data-day="${periode.jour}"]`);
+            const typeEns = setting.typesEnseignement.find(type=>type._id.toString()===periode.typeEnseignement.toString()).code;
+            const salle = setting.salleDeCours.find(salle=>salle._id.toString()===periode.salleCours.toString()).code;
+            if (timeSlot.length > 0) {
+                const content = `${periode.matiere.code} (${typeEns?typeEns:""}) - ${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal.prenom}/${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant.prenom} - ${salle?salle:""}`;
+                timeSlot.append(`<div>${content}</div>`);
+            }
+        });
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+}
+
 
 // read
 export const readPeriode = async (req, res) => { }

@@ -1,5 +1,5 @@
 import express from "express";
-import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau} from "../controllers/matiere/matiere.controller.js";
+import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau,generateProgressByNiveau, generateProgressByEnseignant, generateListMatByNiveau, generateListMatByEnseignantNiveau} from "../controllers/matiere/matiere.controller.js";
 import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant } from "../controllers/matiere/chapitre/chapitre.controller.js";
 import { createObjectif, deleteObjectif, readObjectif, readObjectifs, updateObjectif, updateObjectifEtatObj,getObjectifs, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj } from "../controllers/matiere/objectif/objectif.controller.js";
 
@@ -17,8 +17,12 @@ router.post("/create", createMatiere);
 router.get("/get/:id", readMatiere);
 router.get("/get/:params", readMatieres);
 router.get("/getMatieresByNiveau/:niveauId", getMatieresByNiveau);
+router.get("/generateListMatByNiveau/:niveauId", generateListMatByNiveau);
+router.get("/generateProgressByNiveau/:niveauId", generateProgressByNiveau);
 router.get("/getMatieresByNiveauWithPagination/:niveauId", getMatieresByNiveauWithPagination);
 router.get("/getMatieresByEnseignantNiveau/:niveauId", getMatieresByEnseignantNiveau);
+router.get("/generateListMatByEnseignantNiveau/:niveauId", generateListMatByEnseignantNiveau);
+router.get("/generateProgressByEnseignant/:niveauId", generateProgressByEnseignant);
 
 
 // update
