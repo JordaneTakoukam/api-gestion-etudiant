@@ -21,7 +21,7 @@ router.delete("/delete/:periodeEnseignementId", deletePeriodeEnseignement);
 router.get("/getPeriodesEnseignementWithPagination/:niveauId", getPeriodesEnseignementWithPagination);
 
 router.get("/getPeriodesEnseignement/:niveauId", getPeriodesEnseignement);
-router.get("/generateListPeriodeEnseignement/:niveauId", generateListPeriodeEnseignement);
+router.get("/generateListPeriodeEnseignement/:annee/:semestre", generateListPeriodeEnseignement);
 router.get("/generateProgressionPeriodeEnseignement", generateProgressionPeriodeEnseignement);
 
 

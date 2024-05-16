@@ -504,10 +504,10 @@ export const getPeriodesEnseignement = async (req, res) => {
 }
 
 export const generateListPeriodeEnseignement = async (req, res)=>{
-    const { niveauId } = req.params;
-    const { annee, semestre } = req.query;
+    const { annee, semestre } = req.params;
+    const {  departement, section, cycle, niveau, langue } = req.query;
 
-    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+    if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
         return res.status(400).json({ 
             success: false, 
             message: 'Identifiant du niveau invalide.'
@@ -515,14 +515,14 @@ export const generateListPeriodeEnseignement = async (req, res)=>{
     }
 
     const periodes = await PeriodeEnseignement.find({ 
-        niveau: niveauId,
+        niveau: niveau._id,
         annee: annee,
         semestre: semestre,
     });
 
     periodes.forEach(periode => {
-        periode.dateDebut = moment(periode.dateDebut).toDate();
-        periode.dateFin = moment(periode.dateFin).toDate();
+        periode.dateDebut = moment(new Date(periode.dateDebut)).toDate();
+        periode.dateFin = moment(new Date(periode.dateFin)).toDate();
     });
 
     await Promise.all(periodes.map(async (periode) => {
@@ -546,19 +546,29 @@ export const generateListPeriodeEnseignement = async (req, res)=>{
             }, new Set()).size;
         }));
     }));
+    let filePath='./templates/template_periode_enseignement_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_periode_enseignement_en.html';
+    }
 
-    const htmlContent = await fillTemplate(periodes, './templates/template_periode_enseignement_fr.html', 2024);
+    const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, periodes, filePath, annee, semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
 }
 
-async function fillTemplate (periodes, filePath, annee) {
+async function fillTemplate (departement, section, cycle, niveau, langue, periodes, filePath, annee, semestre) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
-        
+        body.find('#division-fr').text(departement.libelleFr);
+        body.find('#division-en').text(departement.libelleEn);
+        body.find('#section-fr').text(section.libelleFr);
+        body.find('#section-en').text(section.libelleEn);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
+        body.find('#semestre').text(semestre);
         const userTable = $('#table-periode-enseignement');
         const rowTemplate = $('.row_template');
         const periodTemplate=$('.periode_template')
@@ -588,18 +598,30 @@ async function fillTemplate (periodes, filePath, annee) {
 
 
 export const generateProgressionPeriodeEnseignement = async (req, res)=>{
-    const {periode}=req.query;
-    const htmlContent = await fillTemplateProg(periode, './templates/template_progression_periode_enseignement_fr.html', 2024);
+    const {periode, departement, section, cycle, niveau, langue}=req.query;
+    let filePath='./templates/template_progression_periode_enseignement_fr.html'
+    if(langue==='en'){
+        filePath='./templates/template_progression_periode_enseignement_en.html';
+    }
+    const htmlContent = await fillTemplateProg(departement, section, cycle, niveau, langue, periode, filePath, periode.annee, periode.semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
 }
 
-async function fillTemplateProg (periode, filePath, annee) {
+async function fillTemplateProg (departement, section, cycle, niveau, langue, periode, filePath, annee, semestre) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        
         const body = $('body');
+        body.find('#division-fr').text(departement.libelleFr);
+        body.find('#division-en').text(departement.libelleEn);
+        body.find('#section-fr').text(section.libelleFr);
+        body.find('#section-en').text(section.libelleEn);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
+        body.find('#semestre').text(semestre);
         body.find('#title-periode').text(periode.periodeFr);
         const userTable = $('#table-periode-enseignement');
         
