@@ -27,6 +27,14 @@ export const communeSchema = new Schema({
     libelleEn: { type: String, required: true },
 });
 
+export const sectionSchema = new Schema({
+    date_creation: { type: Date, required: true },
+    departement: { type: mongoose.Schema.Types.ObjectId, ref: 'DepartementAcademique', required: true },
+    code: { type: String, required: true },
+    libelleFr: { type: String, required: true },
+    libelleEn: { type: String, required: true },
+});
+
 export const cycleSchema = new Schema({
     date_creation: { type: Date, required: true },
     section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', required: true },

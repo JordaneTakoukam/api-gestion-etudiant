@@ -1,33 +1,40 @@
 const message = {
     erreurServeur: {
         fr: "Erreur interne du serveur !",
-        en: "Erreur interne du serveur !"
+        en: "Internal server error!"
     },
-    emailExiste: "Cette adresse e-mail est déjà enregistrée !",
+    emailExiste: {
+       fr: "Cette adresse e-mail est déjà enregistrée !",
+       en: "This email address is already registered!"
+    },
 
     emailRequis: {
         fr: "L'adresse e-mail est requise",
-        en: ""
+        en: "Email is required"
     },
 
     superAdminCreerAvecSuccess: {
-        fr: "Super Administrateur créer avec succès !",
+        fr: "Super Administrateur créé avec succès !",
+        en: "Super Administrator created successfully!"
     },
 
     superAdminDejaExistant: {
-        fr: "Un compte super-admin est existe déjà !",
+        fr: "Un compte super-admin existe déjà !",
+        en: "A super-admin account already exists!"
     },
+
     inscriptReuissie: {
         fr: "Inscription effectuée avec succès !",
         en: "Registration successful!"
     },
+
     connexionReussie: {
         fr: "Connexion effectuée avec succès !",
         en: "Login successful!"
     },
     creation_reuissi: {
-        fr: "Utilisateur créer avec succès",
-        en: ""
+        fr: "Utilisateur créé avec succès",
+        en: "User created successfully"
     },
     userNonTrouver: {
         fr: "Utilisateur non trouvé !",
@@ -38,75 +45,79 @@ const message = {
         en: "Incorrect password!"
     },
     success_changer_mdp: {
-        fr: "Mot de passe changer avec succès !",
-        en: ""
+        fr: "Mot de passe modifié avec succès !",
+        en: "Password changed successfully!"
     },
     section_manquante: {
         fr: "La section est manquante!",
-        en: ""
+        en: "Section is missing!"
+    },
+    departement_academique_manquante: {
+        fr: "Le département académique est manquante!",
+        en: "Academic department is missing!"
     },
     cycle_manquant: {
         fr: "Le cycle est manquant!",
-        en: ""
+        en: "Cycle is missing!"
     },
+
     niveau_manquant: {
         fr: "Le niveau est manquant!",
-        en: ""
+        en: "Level is missing!"
     },
-
-
     section_invalide: {
         fr: "La section est invalide!",
-        en: ""
+        en: "Section is invalid!"
+    },
+    departement_academique_invalide: {
+        fr: "Le département académique est invalide!",
+        en: "Academic department is invalid!"
     },
     cycle_invalide: {
         fr: "Le cycle est invalide!",
-        en: ""
+        en: "Cycle is invalid!"
     },
     niveau_invalide: {
         fr: "Le niveau est invalide!",
-        en: ""
+        en: "Level is invalid!"
     },
     absence_invalide: {
-        fr: "L'absence est invalide'!",
-        en: ""
+        fr: "L'absence est invalide!",
+        en: "Absence is invalid!"
     },
     grade_invalide: {
         fr: "Le grade est invalide!",
-        en: ""
+        en: "Grade is invalid!"
     },
     categorie_invalide: {
         fr: "La catégorie est invalide!",
-        en: ""
+        en: "Category is invalid!"
     },
     fonction_invalide: {
         fr: "La fonction est invalide!",
-        en: ""
+        en: "Function is invalid!"
     },
     service_invalide: {
         fr: "Le service est invalide!",
-        en: ""
+        en: "Service is invalid!"
     },
-
     region_invalide: {
         fr: "La région est invalide!",
-        en: ""
+        en: "Region is invalid!"
     },
     departement_invalide: {
         fr: "Le département est invalide!",
-        en: ""
+        en: "Department is invalid!"
     },
     commune_invalide: {
         fr: "La commune est invalide!",
-        en: ""
+        en: "Commune is invalid!"
     },
-
-    // =======================================
-
     tokenAccesNonAutoriser: {
         fr: "Accès non autorisé. Token manquant !",
-        en: "Unauthorized access. Missing token!"
+        en: "Unauthorized access. Token missing!"
     },
+
     roleAccesNonAutoriser: {
         fr: "Accès non autorisé. Rôle insuffisant !",
         en: "Unauthorized access. Insufficient role!"
@@ -115,192 +126,176 @@ const message = {
         fr: "Token invalide !",
         en: "Invalid token!"
     },
-
-
     motDePasseChange: {
-        fr: "Mot de passe changé avec succès !",
+        fr: "Mot de passe modifié avec succès !",
         en: "Password changed successfully!"
     },
-
-
     invalidInput: {
         fr: "Entrée invalide.",
         en: "Invalid input."
     },
-
-
-    // ============ parametre
     ajouter_avec_success: {
         fr: "Ajouter avec succès",
-        en: ""
+        en: "Added successfully"
     },
     identifiant_invalide: {
         fr: "L'identifiant est invalide",
-        en: ""
+        en: "Identifier is invalid"
     },
     non_trouvee: {
         fr: "Non trouvé",
-        en: ""
+        en: "Not found"
     },
-
     donne_a_jour: {
-        fr: "Données à jours"
+        fr: "Données à jour",
+        en: "Data updated"
     },
     existe_code: {
-        fr: "Code existe déjà",
-        en: ""
+        fr: "Ce code existe déjà",
+        en: "This code already exists"
     },
     existe_libelle_fr: {
-        fr: "Libelle Fr existe déjà",
-        en: ""
+        fr: "Ce libellé français existe déjà",
+        en: "This French label already exists"
     },
     existe_libelle_en: {
-        fr: "Libelle En existe déjà",
-        en: ""
+        fr: "Ce libelle anglais existe déjà",
+        en: "This English label already exists"
     },
     existe_periode_fr: {
-        fr: "Période Fr existe déjà",
-        en: ""
+        fr: "Cette période en français existe déjà",
+        en: "This period in French already exists"
     },
     existe_periode_en: {
-        fr: "Période En existe déjà",
-        en: ""
+        fr: "Cette période en anglais existe déjà",
+        en: "This period in English already exists"
     },
+
     existe_num: {
-        fr: "Le numéro existe déjà",
-        en: "",
+        fr: "Ce numéro existe déjà",
+        en: "This number already exists",
     },
     chevauchement: {
         fr: "Chevauchement de date",
-        en: "",
+        en: "Date overlap",
     },
     champ_obligatoire: {
         fr: "Tous les champs obligatoires doivent être fournis",
-        en: ""
+        en: "All required fields must be provided",
     },
     nombre_entier: {
         fr: "Attend un nombre entier",
-        en: ""
+        en: "Expects an integer",
     },
     mis_a_jour: {
         fr: "Mis à jour avec succès",
-        en: ""
+        en: "Updated successfully",
     },
     supprimer_avec_success: {
         fr: "Supprimer avec succès",
-        en: "Delete success"
-    }
-    ,
+        en: "Deleted successfully",
+    },
     region_inexistante: {
         fr: "Cette région n'existe pas",
-        en: ""
+        en: "This region does not exist",
     },
     departement_inexistant: {
         fr: "Ce département n'existe pas",
-        en: ""
+        en: "This department does not exist",
     },
     evenement_inexistant: {
         fr: "Cet évènement n'existe pas",
-        en: ""
+        en: "This event does not exist",
     },
     liste_event: {
         fr: "Liste des événements récupérée avec succès",
-        en: ""
+        en: "List of events retrieved successfully",
     },
     event_a_venir: {
-        fr: "Evenement à venir",
-        en: ""
+        fr: "Evènement à venir",
+        en: "Upcoming event",
     },
     matiere_non_trouvee: {
         fr: "Cette matière n'existe pas",
-        en: ""
+        en: "This subject does not exist",
     },
-
     etudiant_non_trouvee: {
-        fr: "Cette étudiant n'existe pas",
-        en: ""
+        fr: "Cet étudiant n'existe pas",
+        en: "This student does not exist",
     },
     matiere_existe: {
         fr: "Un utilisateur avec le même matricule existe déjà",
-        en: ""
+        en: "A user with the same registration number already exists",
     },
     chapitre_non_trouve: {
         fr: "Ce chapitre n'existe pas",
-        en: ""
+        en: "This chapter does not exist",
     },
     type_ens_non_trouve: {
-        fr: "Le type d'enseignement spécifié n'a pas été trouvé.",
-        en: ""
+        fr: "L’activité pédagogique spécifiée n'a pas été trouvé.",
+        en: "The specified pedagogical activity was not found.",
     },
     periode_non_trouve: {
         fr: "La période de cours n'a pas été trouvée.",
-        en: ""
+        en: "The course period was not found.",
     },
     existe_periode_cours: {
         fr: "Une période de cours avec les mêmes paramètres existe déjà",
-        en: ""
+        en: "A course period with the same parameters already exists",
     },
     existe_enseignant_p_cours: {
         fr: "L'enseignant principal a déjà un cours programmé au même moment",
-        en: ""
+        en: "The main teacher already has a scheduled class at the same time",
     },
     existe_enseignant_s_cours: {
         fr: "L'enseignant suppléant a déjà un cours programmé au même moment",
-        en: ""
+        en: "The substitute teacher already has a scheduled class at the same time",
     },
     existe_salle_cours_programme: {
         fr: "La salle de cours a déjà un cours programmé au même moment",
-        en: ""
-    },
-    heure_invalide: {
-        fr: "Format de l'heure invalide. Utilisez HH:MM.",
-        en: ""
-    },
-    heure_invalide: {
-        fr: "Format de l'heure invalide. Utilisez HH:MM.",
-        en: ""
+        en: "The classroom already has a scheduled class at the same time",
     },
 
+    heure_invalide: {
+        fr: "Format de l'heure invalide. Utilisez HH:MM.",
+        en: "Invalid time format. Use HH:MM.",
+    },
     periode_non_trouve: {
-        fr: "Période d\'enseignement non trouvée.",
-        en: ""
+        fr: "Période d'enseignement non trouvée.",
+        en: "Teaching period not found.",
     },
-
-
-
-
     userNotFound: {
         fr: "Utilisateur non trouvé.",
-        en: "User not found."
+        en: "User not found.",
     },
     userUpdated: {
         fr: "Utilisateur mis à jour avec succès.",
-        en: "User updated successfully."
+        en: "User updated successfully.",
     },
     userDeleted: {
         fr: "Utilisateur supprimé avec succès.",
-        en: "User deleted successfully."
+        en: "User deleted successfully.",
     },
     serverError: {
         fr: "Erreur interne du serveur.",
-        en: "Internal server error."
+        en: "Internal server error.",
     },
-
-
     alert_ajouter_success: {
-        fr: "Alerte ajoutée avec succès"
+        fr: "Alerte ajoutée avec succès",
+        en: "Alert added successfully",
     },
     alert_supprimer_sucess: {
-        fr: "Alerte supprimée avec succès"
+        fr: "Alerte supprimée avec succès",
+        en: "Alert deleted successfully",
     },
     alert_non_trouver: {
-        fr: "Alerte non trouvée"
+        fr: "Alerte non trouvée",
+        en: "Alert not found",
     },
-
-   page_non_existante: {
+    page_non_existante: {
         fr: "La page demandée n'existe pas.",
-        en: "The requested page does not exist."
-    }
+        en: "The requested page does not exist.",
+    },
 };
 
 export { message };

@@ -23,7 +23,7 @@ router.get("/getNbAbsencesParSection", getNbAbsencesParSection);
 // router.get("/getUsersByRoleNomPrenom/:role",getUsersByRoleNomPrenom);
 router.get("/getEtudiantsByLevelAndYear/:niveauId", getEtudiantsByLevelAndYear);
 router.get("/getAllEtudiantsByLevelAndYear/:niveauId", getAllEtudiantsByLevelAndYear);
-router.get("/generateListEtudiant/:niveauId", generateListEtudiant);
+router.get("/generateListEtudiant/:annee", generateListEtudiant);
 
 router.get("/getEnseignantsByFilter", getEnseignantsByFilter);
 router.get("/getAllEnseignantsByFilter", getAllEnseignantsByFilter);

@@ -747,11 +747,11 @@ export const getNbAbsencesParSection = async (req, res) => {
 };
 
 export const generateListEtudiant = async (req, res)=>{
-    const { niveauId } = req.params;
-    const { annee } = req.query;
+    const { annee } = req.params;
+    const { section, cycle, niveau, langue } = req.query;
     
     // Vérifier si l'ID du niveau est un ObjectId valide
-    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+    if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
         return res.status(400).json({
             success: false,
             message: message.identifiant_invalide
@@ -760,15 +760,18 @@ export const generateListEtudiant = async (req, res)=>{
     const query = {
         'niveaux': {
             $elemMatch: {
-                niveau: niveauId,
+                niveau: niveau._id,
                 annee: Number(annee),
             },
         },
     };
 
     const etudiants = await User.find(query);
-    
-    const htmlContent = await fillTemplate(etudiants, './templates/template_liste_etudiant_fr.html', 2024);
+    let filePath='./templates/template_liste_etudiant_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_liste_etudiant_en.html'
+    }
+    const htmlContent = await fillTemplate(etudiants, filePath, annee);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
