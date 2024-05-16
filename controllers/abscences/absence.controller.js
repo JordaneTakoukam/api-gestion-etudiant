@@ -47,7 +47,9 @@ export const ajouterAbsence = async (req, res) => {
             dateAbsence,
             heureDebut,
             heureFin,
-            user:userId
+            user:userId,
+            etat:0,
+            motif:"",
         });
 
         // Enregistrer l'absence dans la base de données
@@ -109,6 +111,40 @@ export const retirerAbsence = async (req, res) => {
         await Absence.findByIdAndDelete(absenceId);
 
         res.status(200).json({ success: true, message: { fr: messagesFr.absence_retiree_succes, en: messagesEn.absence_retiree_succes } });
+    } catch (error) {
+        console.error("Erreur lors du retrait de l'absence de l'utilisateur :", error);
+        res.status(500).json({ success: false, message: { fr: messagesFr.erreur_retrait_absence, en: messagesEn.erreur_retrait_absence } });
+    }
+};
+
+// Contrôleur pour retirer une absence à un utilisateur
+export const justifierAbsence = async (req, res) => {
+    
+    const {motif="", etat=1, _id}=req.body;
+
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({
+                success: false,
+                message: message.absence_invalide,
+            });
+        }
+        // Vérifier si l'utilisateur existe
+        const absence = await Absence.findById(_id);
+        if (!absence) {
+            return res.status(404).json({ success: false, message: message.absence_inexistante });
+        }
+        absence.motif=motif;
+        absence.etat=etat;
+        // Supprimer l'absence de la base de données
+        await absence.save();
+
+        res.json({
+            success: true,
+            message: message.mis_a_jour,
+            data: absence,
+        });
     } catch (error) {
         console.error("Erreur lors du retrait de l'absence de l'utilisateur :", error);
         res.status(500).json({ success: false, message: { fr: messagesFr.erreur_retrait_absence, en: messagesEn.erreur_retrait_absence } });

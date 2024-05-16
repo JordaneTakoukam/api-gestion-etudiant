@@ -8,6 +8,8 @@ const absenceSchema = new Schema({
     heureDebut: { type: String, required: true }, // Heure de début de la période de cours
     heureFin: { type: String, required: true }, // Heure de fin de la période de cours
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+    etat:{type:Number},
+    motif:{type:String}
 
 });
 

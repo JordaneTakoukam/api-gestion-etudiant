@@ -605,42 +605,51 @@ export const getNiveauxByEnseignant = async (req, res) => {
 };
 
 export const generateListEnseignant = async (req, res)=>{
-    const {grade, categorie, service, fonction } = req.query;
+    const {grade, categorie, service, fonction, langue, annee } = req.query;
     const role = appConfigs.role.enseignant;
     const query = {
         roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
     };
     // Ajouter les filtres supplémentaires si disponibles
+    let title="";
     if (grade && mongoose.Types.ObjectId.isValid(grade)) {
         query.grade = grade;
+        title=langue==='fr'?"PAR GRADE":"BY GRADE";
     }
 
     if (categorie && mongoose.Types.ObjectId.isValid(categorie)) {
         query.categorie = categorie;
+        title=langue==='fr'?"PAR CATEGORIE":"BY CATEGORY";
     }
 
     if (service && mongoose.Types.ObjectId.isValid(service)) {
         query.service = service;
+        title=langue==='fr'?"PAR SERVICE":"BY SERVICE";
     }
 
     if (fonction && mongoose.Types.ObjectId.isValid(fonction)) {
         query.fonction = fonction;
+        title=langue==='fr'?"PAR FONCTION":"BY FUNCTION";
     }
 
     const enseignants = await User.find(query);
-    
-    const htmlContent = await fillTemplate(enseignants, './templates/template_liste_enseignant_fr.html', 2024);
+    let filePath='./templates/template_liste_enseignant_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_liste_enseignant_en.html'
+    }
+    const htmlContent = await fillTemplate(title, langue, enseignants, filePath, annee);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
 }
 
-async function fillTemplate (enseignants, filePath, annee) {
+async function fillTemplate (title, langue, enseignants, filePath, annee) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
-        
+        body.find('#title').text(title);
+        body.find('#annee').text(formatYear(parseInt(annee)));
         const userTable = $('#table-enseignant');
         const rowTemplate = $('.row_template');
         let i = 1;

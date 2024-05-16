@@ -4,7 +4,7 @@ import User from "../../models/user.model.js";
 import { appConfigs } from "../../configs/app_configs.js";
 import mongoose from 'mongoose';
 import cheerio from 'cheerio';
-import { nbTotalAbsences, formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from "../../fonctions/fonctions.js";
+import { nbTotalAbsences, formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML, nbTotalAbsencesJustifier, nbTotalAbsencesNonJustifier } from "../../fonctions/fonctions.js";
 
 export const getAbsencesByUserAndFilter = async (req, res) => {
     const {userId}=req.params;
@@ -345,8 +345,8 @@ export const getAllAbsencesWithEnseignantsByFilter = async (req, res) => {
 };
 
 export const generateListAbsenceEnseignant = async (req, res)=>{
-    let { semestre = 1, annee = 2024 } = req.query; // Default values for semester, year, and pagination
-
+    let { semestre = 1, annee = 2024, langue } = req.query; // Default values for semester, year, and pagination
+    
     // Convert semestre and annee to numbers
     semestre = parseInt(semestre);
     annee = parseInt(annee);
@@ -402,18 +402,23 @@ export const generateListAbsenceEnseignant = async (req, res)=>{
         // Sorting the absences array by the dateAbsence field in ascending order
         enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
     });
-    const htmlContent = await fillTemplateE(enseignantsWithFilteredAbsences, './templates/template_liste_absences_enseignant_fr.html', 2024);
+    let filePath='./templates/template_liste_absences_enseignant_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_liste_absences_enseignant_en.html'
+    }
+    const htmlContent = await fillTemplateE(langue, enseignantsWithFilteredAbsences, filePath, annee, semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
 }
 
-async function fillTemplateE (enseignants, filePath, annee) {
+async function fillTemplateE (langue, enseignants, filePath, annee, semestre) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
-        
+        body.find('#annee').text(formatYear(parseInt(annee)));
+        body.find('#semestre').text(semestre);
         const userTable = $('#table-enseignant');
         const rowTemplate = $('.row_template');
         let i = 1;
@@ -428,6 +433,8 @@ async function fillTemplateE (enseignants, filePath, annee) {
             clonedRow.find('#date-naiss').text(enseignant.date_naiss!=null?formatDateFr(enseignant.date_naiss):"");
             clonedRow.find('#lieu-naiss').text(enseignant.lieu_naiss!=null?enseignant.lieu_naiss:"");
             clonedRow.find('#absences').text(nbTotalAbsences(enseignant.absences));
+            clonedRow.find('#justifier').text(nbTotalAbsencesJustifier(enseignant.absences));
+            clonedRow.find('#non_justifier').text(nbTotalAbsencesNonJustifier(enseignant.absences));
             userTable.append(clonedRow);
             i++;
         }
@@ -491,11 +498,11 @@ export const getAllAbsencesWithEtudiantsByFilter = async (req, res) => {
 };
 
 export const generateListAbsenceEtudiant = async (req, res)=>{
-    const { niveauId } = req.params;
-    const { annee = 2024, semestre = 1 } = req.query;
+    const { annee, semestre } = req.params;
+    const { departement, section, cycle, niveau, langue } = req.query;
 
     // Vérifier si l'ID du niveau est un ObjectId valide
-    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+    if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
         return res.status(400).json({
             success: false,
             message: message.identifiant_invalide,
@@ -506,7 +513,7 @@ export const generateListAbsenceEtudiant = async (req, res)=>{
     const query = {
         'niveaux': {
             $elemMatch: {
-                niveau: niveauId,
+                niveau: niveau._id,
                 annee: Number(annee),
             },
         },
@@ -517,22 +524,31 @@ export const generateListAbsenceEtudiant = async (req, res)=>{
 
     // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
     etudiants.forEach((etudiant) => {
-        etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee));
+        etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveau._id && niveau.annee === Number(annee));
         etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
     });
-    
-    const htmlContent = await fillTemplate(etudiants, './templates/template_liste_absences_etudiant_fr.html', 2024);
+    let filePath='./templates/template_liste_absences_etudiant_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_liste_absences_etudiant_en.html'
+    }
+    const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, etudiants, filePath, annee, semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
 }
 
-async function fillTemplate (etudiants, filePath, annee) {
+async function fillTemplate (departement, section, cycle, niveau, langue, etudiants, filePath, annee, semestre) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
-        
+        body.find('#division-fr').text(departement.libelleFr);
+        body.find('#division-en').text(departement.libelleEn);
+        body.find('#section-fr').text(section.libelleFr);
+        body.find('#section-en').text(section.libelleEn);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
+        body.find('#semestre').text(semestre);
         const userTable = $('#table-etudiant');
         const rowTemplate = $('.row_template');
         let i = 1;
@@ -547,6 +563,8 @@ async function fillTemplate (etudiants, filePath, annee) {
             clonedRow.find('#date-naiss').text(etudiant.date_naiss!=null?formatDateFr(etudiant.date_naiss):"");
             clonedRow.find('#lieu-naiss').text(etudiant.lieu_naiss!=null?etudiant.lieu_naiss:"");
             clonedRow.find('#absences').text(nbTotalAbsences(etudiant.absences));
+            clonedRow.find('#justifier').text(nbTotalAbsencesJustifier(etudiant.absences));
+            clonedRow.find('#non_justifier').text(nbTotalAbsencesNonJustifier(etudiant.absences));
             userTable.append(clonedRow);
             i++;
         }

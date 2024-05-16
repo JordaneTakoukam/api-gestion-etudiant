@@ -1,5 +1,5 @@
 import express from "express";
-import { ajouterAbsence, retirerAbsence } from "../controllers/abscences/absence.controller.js";
+import { ajouterAbsence, retirerAbsence, justifierAbsence } from "../controllers/abscences/absence.controller.js";
 import { getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter, getAllAbsencesWithEnseignantsByFilter, getAllAbsencesWithEtudiantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent, generateListAbsenceEtudiant, generateListAbsenceEnseignant } from "../controllers/abscences/get_absences.js";
 import { signalerAbsence } from "../controllers/abscences/signaler_absence.controller.js";
 
@@ -16,11 +16,12 @@ router.get("/getAllAbsencesWithEnseignantsByFilter", getAllAbsencesWithEnseignan
 router.get("/generateListAbsenceEnseignant", generateListAbsenceEnseignant);
 router.get("/getAbsencesWithEtudiantsByFilter/:niveauId", getAbsencesWithEtudiantsByFilter);
 router.get("/getAllAbsencesWithEtudiantsByFilter/:niveauId", getAllAbsencesWithEtudiantsByFilter);
-router.get("/generateListAbsenceEtudiant/:niveauId", generateListAbsenceEtudiant);
+router.get("/generateListAbsenceEtudiant/:annee/:semestre", generateListAbsenceEtudiant);
 router.get("/getTotalHoursOfAbsenceByTeacher", getTotalHoursOfAbsenceByTeacher);
 router.get("/getTotalHoursOfAbsenceByStudent", getTotalHoursOfAbsenceByStudent);
 router.post("/create/:userId", ajouterAbsence);
 router.delete("/delete/:userId/:absenceId", retirerAbsence);
+router.put("/update", justifierAbsence);
 
 
 router.post("/signaler", signalerAbsence);

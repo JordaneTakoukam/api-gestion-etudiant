@@ -168,9 +168,10 @@ export const updateNiveau = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception du niveau en cours de modification
+        
         if (existingNiveau.niveaux[0].code !== code) {
             const existingCode = await Setting.findOne({
-                niveau: {
+                niveaux: {
                     $elemMatch: {
                         code: code,
                         cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
@@ -207,7 +208,7 @@ export const updateNiveau = async (req, res) => {
         // Vérifier si le libelle en existe déjà, à l'exception du niveau en cours de modification
         if (existingNiveau.niveaux[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
-                niveau: {
+                niveaux: {
                     $elemMatch: {
                         libelleEn: libelleEn,
                         cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier

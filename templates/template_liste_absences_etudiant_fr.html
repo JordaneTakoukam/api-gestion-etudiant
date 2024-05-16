@@ -49,7 +49,9 @@
             width: 20px;
         }
 
-        
+        h1, h3{
+            text-align: center;
+        }
 
        
     </style>
@@ -63,7 +65,8 @@
                     <span class="devise">Paix - Travail - Patrie</span><br>**********<br>
                     ECOLE NATIONALE D'ADMINISTRATION ET DE MAGISTRATURE<br>**********<br>
                     DIRECTION GENERALE<br>**********<br>
-                    DIRECTION DES AFFAIRES ACADEMIQUES<br>**********<br>
+                    DIVISION DES <span id="division-fr"></span><br>**********<br>
+                    SECTION <span id="section-fr"></span><br>**********
                 </td>
                 <td id="header-logo"></td>
                 <td id="header-english">
@@ -71,10 +74,15 @@
                     <span class="devise">Peace - Work - Fatherland</span><br>**********<br>
                     NATIONAL SCHOOL OF ADMINISTRATION AND MAGISTRACY<br>**********<br>
                     DIRECTORALE GENERAL<br>**********<br>
-                    DEPARTEMENT OF ACADEMIC AFFAIRS<br>**********
+                    DEPARTMENT OF <span id="division-en"></span><br>**********<br>
+                    <span id="section-en"></span> SECTION</span><br>**********
                 </td>
             </tr>
         </table>
+        
+        <h1>ABSENCES PAR ETUDIANT CYCLE <span id="cycle-niveau"></span></h1>
+        <h3>Année académique <span id="annee"></span></h3>
+        <h3>Semestre <span id="semestre"></span></h3>
         
        
         <table id="table-etudiant">
@@ -89,6 +97,8 @@
                     <th class="header-etudiant" >Date de naissance</th>
                     <th class="header-etudiant" >Lieu de naissance</th>
                     <th class="header-etudiant" >Absences(H)</th>
+                    <th class="header-etudiant" >Justifier(H)</th>
+                    <th class="header-etudiant" >Non Justifier(H)</th>
                 </tr>
             </thead>
             <tbody>
@@ -102,6 +112,8 @@
                     <td id="date-naiss"></td>
                     <td id="lieu-naiss"></td>
                     <td id="absences"></td>
+                    <td id="justifier"></td>
+                    <td id="non_justifier"></td>
                 </tr>
             </tbody>
             

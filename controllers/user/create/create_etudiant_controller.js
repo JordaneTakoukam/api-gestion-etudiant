@@ -748,7 +748,7 @@ export const getNbAbsencesParSection = async (req, res) => {
 
 export const generateListEtudiant = async (req, res)=>{
     const { annee } = req.params;
-    const { section, cycle, niveau, langue } = req.query;
+    const { departement, section, cycle, niveau, langue } = req.query;
     
     // Vérifier si l'ID du niveau est un ObjectId valide
     if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
@@ -768,21 +768,27 @@ export const generateListEtudiant = async (req, res)=>{
 
     const etudiants = await User.find(query);
     let filePath='./templates/template_liste_etudiant_fr.html';
+    
     if(langue==='en'){
         filePath='./templates/template_liste_etudiant_en.html'
     }
-    const htmlContent = await fillTemplate(etudiants, filePath, annee);
+    const htmlContent = await fillTemplate( departement, section, cycle, niveau, etudiants, filePath, annee);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
 }
 
-async function fillTemplate (etudiants, filePath, annee) {
+async function fillTemplate (departement, section, cycle, niveau, etudiants, filePath, annee) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
-        
+        body.find('#division-fr').text(departement.libelleFr);
+        body.find('#division-en').text(departement.libelleEn);
+        body.find('#section-fr').text(section.libelleFr);
+        body.find('#section-en').text(section.libelleEn);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
         const userTable = $('#table-etudiant');
         const rowTemplate = $('.row_template');
         let i = 1;
