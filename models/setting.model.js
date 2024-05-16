@@ -19,7 +19,7 @@ const settingSchema = new Schema({
     niveaux: [niveauSchema],
     salleDeCours: [salleSchema],
     typesEnseignement: [codeLibelleSchema],
-    etatEvenement: [codeLibelleSchema],
+    etatsEvenement: [codeLibelleSchema],
     roles: [codeLibelleSchema]
 });
 

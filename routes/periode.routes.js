@@ -15,7 +15,7 @@ router.post("/create", createPeriode);
 router.get("/get/:id", readPeriode);
 router.get("/get/:params", readPeriode);
 router.get("/getPeriodesByNiveau/:niveauId", getPeriodesByNiveau);
-router.get("/generateEmploisDuTemps/:niveauId", generateEmploisDuTemps);
+router.get("/generateEmploisDuTemps/:annee/:semestre", generateEmploisDuTemps);
 router.get("/getPeriodesAVenirByNiveau/:niveauId", getPeriodesAVenirByNiveau);
 router.get("/getPeriodesAVenirByEnseignant/:enseignantId", getPeriodesAVenirByEnseignant);
 

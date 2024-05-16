@@ -869,11 +869,11 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
 
 
 export const generateEmploisDuTemps = async (req, res) => {
-    const { niveauId } = req.params;
-    const { annee, semestre } = req.query;
+    const {  annee, semestre } = req.params;
+    const {section, cycle, niveau, langue} = req.query;
 
     // Vérifier si l'ID du niveau est valide
-    if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+    if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
         return res.status(400).json({ 
             success: false, 
             message: message.identifiant_invalide,
@@ -881,18 +881,18 @@ export const generateEmploisDuTemps = async (req, res) => {
     }
 
     // Création du filtre initial pour le niveau
-    const filter = { niveau: niveauId };
+    const filter = { niveau: niveau._id };
 
     // Si une année est spécifiée dans la requête, l'utiliser
     if (annee && !isNaN(annee)) {
         filter.annee = parseInt(annee);
-        const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
+        const periodesCurrentYear = await Periode.findOne({ niveau: niveau._id, annee }).exec();
         if (!periodesCurrentYear) {
             // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
             let found = false;
             let previousYear = parseInt(annee) - 1;
             while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-                const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
+                const periodesPreviousYear = await Periode.findOne({ niveau: niveau._id, annee: previousYear }).exec();
                 if (periodesPreviousYear) {
                     filter.annee = previousYear;
                     found = true;
@@ -924,9 +924,12 @@ export const generateEmploisDuTemps = async (req, res) => {
             select: 'nom prenom'
         })
         .exec();
-
+    let filePath= './templates/template_emplois_temps_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_emplois_temps_en.html'
+    }
     // Remplir le template avec les données récupérées
-    const htmlContent = await fillTemplateEmplois(periodes, './templates/template_emplois_temps_fr.html');
+    const htmlContent = await fillTemplateEmplois(langue, section, cycle, niveau, periodes, filePath, annee, semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
@@ -943,10 +946,17 @@ function getUniqueTimeSlots(periodes) {
     return Array.from(timeSlots).sort();
 }
 
-async function fillTemplateEmplois(periodes, filePath) {
+async function fillTemplateEmplois(langue, section, cycle, niveau, periodes, filePath, annee, semestre) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        
+        const body = $('body');
+        
+        body.find('#section').text(section.libelleFr+" "+cycle.code+""+niveau.code);
+        body.find('#semestre').text(semestre);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
         const tbody = $('#table-emplois tbody');
         
         const timeSlots = getUniqueTimeSlots(periodes);

@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 import mongoose from 'mongoose';
 import { formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
+import Setting from '../../models/setting.model.js';
 
 
 // create
@@ -476,9 +477,14 @@ async function fillTemplate (evenements, filePath, annee) {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
-        body.find('.annee').text(formatYear(annee));
+        body.find('#annee').text(formatYear(parseInt(annee)));
         const userTable = $('#table-calendrier');
         const rowTemplate = $('.row_template');
+        let settings = await Setting.find().select('etatsEvenement');
+        let setting = null;
+        if(settings.length>0){
+            setting=settings[0]
+        }
         
         for (const event of evenements) {
             const clonedRow = rowTemplate.clone();
@@ -486,6 +492,10 @@ async function fillTemplate (evenements, filePath, annee) {
             clonedRow.find('#periode').text(event.periodeFr);
             clonedRow.find('#personnel').text(event.personnelFr);
             clonedRow.find('#description_observation').text(event.descriptionObservationFr);
+            clonedRow.find('#fonction').text("");
+            if(event.etat!=null && setting){
+                clonedRow.find('#statut').text(setting.etatsEvenement.find((etat)=>etat._id.toString()===event.etat.toString())?.libelleFr??"");
+            }
             userTable.append(clonedRow);
         }
         rowTemplate.first().remove();

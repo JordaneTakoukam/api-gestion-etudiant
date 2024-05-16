@@ -22,7 +22,7 @@
             vertical-align: top;
             word-wrap: break-word;
         }
-        th {
+        .header-emploi {
             background-color: #333;
             color: white;
         }
@@ -58,10 +58,14 @@
             font-style: italic;
         }
 
+        .line-desc{
+            background-color: none;
+        }
+
     </style>
 </head>
 <body>
-    <table id="table-header">
+    <!-- <table id="table-header">
         <tr>
             <td id="header-french">
                 REPUBLIQUE DU CAMEROUN<br>
@@ -79,11 +83,18 @@
                 DEPARTEMENT OF ACADEMIC AFFAIRS<br>**********
             </td>
         </tr>
-    </table>
+    </table> -->
     
-    <h1>Emploi du Temps</h1>
     <table id="table-emplois">
         <thead>
+            <tr >
+                <th colspan="8">EMPLOI DE TEMPS CYCLE <span id="cycle-niveau"></span></th>
+            </tr>
+            <tr >
+                <th colspan="2">ANNEE ACADEMIQUE <span id="annee"></span></th>
+                <th colspan="4">SECTION : <span id="section"></span></th>
+                <th colspan="2">SEMESTRE <span id="semestre"></span></th>
+            </tr>
             <tr>
                 <th class="header-emploi">Horaire</th>
                 <th class="header-emploi">Lundi</th>
