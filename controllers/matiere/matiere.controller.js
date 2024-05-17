@@ -262,17 +262,67 @@ export const deleteMatiere = async (req, res) => {
 
 export const getMatieresByNiveau = async (req, res) => {
     const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+    const {annee, semestre}=req.query;
 
     try {
+
+        const filter = { 
+            niveau: niveauId
+        };
+
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+            let periodesCurrentYear = await Periode.findOne(filter).exec();
+            if (!periodesCurrentYear) {
+                // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+                let found = false;
+                let previousYear = parseInt(annee) - 1;
+                while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                    periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                    if (periodesCurrentYear) {
+                        filter.annee = previousYear;
+                        found = true;
+                    } else {
+                        previousYear--;
+                    }
+                }
+            } 
+        }
+
+        // Si un semestre est spécifié dans la requête, l'utiliser
+        if (semestre && !isNaN(semestre)) {
+            filter.semestre = parseInt(semestre);
+        }
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('matiere').exec();
+
+        // Extraire les identifiants uniques des matières
+        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+        // Récupérer les détails de chaque matière à partir des identifiants uniques
+        const matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                        .populate({
+                            path: 'typesEnseignement.enseignantPrincipal',
+                            select: '_id nom prenom'
+                        })
+                        .populate({
+                            path: 'typesEnseignement.enseignantSuppleant',
+                            select: '_id nom prenom'
+                        })
+                        .populate('chapitres')
+                        .populate('objectifs');
+
         // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-        const matieres = await Matiere.find({niveau:niveauId}).populate({
-            path: 'typesEnseignement.enseignantPrincipal',
-            select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
-        }).populate({
-            path: 'typesEnseignement.enseignantSuppleant',
-            select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
-        }).populate('chapitres')
-        .populate('objectifs');
+        // const matieres = await Matiere.find({niveau:niveauId}).populate({
+        //     path: 'typesEnseignement.enseignantPrincipal',
+        //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
+        // }).populate({
+        //     path: 'typesEnseignement.enseignantSuppleant',
+        //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
+        // }).populate('chapitres')
+        // .populate('objectifs');
         
         
 
@@ -293,67 +343,208 @@ export const getMatieresByNiveau = async (req, res) => {
 };
 
 export const generateListMatByNiveau = async (req, res)=>{
-    const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+    const {annee, semestre} = req.params; 
+    const { langue, departement, section, cycle, niveau}=req.query;
 
-    // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-    const matieres = await Matiere.find({niveau:niveauId}).populate({
-        path: 'typesEnseignement.enseignantPrincipal',
-        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
-    }).populate({
-        path: 'typesEnseignement.enseignantSuppleant',
-        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
-    }).populate('chapitres')
-    .populate('objectifs');
-    
-    const htmlContent = await fillTemplateListMat(matieres, './templates/template_liste_matiere_fr.html', 2024);
+    const filter = { 
+        niveau: niveau._id
+    };
+
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee);
+        let periodesCurrentYear = await Periode.findOne(filter).exec();
+        if (!periodesCurrentYear) {
+            // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+            let found = false;
+            let previousYear = parseInt(annee) - 1;
+            while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                if (periodesCurrentYear) {
+                    filter.annee = previousYear;
+                    found = true;
+                } else {
+                    previousYear--;
+                }
+            }
+        } 
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter).select('matiere').exec();
+
+    // Extraire les identifiants uniques des matières
+    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+    // Récupérer les détails de chaque matière à partir des identifiants uniques
+    const matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                    .populate({
+                        path: 'typesEnseignement.enseignantPrincipal',
+                        select: '_id nom prenom'
+                    })
+                    .populate({
+                        path: 'typesEnseignement.enseignantSuppleant',
+                        select: '_id nom prenom'
+                    })
+                    .populate('chapitres')
+                    .populate('objectifs');
+    let filePath='./templates/template_liste_matiere_fr.html';
+               
+    if(langue==='en'){
+        filePath='./templates/template_liste_matiere_en.html';
+    }
+    const htmlContent = await fillTemplateListMat(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    
+    // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
+    // const matieres = await Matiere.find({niveau:niveauId}).populate({
+    //     path: 'typesEnseignement.enseignantPrincipal',
+    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
+    // }).populate({
+    //     path: 'typesEnseignement.enseignantSuppleant',
+    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
+    // }).populate('chapitres')
+    // .populate('objectifs');
 }
 
 export const generateProgressByNiveau = async (req, res)=>{
-    const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+    const {annee, semestre}=req.params;
+    const { langue, departement, section, cycle, niveau } = req.query;
 
-    // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-    const matieres = await Matiere.find({niveau:niveauId}).populate({
-        path: 'typesEnseignement.enseignantPrincipal',
-        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
-    }).populate({
-        path: 'typesEnseignement.enseignantSuppleant',
-        select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
-    }).populate('chapitres')
-    .populate('objectifs');
-    const htmlContent = await fillTemplate(matieres, './templates/template_progression_matiere_fr.html', 2024);
+    const filter = { 
+        niveau: niveau._id,
+    };
 
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee);
+        let periodesCurrentYear = await Periode.findOne(filter).exec();
+        if (!periodesCurrentYear) {
+            // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+            let found = false;
+            let previousYear = parseInt(annee) - 1;
+            while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                if (periodesCurrentYear) {
+                    filter.annee = previousYear;
+                    found = true;
+                } else {
+                    previousYear--;
+                }
+            }
+        } 
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+    
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter).select('matiere').exec();
+
+    // Extraire les identifiants uniques des matières
+    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+    // Récupérer les détails de chaque matière à partir des identifiants uniques
+    const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
+    
+    let filePath='./templates/template_progression_matiere_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_progression_matiere_en.html';
+    }
+    const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+
+    
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+
+    // const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+
+    // // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
+    // const matieres = await Matiere.find({niveau:niveauId}).populate({
+    //     path: 'typesEnseignement.enseignantPrincipal',
+    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
+    // }).populate({
+    //     path: 'typesEnseignement.enseignantSuppleant',
+    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
+    // }).populate('chapitres')
+    // .populate('objectifs');
+    // const htmlContent = await fillTemplate(matieres, './templates/template_progression_matiere_fr.html', 2024);
+
 }
 
 export const getMatieresByNiveauWithPagination = async (req, res) => {
     const niveauId = req.params.niveauId;
-    const { page = 1, pageSize = 10 } = req.query;
+    const { page = 1, pageSize = 10, annee, semestre } = req.query;
 
     try {
         
 
         // Récupération des matières avec pagination
         const startIndex = (page - 1) * pageSize;
-        const matieres = await Matiere.find({ niveau: niveauId })
-            .populate({
-                path: 'typesEnseignement.enseignantPrincipal',
-                select: '_id nom prenom'
-            })
-            .populate({
-                path: 'typesEnseignement.enseignantSuppleant',
-                select: '_id nom prenom'
-            })
-            .populate('chapitres')
-            .populate('objectifs')
-            .skip(startIndex)
-            .limit(parseInt(pageSize));
-            
+       
+        const filter = { 
+            niveau: niveauId
+        };
+
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+            let periodesCurrentYear = await Periode.findOne(filter).exec();
+            if (!periodesCurrentYear) {
+                // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+                let found = false;
+                let previousYear = parseInt(annee) - 1;
+                while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+                    periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+                    if (periodesCurrentYear) {
+                        filter.annee = previousYear;
+                        found = true;
+                    } else {
+                        previousYear--;
+                    }
+                }
+            } 
+        }
+
+        // Si un semestre est spécifié dans la requête, l'utiliser
+        if (semestre && !isNaN(semestre)) {
+            filter.semestre = parseInt(semestre);
+        }
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('matiere').exec();
+
+        // Extraire les identifiants uniques des matières
+        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+        // Récupérer les détails de chaque matière à partir des identifiants uniques
+        const matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                        .populate({
+                            path: 'typesEnseignement.enseignantPrincipal',
+                            select: '_id nom prenom'
+                        })
+                        .populate({
+                            path: 'typesEnseignement.enseignantSuppleant',
+                            select: '_id nom prenom'
+                        })
+                        .populate('chapitres')
+                        .populate('objectifs')
+                        .skip(startIndex)
+                        .limit(parseInt(pageSize))
+
         // Comptage total des matières pour la pagination
-        const totalMatiere = await Matiere.countDocuments({ niveau: niveauId });
+        const totalMatiere = await Matiere.countDocuments({ _id: { $in: matiereIds } });
         const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
 
         res.status(200).json({ 
@@ -367,6 +558,25 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
             } 
             
         });
+
+         // const matieres = await Matiere.find({ niveau: niveauId })
+        //     .populate({
+        //         path: 'typesEnseignement.enseignantPrincipal',
+        //         select: '_id nom prenom'
+        //     })
+        //     .populate({
+        //         path: 'typesEnseignement.enseignantSuppleant',
+        //         select: '_id nom prenom'
+        //     })
+        //     .populate('chapitres')
+        //     .populate('objectifs')
+        //     .skip(startIndex)
+        //     .limit(parseInt(pageSize));
+            
+        // // Comptage total des matières pour la pagination
+        // const totalMatiere = await Matiere.countDocuments({ niveau: niveauId });
+        // const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
+
     } catch (error) {
         console.error('Erreur lors de la récupération des matières par niveau :', error);
         res.status(500).json({ success: false, message: message.erreurServeur });
@@ -444,7 +654,7 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
 
 export const generateListMatByEnseignantNiveau = async (req, res)=>{
     const niveauId = req.params.niveauId;
-    const { enseignantId, annee, semestre } = req.query;
+    const { enseignantId, annee, semestre,  langue, departement, section, cycle, niveau } = req.query;
 
     const filter = { 
         niveau: niveauId,
@@ -490,8 +700,11 @@ export const generateListMatByEnseignantNiveau = async (req, res)=>{
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
 
-    
-    const htmlContent = await fillTemplateListMat(matieres, './templates/template_liste_matiere_fr.html', annee);
+    let filePath='./templates/template_liste_matiere_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_liste_matiere_en.html';
+    }
+    const htmlContent = await fillTemplateListMat( langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
@@ -499,7 +712,7 @@ export const generateListMatByEnseignantNiveau = async (req, res)=>{
 
 export const generateProgressByEnseignant = async (req, res)=>{
     const niveauId = req.params.niveauId;
-    const { enseignantId, annee, semestre } = req.query;
+    const { enseignantId, annee, semestre, langue, departement, section, cycle, niveau } = req.query;
 
     const filter = { 
         niveau: niveauId,
@@ -545,18 +758,28 @@ export const generateProgressByEnseignant = async (req, res)=>{
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
     
-    const htmlContent = await fillTemplate(matieres, './templates/template_progression_matiere_fr.html', 2024);
+    let filePath='./templates/template_progression_matiere_fr.html';
+    if(langue==='en'){
+        filePath='./templates/template_progression_matiere_en.html';
+    }
+    const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
 }
 
-async function fillTemplateListMat (matieres, filePath, annee) {
+async function fillTemplateListMat (langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
-        
+        body.find('#division-fr').text(departement.libelleFr);
+        body.find('#division-en').text(departement.libelleEn);
+        body.find('#section-fr').text(section.libelleFr);
+        body.find('#section-en').text(section.libelleEn);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
+        body.find('#semestre').text(semestre);
         const userTable = $('#table-matiere');
         const matTemplate=$('.matiere_template');
         const appTemplate=$('.app_template');
@@ -641,11 +864,18 @@ async function fillTemplateListMat (matieres, filePath, annee) {
     }
 };
 
-async function fillTemplate (matieres, filePath, annee) {
+async function fillTemplate (langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
         const body = $('body');
+        body.find('#division-fr').text(departement.libelleFr);
+        body.find('#division-en').text(departement.libelleEn);
+        body.find('#section-fr').text(section.libelleFr);
+        body.find('#section-en').text(section.libelleEn);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
+        body.find('#semestre').text(semestre);
         
         const userTable = $('#table-progression');
         const rowTemplate = $('.row_template');
