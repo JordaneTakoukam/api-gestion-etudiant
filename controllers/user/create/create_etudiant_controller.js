@@ -29,7 +29,6 @@ export const createEtudiant = async (req, res) => {
         // autres (object Id)
         niveaux,
 
-        grade,
         categorie,
         fonction,
         service,
@@ -92,14 +91,14 @@ export const createEtudiant = async (req, res) => {
 
 
         // vérifier le grade
-        if (grade) {
-            if (!mongoose.Types.ObjectId.isValid(grade)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.grade_invalide,
-                });
-            }
-        }
+        // if (grade) {
+        //     if (!mongoose.Types.ObjectId.isValid(grade)) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.grade_invalide,
+        //         });
+        //     }
+        // }
 
         // vérifier le service
         if (service) {
@@ -176,7 +175,7 @@ export const createEtudiant = async (req, res) => {
             absences : [],
             niveaux,
 
-            grade,
+            // grade,
             categorie,
             fonction,
             service,
@@ -228,7 +227,7 @@ export const updateEtudiant = async (req, res) => {
         // autres (object Id)
         niveaux,
 
-        grade,
+        // grade,
         categorie,
         fonction,
         service,
@@ -297,14 +296,14 @@ export const updateEtudiant = async (req, res) => {
 
 
         // vérifier le grade
-        if (grade) {
-            if (!mongoose.Types.ObjectId.isValid(grade)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.grade_invalide,
-                });
-            }
-        }
+        // if (grade) {
+        //     if (!mongoose.Types.ObjectId.isValid(grade)) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.grade_invalide,
+        //         });
+        //     }
+        // }
 
         // vérifier le service
         if (service) {
@@ -359,7 +358,7 @@ export const updateEtudiant = async (req, res) => {
         existingEtudiant.photo_profil = photo_profil;
         existingEtudiant.contact = contact;
         existingEtudiant.date_entree = date_entree;
-        existingEtudiant.grade = grade;
+        // existingEtudiant.grade = grade;
         existingEtudiant.categorie = categorie;
         existingEtudiant.fonction = fonction;
         existingEtudiant.service = service;

@@ -417,7 +417,6 @@ export const generateListMatByNiveau = async (req, res)=>{
 export const generateProgressByNiveau = async (req, res)=>{
     const {annee, semestre}=req.params;
     const { langue, departement, section, cycle, niveau } = req.query;
-
     const filter = { 
         niveau: niveau._id,
     };

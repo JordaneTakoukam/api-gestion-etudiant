@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import {readCategorie, readCategories, createCategorie, deleteCategorie, updateCategorie } from "../../controllers/setting/categorie/categorie.controller.js";
+import {createCategorie, deleteCategorie, updateCategorie } from "../../controllers/setting/categorie/categorie.controller.js";
 
 
 // middlewares
@@ -12,9 +12,9 @@ const router = express.Router();
 router.post("/create", createCategorie);
 
 //  read
-router.get("/get/:id", readCategorie);
-router.get("/get/:params", readCategories);
-router.get("", readCategories);
+// router.get("/get/:id", readCategorie);
+// router.get("/get/:params", readCategories);
+// router.get("", readCategories);
 
 
 // update

@@ -35,6 +35,7 @@ export const sectionSchema = new Schema({
     libelleEn: { type: String, required: true },
 });
 
+
 export const cycleSchema = new Schema({
     date_creation: { type: Date, required: true },
     section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', required: true },
@@ -58,6 +59,14 @@ export const salleSchema = new Schema({
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
     nbPlace:{type: Number, required:true}
+});
+
+export const categorieSchema = new Schema({
+    date_creation: { type: Date, required: true },
+    grade: { type: mongoose.Schema.Types.ObjectId, ref: 'Grade', required: true },
+    code: { type: String, required: true },
+    libelleFr: { type: String, required: true },
+    libelleEn: { type: String, required: true },
 });
 
 

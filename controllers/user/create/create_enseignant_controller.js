@@ -31,7 +31,7 @@ export const createEnseignant = async (req, res) => {
         abscences,
         niveaux,
 
-        grade,
+        // grade,
         categorie,
         fonction,
         service,
@@ -94,14 +94,14 @@ export const createEnseignant = async (req, res) => {
 
 
         // vérifier le grade
-        if (grade) {
-            if (!mongoose.Types.ObjectId.isValid(grade)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.grade_invalide,
-                });
-            }
-        }
+        // if (grade) {
+        //     if (!mongoose.Types.ObjectId.isValid(grade)) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.grade_invalide,
+        //         });
+        //     }
+        // }
 
         // vérifier le service
         if (service) {
@@ -178,7 +178,7 @@ export const createEnseignant = async (req, res) => {
             abscences,
             niveaux,
 
-            grade,
+            // grade,
             categorie,
             fonction,
             service,
@@ -230,7 +230,7 @@ export const updateEnseignant = async (req, res) => {
         abscences,
         niveaux,
 
-        grade,
+        // grade,
         categorie,
         fonction,
         service,
@@ -309,14 +309,14 @@ export const updateEnseignant = async (req, res) => {
 
 
         // vérifier le grade
-        if (grade) {
-            if (!mongoose.Types.ObjectId.isValid(grade)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.grade_invalide,
-                });
-            }
-        }
+        // if (grade) {
+        //     if (!mongoose.Types.ObjectId.isValid(grade)) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.grade_invalide,
+        //         });
+        //     }
+        // }
 
         // vérifier le service
         if (service) {
@@ -371,7 +371,7 @@ export const updateEnseignant = async (req, res) => {
         existingEnseignant.photo_profil = photo_profil;
         existingEnseignant.contact = contact;
         existingEnseignant.date_entree = date_entree;
-        existingEnseignant.grade = grade;
+        // existingEnseignant.grade = grade;
         existingEnseignant.categorie = categorie;
         existingEnseignant.fonction = fonction;
         existingEnseignant.service = service;

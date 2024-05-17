@@ -6,6 +6,7 @@ import { appConfigs } from "../../../configs/app_configs.js";
 import mongoose from 'mongoose';
 import { sendPasswordOnEmail } from "../../../utils/send_password_on_email.js";
 
+
 export const createAdminController = async (req, res) => {
     const {
         // info obligatoire
@@ -23,67 +24,59 @@ export const createAdminController = async (req, res) => {
         date_entree,
 
         // autres (object Id)
-        grade,
+        // abscences,
+        // niveaux,
+
+        // grade,
         categorie,
         fonction,
         service,
-        region,
-        departement,
         commune,
 
     } = req.body;
 
     try {
 
-        if (!email) {
+        // Vérifier que tous les champs obligatoires sont présents
+        if (!nom || !email || !genre) {
+            return res.status(400).json({ success: false, message: message.champ_obligatoire });
+        }
+
+        
+        // Vérifier si l'utilisateur existe déjà avec cet e-mail
+        const existingUserWithEmail = await User.findOne({ email });
+
+        if (existingUserWithEmail) {
             return res.status(400).json({
                 success: false,
-                message: message.emailRequis,
+                message: message.emailExiste,
             });
-        } else {
-            // Vérifier si l'utilisateur existe déjà avec cet e-mail
-            const existingUserWithEmail = await User.findOne({ email });
+        }
 
-            if (existingUserWithEmail) {
+        //vérifier si le matricule exite déjà
+        if(matricule){
+            const existingMatricule = await User.findOne({ matricule });
+
+            if (existingMatricule) {
                 return res.status(400).json({
                     success: false,
-                    message: message.emailExiste,
+                    message: message.enseignant_existe,
                 });
             }
         }
 
 
-        // veriifer le grade
-        if (grade) {
-            if (!mongoose.Types.ObjectId.isValid(grades)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.grade_invalide,
-                });
-            }
-        }
+        // vérifier le grade
+        // if (grade) {
+        //     if (!mongoose.Types.ObjectId.isValid(grade)) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.grade_invalide,
+        //         });
+        //     }
+        // }
 
-        // veriifer la categories
-        if (categorie) {
-            if (!mongoose.Types.ObjectId.isValid(categories)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.categorie_invalide,
-                });
-            }
-        }
-
-        // veriifer la fonction
-        if (fonction) {
-            if (!mongoose.Types.ObjectId.isValid(fonction)) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.fonction_invalide,
-                });
-            }
-        }
-
-        // veriifer le service
+        // vérifier le service
         if (service) {
             if (!mongoose.Types.ObjectId.isValid(service)) {
                 return res.status(400).json({
@@ -93,29 +86,29 @@ export const createAdminController = async (req, res) => {
             }
         }
 
-        // veriifer la region
-        if (region) {
-            if (!mongoose.Types.ObjectId.isValid(region)) {
+        //vérifier la catégorie
+        if (categorie) {
+            if (!mongoose.Types.ObjectId.isValid(categorie)) {
                 return res.status(400).json({
                     success: false,
-                    message: message.region_invalide,
+                    message: message.categorie_invalide,
                 });
             }
         }
 
-        // veriifer le departement
-        if (departement) {
-            if (!mongoose.Types.ObjectId.isValid(departement)) {
+        //vérifier la fonction
+        if (fonction) {
+            if (!mongoose.Types.ObjectId.isValid(fonction)) {
                 return res.status(400).json({
                     success: false,
-                    message: message.departement_invalide,
+                    message: message.fonction_invalide,
                 });
             }
         }
 
-        // veriifer la commune
+        // vérifier la commune
         if (commune) {
-            if (!mongoose.Types.ObjectId.isValid(communes)) {
+            if (!mongoose.Types.ObjectId.isValid(commune)) {
                 return res.status(400).json({
                     success: false,
                     message: message.commune_invalide,
@@ -127,7 +120,7 @@ export const createAdminController = async (req, res) => {
 
         const role = appConfigs.role.admin;
         // mot de psase par defaut
-        const mot_de_passe = process.env.DEFAULT_ADMIN_PASSWORD;
+        const mot_de_passe = process.env.DEFAULT_ENSEIGNANT_PASSWORD
 
         const saltRounds = 10; // Nombre de tours pour le hachage
         const hashedPassword = await bcrypt.hash(mot_de_passe, saltRounds);
@@ -154,34 +147,27 @@ export const createAdminController = async (req, res) => {
             historique_connexion: [],
             mot_de_passe: hashedPassword,
 
-            // object Id
-            grade,
+
             categorie,
             fonction,
             service,
-            region,
-            departement,
             commune,
         });
 
 
-        const user = await newUser.save();
-        sendPasswordOnEmail(user.nom, user.email, passwordGenerate);
+        const newEnseignant = await newUser.save();
 
-        try {
-            // sendPasswordOnEmail(user.nom, user.email, mot_de_passe);
-        } catch (error) {
-            console.error("Erreur lors de l'envoi de l'e-mail:", error);
 
-        }
-
-        const userData = user.toObject();
+        const userData = newEnseignant.toObject();
+        sendPasswordOnEmail(userData.nom, userData.email, mot_de_passe);
         delete userData.mot_de_passe;
+        
         res.json({
             success: true,
-            message: message.creation_reuissi,
+            message: message.ajouter_avec_success,
             data: userData,
         });
+
 
     } catch (error) {
         console.error("Erreur :", error);
