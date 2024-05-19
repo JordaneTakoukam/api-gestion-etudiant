@@ -10,7 +10,7 @@
             font-size: 13px;
             text-align: justify;
         }
-        #table-etudiant{
+        #table-enseignant{
             border-collapse: collapse;
             width: 1030px;
         }
@@ -69,39 +69,37 @@
                     REPUBLIQUE DU CAMEROUN<br>
                     <span class="devise">Paix - Travail - Patrie</span><br>**********<br>
                     ECOLE NATIONALE D'ADMINISTRATION ET DE MAGISTRATURE<br>**********<br>
-                    DIRECTION GENERALE<br>**********<br>
-                    DIVISION DES <span id="division-fr"></span><br>**********<br>
-                    SECTION <span id="section-fr"></span><br>**********
+                    DIRECTION GENERALE<br>**********<br>        
                 </td>
-                <td id="header-logo"></td>
+                <td id="header-logo"><img src="https://upload.wikimedia.org/wikipedia/fr/2/29/Enam_Cameroun_blason.jpg" width="90" height="90"></td>
                 <td id="header-english">
                     REPUBLIC OF CAMEROON<br>
                     <span class="devise">Peace - Work - Fatherland</span><br>**********<br>
                     NATIONAL SCHOOL OF ADMINISTRATION AND MAGISTRACY<br>**********<br>
                     DIRECTORALE GENERAL<br>**********<br>
-                    DEPARTMENT OF <span id="division-en"></span><br>**********<br>
-                    <span id="section-en"></span> SECTION</span><br>**********
                 </td>
             </tr>
         </table>
         
-        
         <br><p id="title-doc">
-            LISTE DES ETUDIANTS CYCLE <span id="cycle-niveau"></span><br>
+            ABSENCES PAR ENSEIGNANT<br>
             ANNEE ACADEMIQUE <span id="annee"></span><br>
+            SEMESTRE <span id="semestre"></span><br>
         </p>
-       
-        <table id="table-etudiant">
+        <table id="table-enseignant">
             <thead>
                 <tr>
-                    <th class="header-etudiant num" >N°</th>
-                    <th class="header-etudiant" >Matricule</th>
-                    <th class="header-etudiant" >Nom</th>
-                    <th class="header-etudiant" >Prénom</th>
-                    <th class="header-etudiant" >Genre</th>
-                    <th class="header-etudiant" >E-mail</th>
-                    <th class="header-etudiant" >Date de naissance</th>
-                    <th class="header-etudiant" >Lieu de naissance</th>
+                    <th class="header-enseignant num" >N°</th>
+                    <th class="header-enseignant" >Matricule</th>
+                    <th class="header-enseignant" >Nom</th>
+                    <th class="header-enseignant" >Prénom</th>
+                    <th class="header-enseignant" >Genre</th>
+                    <th class="header-enseignant" >E-mail</th>
+                    <th class="header-enseignant" >Date de naissance</th>
+                    <th class="header-enseignant" >Lieu de naissance</th>
+                    <th class="header-enseignant" >Absences(H)</th>
+                    <th class="header-etudiant" >Justifier(H)</th>
+                    <th class="header-etudiant" >Non Justifier(H)</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,6 +112,9 @@
                     <td id="e-mail"></td>
                     <td id="date-naiss"></td>
                     <td id="lieu-naiss"></td>
+                    <td id="absences"></td>
+                    <td id="justifier"></td>
+                    <td id="non_justifier"></td>
                 </tr>
             </tbody>
             

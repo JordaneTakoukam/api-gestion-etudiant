@@ -614,28 +614,28 @@ export const generateListEnseignant = async (req, res)=>{
     let title="";
     if (grade && mongoose.Types.ObjectId.isValid(grade)) {
         query.grade = grade;
-        title=langue==='fr'?"PAR GRADE":"BY GRADE";
+        title=langue==='fr'?"PAR GRADE":"PER GRADE";
     }
 
     if (categorie && mongoose.Types.ObjectId.isValid(categorie)) {
         query.categorie = categorie;
-        title=langue==='fr'?"PAR CATEGORIE":"BY CATEGORY";
+        title=langue==='fr'?"PAR CATEGORIE":"PER CATEGORY";
     }
 
     if (service && mongoose.Types.ObjectId.isValid(service)) {
         query.service = service;
-        title=langue==='fr'?"PAR SERVICE":"BY SERVICE";
+        title=langue==='fr'?"PAR SERVICE":"PER SERVICE";
     }
 
     if (fonction && mongoose.Types.ObjectId.isValid(fonction)) {
         query.fonction = fonction;
-        title=langue==='fr'?"PAR FONCTION":"BY FUNCTION";
+        title=langue==='fr'?"PAR FONCTION":"PER FUNCTION";
     }
 
     const enseignants = await User.find(query);
-    let filePath='./templates/template_liste_enseignant_fr.html';
+    let filePath='./templates/templates_fr/template_liste_enseignant_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_liste_enseignant_en.html'
+        filePath='./templates/templates_en/template_liste_enseignant_en.html'
     }
     const htmlContent = await fillTemplate(title, langue, enseignants, filePath, annee);
 
@@ -672,16 +672,20 @@ async function fillTemplate (title, langue, enseignants, filePath, annee) {
             clonedRow.find('#service').text("");
             clonedRow.find('#fonction').text("");
             if(enseignant.grade!=null && setting){
-                clonedRow.find('#grade').text(setting.grades.find((grade)=>grade._id.toString()===enseignant.grade.toString())?.libelleFr??"");
+                const grade=setting.grades.find((grade)=>grade._id.toString()===enseignant.grade.toString());
+                clonedRow.find('#grade').text(langue==='fr'?grade?.libelleFr??"":grade?.libelleEn??"");
             }
             if(enseignant.categorie!=null && setting){
-                clonedRow.find('#categorie').text(setting.categories.find((categorie)=>categorie._id.toString()===enseignant.categorie.toString())?.libelleFr??"");
+                const categorie = setting.categories.find((categorie)=>categorie._id.toString()===enseignant.categorie.toString());
+                clonedRow.find('#categorie').text(langue==='fr'?categorie?.libelleFr??"":categorie?.libelleEn??"");
             }
             if(enseignant.service!=null && setting){
-                clonedRow.find('#service').text(setting.services.find((service)=>service._id.toString()===enseignant.service.toString())?.libelleFr??"");
+                const service = setting.services.find((service)=>service._id.toString()===enseignant.service.toString());
+                clonedRow.find('#service').text(langue==='fr'?service?.libelleFr??"":service?.libelleEn??"");
             }
             if(enseignant.fonction!=null && setting){
-                clonedRow.find('#fonction').text(setting.fonctions.find((fonction)=>fonction._id.toString()===enseignant.fonction.toString())?.libelleFr??"");
+                const fonction = setting.fonctions.find((fonction)=>fonction._id.toString()===enseignant.fonction.toString());
+                clonedRow.find('#fonction').text(langue==='fr'?fonction?.libelleFr??"":fonction?.libelleEn??"");
             }
             
             

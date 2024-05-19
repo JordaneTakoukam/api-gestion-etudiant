@@ -968,7 +968,7 @@ export const generateEmploisDuTemps = async (req, res) => {
     const periodes = await Periode.find(filter)
         .populate({
             path: 'matiere',
-            select: 'code'
+            select: 'code libelleFr libelleEn'
         })
         .populate({
             path: 'enseignantPrincipal',
@@ -979,9 +979,9 @@ export const generateEmploisDuTemps = async (req, res) => {
             select: 'nom prenom'
         })
         .exec();
-    let filePath= './templates/template_emplois_temps_fr.html';
+    let filePath= './templates/templates_fr/template_emplois_temps_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_emplois_temps_en.html'
+        filePath='./templates/templates_en/template_emplois_temps_en.html'
     }
     // Remplir le template avec les données récupérées
     const htmlContent = await fillTemplateEmplois(langue, section, cycle, niveau, periodes, filePath, annee, semestre);
@@ -1008,7 +1008,7 @@ async function fillTemplateEmplois(langue, section, cycle, niveau, periodes, fil
         
         const body = $('body');
         
-        body.find('#section').text(section.libelleFr+" "+cycle.code+""+niveau.code);
+        body.find('#section').text(langue==='fr'?section.libelleFr:section.libelleEn+" "+cycle.code+""+niveau.code);
         body.find('#semestre').text(semestre);
         body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
         body.find('#annee').text(formatYear(parseInt(annee)));
@@ -1041,7 +1041,8 @@ async function fillTemplateEmplois(langue, section, cycle, niveau, periodes, fil
                 const typeEns = setting.typesEnseignement.find(type=>type._id.toString()===periode.typeEnseignement.toString()).code;
                 const salle = setting.salleDeCours.find(salle=>salle._id.toString()===periode.salleCours.toString()).code;
                 if (timeSlot.length > 0) {
-                    const content = `${periode.matiere.code} (${typeEns?typeEns:""}) - ${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal.prenom}/${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant.prenom} - ${salle?salle:""}`;
+                    // const content = `${langue==='fr'?periode.matiere.libelleFr:periode.matiere.libelleEn} (${typeEns?typeEns:""}) - ${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal.prenom}/${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant.prenom} - ${salle?salle:""}`;
+                    const content = `${langue==='fr'?periode.matiere.libelleFr:periode.matiere.libelleEn} <br> ${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal.prenom}/${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant.prenom} <br> ${salle?salle:""}`;
                     timeSlot.append(`<div>${content}</div>`);
                 }
             }else{

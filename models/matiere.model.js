@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 
 const matiereSchema = new Schema({
-    code: { type: String, required: true },
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
     niveau:{ type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },

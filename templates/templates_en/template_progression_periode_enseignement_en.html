@@ -10,15 +10,15 @@
             font-size: 13px;
             text-align: justify;
         }
-        #table-enseignant{
+        #table-periode-enseignement{
             border-collapse: collapse;
-            width: 1030px;
+            width: 700px;
         }
         td, th{
             border: 1px solid black;
         }
         #table-header{
-            width: 1030px;
+            width: 700px;
             text-align: center;
             border: none;
             font-size: 11px;
@@ -45,16 +45,32 @@
             font-style: italic;
         }
 
-        .num{
-            width: 20px;
+        #doc-header, .decide{
+            text-align: center;
+        }
+
+        .bold-underline{
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        sup, #directeur{
+            font-weight: bold;
+        }
+
+        #title-periode, #title-matiere{
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .row_template, .elem_template{
+            text-align: center;
         }
 
         #title-doc{
             font-weight: bold;
             text-align: center;
         }
-
-       
     </style>
 </head>
     <body >
@@ -66,53 +82,49 @@
                     <span class="devise">Paix - Travail - Patrie</span><br>**********<br>
                     ECOLE NATIONALE D'ADMINISTRATION ET DE MAGISTRATURE<br>**********<br>
                     DIRECTION GENERALE<br>**********<br>
-                    
+                    DIVISION DES <span id="division-fr"></span><br>**********<br>
+                    SECTION <span id="section-fr"></span><br>**********
                 </td>
-                <td id="header-logo"></td>
+                <td id="header-logo"><img src="https://upload.wikimedia.org/wikipedia/fr/2/29/Enam_Cameroun_blason.jpg" width="90" height="90"></td>
                 <td id="header-english">
                     REPUBLIC OF CAMEROON<br>
                     <span class="devise">Peace - Work - Fatherland</span><br>**********<br>
                     NATIONAL SCHOOL OF ADMINISTRATION AND MAGISTRACY<br>**********<br>
                     DIRECTORALE GENERAL<br>**********<br>
-                    
+                    DEPARTMENT OF <span id="division-en"></span><br>**********<br>
+                    <span id="section-en"></span> SECTION</span><br>**********
                 </td>
             </tr>
         </table>
         
-        
         <br><p id="title-doc">
-            LISTE DES ENSEIGNANTS <br>
-            ANNEE ACADEMIQUE <span id="annee"></span><br>
+            PROGRESSION BY TEACHING PERIOD CYCLE <span id="cycle-niveau"></span><br>
+            ACADEMIC YEAR <span id="annee"></span><br>
+            SEMESTER <span id="semestre"></span><br>
         </p>
-       
-        <table id="table-enseignant">
+        
+        <table id="table-periode-enseignement">
             <thead>
                 <tr>
-                    <th class="header-enseignant num" >N°</th>
-                    <th class="header-enseignant" >Matricule</th>
-                    <th class="header-enseignant" >Nom</th>
-                    <th class="header-enseignant" >Prénom</th>
-                    <th class="header-enseignant" >Genre</th>
-                    <th class="header-enseignant" >E-mail</th>
-                    <th class="header-enseignant" >Grade</th>
-                    <th class="header-enseignant" >Categorie</th>
-                    <th class="header-enseignant" >Service</th>
-                    <th class="header-enseignant" >Fonction</th>
-                    
+                    <th id="title-periode" colspan="4"></th>
                 </tr>
             </thead>
             <tbody>
+                <tr class="matiere_template">
+                    <td id="title-matiere" colspan="4"></td>
+                </tr>
+                <tr class="elem_template">
+                    <td>Number of sessions</td>
+                    <td>Number of sessions practised</td>
+                    <td>Gap</td>
+                    <td>Relative attendance rate</td>
+                </tr>
                 <tr class="row_template">
-                    <td id="num" ></td>
-                    <td id="matricule" ></td>
-                    <td id="nom" ></td>
-                    <td id="prenom" ></td>
-                    <td id="genre"></td>
-                    <td id="e-mail"></td>
-                    <td id="grade"></td>
-                    <td id="categorie"></td>
-                    <td id="service"></td>
-                    <td id="fonction"></td>
+                    <td id="nb-seance" ></td>
+                    <td id="nb-seance-pra" ></td>
+                    <td id="gap" ></td>
+                    <td id="taux" ></td>
+
                 </tr>
             </tbody>
             

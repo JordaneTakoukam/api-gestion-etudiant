@@ -10,7 +10,7 @@
             font-size: 13px;
             text-align: justify;
         }
-        #table-matiere{
+        #table-etudiant{
             border-collapse: collapse;
             width: 1030px;
         }
@@ -44,16 +44,20 @@
         .devise{
             font-style: italic;
         }
-        
-        #title-matiere{
-            background-color: rgb(192, 191, 191);
-            font-weight: bold;
+
+        .num{
+            width: 20px;
+        }
+
+        h1, h3{
+            text-align: center;
         }
 
         #title-doc{
             font-weight: bold;
             text-align: center;
         }
+
        
     </style>
 </head>
@@ -69,7 +73,7 @@
                     DIVISION DES <span id="division-fr"></span><br>**********<br>
                     SECTION <span id="section-fr"></span><br>**********
                 </td>
-                <td id="header-logo"></td>
+                <td id="header-logo"><img src="https://upload.wikimedia.org/wikipedia/fr/2/29/Enam_Cameroun_blason.jpg" width="90" height="90"></td>
                 <td id="header-english">
                     REPUBLIC OF CAMEROON<br>
                     <span class="devise">Peace - Work - Fatherland</span><br>**********<br>
@@ -83,43 +87,33 @@
         
         
         <br><p id="title-doc">
-            LISTE DES MATIERES CYCLE <span id="cycle-niveau"></span><br>
+            LISTE DES ETUDIANTS CYCLE <span id="cycle-niveau"></span><br>
             ANNEE ACADEMIQUE <span id="annee"></span><br>
-            SEMESTRE <span id="semestre"></span><br>
         </p>
        
-        <table id="table-matiere">
+        <table id="table-etudiant">
             <thead>
                 <tr>
-                    <th class="header-matiere" >Matière</th>
-                    <th class="header-matiere" >CM</th>
-                    <th class="header-matiere" >TD</th>
-                    <th class="header-matiere" >TP</th>
-                    <th class="header-matiere" >Intervenants</th>
+                    <th class="header-etudiant num" >N°</th>
+                    <th class="header-etudiant" >Matricule</th>
+                    <th class="header-etudiant" >Nom</th>
+                    <th class="header-etudiant" >Prénom</th>
+                    <th class="header-etudiant" >Genre</th>
+                    <th class="header-etudiant" >E-mail</th>
+                    <th class="header-etudiant" >Date de naissance</th>
+                    <th class="header-etudiant" >Lieu de naissance</th>
                 </tr>
             </thead>
             <tbody>
-                <tr class="matiere_template">
-                    <td id="title-matiere" colspan="5"></td>
-                </tr>
                 <tr class="row_template">
-                    <td id="title-chapitre" ></td>
-                    <td id="cm" ></td>
-                    <td id="td" ></td>
-                    <td id="tp" ></td>
-                    <td id="intervenants"></td>
-                </tr>
-                <tr class="app_template">
-                    <td  colspan="5"><strong>Approche pédagogique : </strong><span id="approche-ped"></span></td>
-                </tr>
-                <tr class="pre_template">
-                    <td colspan="5"><strong>Prérequis : </strong><span id="prerequis"></span></td>
-                </tr>
-                <tr class="eva_template">
-                    <td colspan="5"><strong>Evaluation des acquis : </strong><span id="evaluation"></span></td>
-                </tr>
-                <tr class="comp_template">
-                    <td colspan="5"><strong>Compétences Acquises : </strong><span id="competence"></span></td>
+                    <td id="num" ></td>
+                    <td id="matricule" ></td>
+                    <td id="nom" ></td>
+                    <td id="prenom" ></td>
+                    <td id="genre"></td>
+                    <td id="e-mail"></td>
+                    <td id="date-naiss"></td>
+                    <td id="lieu-naiss"></td>
                 </tr>
             </tbody>
             

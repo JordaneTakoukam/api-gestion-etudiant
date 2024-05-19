@@ -465,14 +465,19 @@ export const getUpcommingEventsOfYear = async (req, res) => {
 
 export const generateListEvent = async (req, res)=>{
     const { annee = 2024 } = req.params;
+    const {langue}=req.query;
     const evenements = await Evenement.find({ annee: annee });
-    const htmlContent = await fillTemplate(evenements, './templates/template_calendrier_fr.html', annee);
+    let filePath='./templates/templates_fr/template_calendrier_fr.html';
+    if(langue==='en'){
+        filePath='./templates/templates_en/template_calendrier_en.html';
+    }
+    const htmlContent = await fillTemplate(langue, evenements, filePath, annee);
 
     // Générer le PDF à partir du contenu HTML
     generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
 }
 
-async function fillTemplate (evenements, filePath, annee) {
+async function fillTemplate (langue, evenements, filePath, annee) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
@@ -488,13 +493,14 @@ async function fillTemplate (evenements, filePath, annee) {
         
         for (const event of evenements) {
             const clonedRow = rowTemplate.clone();
-            clonedRow.find('#libelle').text(event.libelleFr);
-            clonedRow.find('#periode').text(event.periodeFr);
-            clonedRow.find('#personnel').text(event.personnelFr);
-            clonedRow.find('#description_observation').text(event.descriptionObservationFr);
+            clonedRow.find('#libelle').text(langue==='fr'?event.libelleFr:event.libelleEn);
+            clonedRow.find('#periode').text(langue==='fr'?event.periodeFr:event.periodeEn);
+            clonedRow.find('#personnel').text(langue==='fr'?event.personnelFr:event.personnelEn);
+            clonedRow.find('#description_observation').text(langue==='fr'?event.descriptionObservationFr:event.descriptionObservationEn);
             clonedRow.find('#fonction').text("");
             if(event.etat!=null && setting){
-                clonedRow.find('#statut').text(setting.etatsEvenement.find((etat)=>etat._id.toString()===event.etat.toString())?.libelleFr??"");
+                const etat= setting.etatsEvenement.find((etat)=>etat._id.toString()===event.etat.toString());
+                clonedRow.find('#statut').text(langue==='fr'?etat?.libelleFr??"":etat?.libelleEn??"");
             }
             userTable.append(clonedRow);
         }

@@ -546,9 +546,9 @@ export const generateListPeriodeEnseignement = async (req, res)=>{
             }, new Set()).size;
         }));
     }));
-    let filePath='./templates/template_periode_enseignement_fr.html';
+    let filePath='./templates/templates_fr/template_periode_enseignement_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_periode_enseignement_en.html';
+        filePath='./templates/templates_en/template_periode_enseignement_en.html';
     }
 
     const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, periodes, filePath, annee, semestre);
@@ -575,12 +575,12 @@ async function fillTemplate (departement, section, cycle, niveau, langue, period
         
         for (const periode of periodes) {
             const clonedRowPeriod = periodTemplate.clone();
-            clonedRowPeriod.find('#title-periode').text(periode.periodeFr);
+            clonedRowPeriod.find('#title-periode').text(langue==='fr'?periode.periodeFr:periode.periodeEn);
             userTable.append(clonedRowPeriod);
             if(periode.enseignements){
                 for(const enseignement of periode.enseignements){   
                     const clonedRow = rowTemplate.clone();
-                    clonedRow.find('#matiere').text(enseignement.matiere.code+":"+enseignement.matiere.libelleFr);
+                    clonedRow.find('#matiere').text(langue==='fr'?enseignement.matiere.libelleFr:enseignement.matiere.libelleEn);
                     clonedRow.find('#periode-enseignement').text(enseignement.nombreSeance);
                     userTable.append(clonedRow);
                 }
@@ -599,9 +599,9 @@ async function fillTemplate (departement, section, cycle, niveau, langue, period
 
 export const generateProgressionPeriodeEnseignement = async (req, res)=>{
     const {periode, departement, section, cycle, niveau, langue}=req.query;
-    let filePath='./templates/template_progression_periode_enseignement_fr.html'
+    let filePath='./templates/templates_fr/template_progression_periode_enseignement_fr.html'
     if(langue==='en'){
-        filePath='./templates/template_progression_periode_enseignement_en.html';
+        filePath='./templates/templates_en/template_progression_periode_enseignement_en.html';
     }
     const htmlContent = await fillTemplateProg(departement, section, cycle, niveau, langue, periode, filePath, periode.annee, periode.semestre);
 
@@ -622,7 +622,7 @@ async function fillTemplateProg (departement, section, cycle, niveau, langue, pe
         body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
         body.find('#annee').text(formatYear(parseInt(annee)));
         body.find('#semestre').text(semestre);
-        body.find('#title-periode').text(periode.periodeFr);
+        body.find('#title-periode').text(langue==='fr'?periode.periodeFr:periode.periodeEn);
         const userTable = $('#table-periode-enseignement');
         
         const matTemplate = $('.matiere_template');
@@ -634,7 +634,7 @@ async function fillTemplateProg (departement, section, cycle, niveau, langue, pe
             for(const enseignement of periode.enseignements){   
                 const clonedMat = matTemplate.clone();
                 
-                clonedMat.find('#title-matiere').text(enseignement.matiere.code+":"+enseignement.matiere.libelleFr);
+                clonedMat.find('#title-matiere').text(langue==='fr'?enseignement.matiere.libelleFr:enseignement.matiere.libelleEn);
                 userTable.append(clonedMat);
                 const clonedElm = elemTemplate.clone();
                 userTable.append(clonedElm);

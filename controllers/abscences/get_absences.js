@@ -402,9 +402,9 @@ export const generateListAbsenceEnseignant = async (req, res)=>{
         // Sorting the absences array by the dateAbsence field in ascending order
         enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
     });
-    let filePath='./templates/template_liste_absences_enseignant_fr.html';
+    let filePath='./templates/templates_fr/template_liste_absences_enseignant_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_liste_absences_enseignant_en.html'
+        filePath='./templates/templates_en/template_liste_absences_enseignant_en.html'
     }
     const htmlContent = await fillTemplateE(langue, enseignantsWithFilteredAbsences, filePath, annee, semestre);
 
@@ -527,9 +527,9 @@ export const generateListAbsenceEtudiant = async (req, res)=>{
         etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveau._id && niveau.annee === Number(annee));
         etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
     });
-    let filePath='./templates/template_liste_absences_etudiant_fr.html';
+    let filePath='./templates/templates_fr/template_liste_absences_etudiant_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_liste_absences_etudiant_en.html'
+        filePath='./templates/templates_en/template_liste_absences_etudiant_en.html'
     }
     const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, etudiants, filePath, annee, semestre);
 

@@ -766,10 +766,10 @@ export const generateListEtudiant = async (req, res)=>{
     };
 
     const etudiants = await User.find(query);
-    let filePath='./templates/template_liste_etudiant_fr.html';
+    let filePath='./templates/templates_fr/template_liste_etudiant_fr.html';
     
     if(langue==='en'){
-        filePath='./templates/template_liste_etudiant_en.html'
+        filePath='./templates/templates_en/template_liste_etudiant_en.html'
     }
     const htmlContent = await fillTemplate( departement, section, cycle, niveau, etudiants, filePath, annee);
 

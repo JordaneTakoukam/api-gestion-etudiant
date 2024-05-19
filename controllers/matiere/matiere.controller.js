@@ -9,12 +9,13 @@ import cheerio from 'cheerio';
 
 // create
 export const createMatiere = async (req, res) => { 
-    const { code, libelleFr, libelleEn, niveau, prerequisFr, prerequisEn, approchePedFr, approchePedEn, evaluationAcquisFr, evaluationAcquisEn, typesEnseignement, chapitres, objectifs } = req.body;
+    const {libelleFr, libelleEn, niveau, prerequisFr, prerequisEn, approchePedFr, approchePedEn, evaluationAcquisFr, evaluationAcquisEn, typesEnseignement, chapitres, objectifs } = req.body;
 
     try {
 
         // Vérifier que tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !niveau || !typesEnseignement) {
+        // if (!code || !libelleFr || !libelleEn || !niveau || !typesEnseignement) {
+        if (!libelleFr || !libelleEn || !niveau || !typesEnseignement) {
             return res.status(400).json({ success: false, message: message.champ_obligatoire });
         }
 
@@ -71,13 +72,16 @@ export const createMatiere = async (req, res) => {
         }
 
         // Vérifier si le code de existe déjà
-        const existingCode = await Matiere.findOne({ code: code });
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code
-            });
+        if(code!==""){
+            const existingCode = await Matiere.findOne({ code: code });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
         }
+        
 
         // Vérifier si le libelle fr de  existe déjà
         const existingLibelleFr = await Matiere.findOne({libelleFr: libelleFr});
@@ -133,7 +137,8 @@ export const updateMatiere = async (req, res) => {
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !niveau || !typesEnseignement) {
+        // if (!code || !libelleFr || !libelleEn || !niveau || !typesEnseignement) {
+        if (!libelleFr || !libelleEn || !niveau || !typesEnseignement) {
             return res.status(400).json({ success: false, message: message.champ_obligatoire });
         }
         // Vérifier si l'ID de la matière est un ObjectId valide
@@ -154,7 +159,7 @@ export const updateMatiere = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà (sauf pour l'événement actuel)
-        if (existingMatiere.code !== code) {
+        if (code!=="" && existingMatiere.code !== code) {
             const existingCode = await Matiere.findOne({ code: code });
             if (existingCode) {
                 return res.status(400).json({
@@ -393,10 +398,10 @@ export const generateListMatByNiveau = async (req, res)=>{
                     })
                     .populate('chapitres')
                     .populate('objectifs');
-    let filePath='./templates/template_liste_matiere_fr.html';
+    let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
                
     if(langue==='en'){
-        filePath='./templates/template_liste_matiere_en.html';
+        filePath='./templates/templates_en/template_liste_matiere_en.html';
     }
     const htmlContent = await fillTemplateListMat(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
@@ -457,9 +462,9 @@ export const generateProgressByNiveau = async (req, res)=>{
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
     
-    let filePath='./templates/template_progression_matiere_fr.html';
+    let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_progression_matiere_en.html';
+        filePath='./templates/templates_en/template_progression_matiere_en.html';
     }
     const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
@@ -793,13 +798,13 @@ async function fillTemplateListMat (langue, departement, section, cycle, niveau,
         }
         for (const matiere of matieres) {
             const clonedRowMat = matTemplate.clone();
-            clonedRowMat.find('#title-matiere').text(matiere.libelleFr);
+            clonedRowMat.find('#title-matiere').text(langue==='fr'?matiere.libelleFr:matiere.libelleEn);
             userTable.append(clonedRowMat);
             
             if(matiere.chapitres){
                 for(const chapitre of matiere.chapitres){
                     const clonedRow = rowTemplate.clone();
-                    clonedRow.find('#title-chapitre').text(chapitre.libelleFr);
+                    clonedRow.find('#title-chapitre').text(langue==='fr'?chapitre.libelleFr:chapitre.libelleEn);
                     if(chapitre.typesEnseignement!=null && setting){
                         for(const typeEns of chapitre.typesEnseignement){
                             let type = setting.typesEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).code.toString().toLowerCase();
@@ -821,23 +826,23 @@ async function fillTemplateListMat (langue, departement, section, cycle, niveau,
             }
 
             const clonedRowApp = appTemplate.clone();
-            clonedRowApp.find('#approche-ped').text(matiere.approchePedFr)
+            clonedRowApp.find('#approche-ped').text(langue==='fr'?matiere.approchePedFr:matiere.approchePedEn)
             userTable.append(clonedRowApp);
 
             const clonedRowPre = preTemplate.clone();
-            clonedRowPre.find('#prerequis').text(matiere.prerequisFr)
+            clonedRowPre.find('#prerequis').text(langue==='fr'?matiere.prerequisFr:matiere.prerequisEn)
             userTable.append(clonedRowPre);
 
             const clonedRowEva = evaTemplate.clone();
-            clonedRowEva.find('#evaluation').text(matiere.evaluationAcquisFr)
+            clonedRowEva.find('#evaluation').text(langue==='fr'?matiere.evaluationAcquisFr:matiere.evaluationAcquisEn)
             userTable.append(clonedRowEva);
             let objectifs="";
             if(matiere.objectifs){
                 for(const objectif of matiere.objectifs){
                     if (objectifs.length > 0) {
-                        objectifs = objectifs + "," +objectif.libelleFr;
+                        objectifs = objectifs + "," +langue==='fr'?objectif.libelleFr:objectif.libelleEn;
                     } else {
-                        objectifs = objectif.libelleFr;
+                        objectifs = langue==='fr'?objectif.libelleFr:objectif.libelleEn;
                     }
                 }
             }
@@ -881,7 +886,7 @@ async function fillTemplate (langue, departement, section, cycle, niveau, matier
         
         for (const matiere of matieres) {
             const clonedRow = rowTemplate.clone();
-            clonedRow.find('#matiere').text(matiere.code+":"+matiere.libelleFr);
+            clonedRow.find('#matiere').text(matiere.code+":"+langue==='fr'?matiere.libelleFr:matiere.libelleEn);
             clonedRow.find('#progression').text(calculateProgress(matiere)+" %");
             userTable.append(clonedRow);
         }
