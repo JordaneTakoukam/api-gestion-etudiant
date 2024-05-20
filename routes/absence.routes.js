@@ -1,7 +1,7 @@
 import express from "express";
 import { ajouterAbsence, retirerAbsence, justifierAbsence } from "../controllers/abscences/absence.controller.js";
 import { getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter, getAllAbsencesWithEnseignantsByFilter, getAllAbsencesWithEtudiantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent, generateListAbsenceEtudiant, generateListAbsenceEnseignant } from "../controllers/abscences/get_absences.js";
-import { signalerAbsence } from "../controllers/abscences/signaler_absence.controller.js";
+import { signalerAbsence, getAbsencesSignaler } from "../controllers/abscences/signaler_absence.controller.js";
 
 
 // controllers
@@ -25,6 +25,7 @@ router.put("/update", justifierAbsence);
 
 
 router.post("/signaler", signalerAbsence);
+router.get("/getAbsencesSignaler/:userId", getAbsencesSignaler);
 
 
 export default router;

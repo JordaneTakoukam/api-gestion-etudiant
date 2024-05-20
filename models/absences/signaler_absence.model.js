@@ -5,12 +5,14 @@ import { validRoles } from '../user.model.js';
 const signalementAbsenceSchema = new Schema({
     date_creation: { type: Date, default: Date.now },
     role: { type: String, enum: validRoles, required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, refPath: 'User', required: true }, // Référence à l'utilisateur (étudiant, délégué, enseignant, admin)
-    motif: { type: String, required: true },
-    titre: { type: String, default: null },
-    description: { type: String, default: null },
-    date_debut_absence: { type: Date, required: true },
-    date_fin_absence: { type: Date, required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Référence à l'utilisateur (étudiant, délégué, enseignant, admin)
+    heure_debut_absence: { type: String, required: true },
+    heure_fin_absence: { type: String, required: true },
+    jour_absence: { type: Number, required: true },
+    date_absence_signaler: { type: Date, required: true },
+    semestre: { type: Number, required: true },
+    annee: { type: Number, required: true },
+    niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },
 });
 
 const SignalementAbsence = mongoose.model('SignalementAbsence', signalementAbsenceSchema, 'signalementsAbsences');
