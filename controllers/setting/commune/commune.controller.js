@@ -9,7 +9,7 @@ export const createCommune = async (req, res) => {
     const { code, libelleFr, libelleEn, departement } = req.body;
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !departement) {
+        if (!libelleFr || !libelleEn || !departement) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -38,15 +38,17 @@ export const createCommune = async (req, res) => {
         }
 
         // Vérifier si le code de la commune existe déjà
-        const existingCode = await Setting.findOne({
-            'communes.code': code,
-        });
-        
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
+        if(code){
+            const existingCode = await Setting.findOne({
+                'communes.code': code,
             });
+            
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
         // Vérifier si le libelle fr de la commune existe déjà
         const existingLibelleFr = await Setting.findOne({
@@ -111,7 +113,7 @@ export const updateCommune = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !departement) {
+        if (!libelleFr || !libelleEn || !departement) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -152,7 +154,7 @@ export const updateCommune = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception du commune en cours de modification
-        if (existingCommune.communes[0].code !== code) {
+        if (code && existingCommune.communes[0].code !== code) {
             const existingCode = await Setting.findOne({
                 'communes.code': code,
             });

@@ -10,7 +10,7 @@ export const createDepartement = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !region) {
+        if (!libelleFr || !libelleEn || !region) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -37,16 +37,19 @@ export const createDepartement = async (req, res) => {
 
 
         // Vérifier si le code de la département existe déjà
-        const existingCode = await Setting.findOne({
-            'departements.code': code,
-        });
-
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
+        if(code){
+            const existingCode = await Setting.findOne({
+                'departements.code': code,
             });
+    
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
+       
         // Vérifier si le libelle fr de la département existe déjà
         const existingLibelleFr = await Setting.findOne({
             'departements.libelleFr': libelleFr,
@@ -110,7 +113,7 @@ export const updateDepartement = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !region) {
+        if (!libelleFr || !libelleEn || !region) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -151,7 +154,8 @@ export const updateDepartement = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception du département en cours de modification
-        if (existingDepartement.departements[0].code !== code) {
+        
+        if (code && existingDepartement.departements[0].code !== code) {
             const existingCode = await Setting.findOne({
                 'departements.code': code,
             });
