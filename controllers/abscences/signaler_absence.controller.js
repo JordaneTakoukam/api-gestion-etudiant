@@ -5,11 +5,13 @@ import User, { validRoles } from "../../models/user.model.js";
 import { io } from "../../server.js";
 import Setting from '../../models/setting.model.js';
 import { appConfigs } from "../../configs/app_configs.js";
+import { DateTime } from 'luxon';
 
 // Contrôleur pour signaler une absence
 export const signalerAbsence = async (req, res) => {
     const {
-        userId,
+        user,
+        enseignant,
         role,
         // motif,
         // titre, 
@@ -17,7 +19,6 @@ export const signalerAbsence = async (req, res) => {
         heure_debut_absence,
         heure_fin_absence,
         jour_absence,
-        date_absence_signaler,
 
         niveau,
         semestre,
@@ -26,7 +27,15 @@ export const signalerAbsence = async (req, res) => {
 
     try {
         // Vérifier si l'ID de l'user est valide
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
+        if (!mongoose.Types.ObjectId.isValid(user._id)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        // Vérifier si l'ID de l'enseignant est valide
+        if (enseignant && !mongoose.Types.ObjectId.isValid(enseignant._id)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -34,10 +43,10 @@ export const signalerAbsence = async (req, res) => {
         }
 
         // Rechercher l'user dans la base de données
-        const user = await User.findById(userId).select('_id nom prenom');
-        if (!user) {
-            return res.status(404).json({ success: false, message: message.userNonTrouver });
-        }
+        // const user = await User.findById(userId).select('_id nom prenom');
+        // if (!user) {
+        //     return res.status(404).json({ success: false, message: message.userNonTrouver });
+        // }
 
         if (!role || !validRoles.includes(role)) {
             return res.status(404).json({ success: false, message: 'Rôle invalide' });
@@ -53,10 +62,11 @@ export const signalerAbsence = async (req, res) => {
         //     date_debut_absence,
         //     date_fin_absence,
         // });
-
+        const date_absence_signaler = DateTime.now().toJSDate();
         const nouvelleAbsenceSignaler = new SignalementAbsence({
             role,
-            user,
+            user:user._id,
+            enseignant:enseignant._id,
             heure_debut_absence,
             heure_fin_absence,
             jour_absence,
@@ -68,7 +78,7 @@ export const signalerAbsence = async (req, res) => {
 
 
         // Enregistrer le signalement d'absence dans la base de données
-        // const nouvelleAbsence = await nouvelleAbsenceSignaler.save();
+        const nouvelleAbsence = await nouvelleAbsenceSignaler.save();
 
         const dataReturn = {
             // nom: user.nom,
@@ -97,7 +107,7 @@ export const signalerAbsence = async (req, res) => {
 
 export const getAbsencesSignaler = async (req, res) => {
     const {userId}=req.params;
-    const { niveauxId, role } = req.query;
+    const { niveauxId, role, annee, semestre } = req.query;
     console.log(niveauxId);
     // console.log(userId+" "+semestre+" "+annee)
     try {
@@ -108,17 +118,17 @@ export const getAbsencesSignaler = async (req, res) => {
         //         historique_connexion: { $slice: ["$historique_connexion", -1] } 
         //     }}
         //   ]);
-        let settings = await Setting.find().select('anneeCourante semestreCourant');
-        let setting = null;
-        if(settings.length>0){
-            setting=settings[0]
-        }
-        let annee;
-        let semestre;
-        if(setting){
-            annee=setting.anneeCourante;
-            semestre=setting.semestreCourant;
-        }
+        // let settings = await Setting.find().select('anneeCourante semestreCourant');
+        // let setting = null;
+        // if(settings.length>0){
+        //     setting=settings[0]
+        // }
+        // let annee;
+        // let semestre;
+        // if(setting){
+        //     annee=setting.anneeCourante;
+        //     semestre=setting.semestreCourant;
+        // }
         // if(role===appConfigs.role.enseignant){
 
         // }
@@ -128,7 +138,16 @@ export const getAbsencesSignaler = async (req, res) => {
             const jour=result.historique_connexion[length-2];
             let absences=[];
             if(niveauxId && niveauxId.length>0){
-                if(role===appConfigs.role.enseignant || role===appConfigs.role.delegue){
+                if(role===appConfigs.role.enseignant ){
+                    absences = await SignalementAbsence.find({
+                        user: { $ne: userId },
+                        enseignant:userId,
+                        niveau: { $in: niveauxId },
+                        annee: annee,
+                        semestre: semestre,
+                        date_absence_signaler: { $gte: jour }
+                    }).populate('user', '_id nom prenom');
+                }else if( role===appConfigs.role.delegue){
                     absences = await SignalementAbsence.find({
                         user: { $ne: userId },
                         niveau: { $in: niveauxId },
