@@ -70,7 +70,6 @@ const staticsPath = path.join('./');
 app.use("/profile_images", express.static(path.join(staticsPath, "profile_images")));
 
 
-const httpServer = createServer(app);
 
 //
 // routes de l'api
@@ -106,8 +105,10 @@ app.use("/api/v1/absence", abscenceRoutes);
 app.use("/api/v1/alerte", abscenceRoutes);
 
 
+const server = createServer(app);
+
 // Initialise Socket.io après la connexion à MongoDB
-export const io = new Server(httpServer,
+export const io = new Server(server,
     {
         cors: {
             origin: "http://localhost:5173", // Autoriser les requêtes provenant de cette URL
@@ -119,18 +120,21 @@ export const io = new Server(httpServer,
 connectMongoDB(process.env.MONGODB_URL)
     .then(() => {
 
-
         // Gestion des connexions Socket.io
-        io.on("connection", (socket) => {
-            console.log("Nouvelle connexion socket établie :", socket.id);
+        io.on('connection', (socket) => {
+            console.log('Nouvelle connexion socket établie :', socket.id);
+
             // Ajoute ici la logique de gestion des événements Socket.io si nécessaire
+            // socket.on('disconnect', () => {
+            //     console.log('Connexion socket déconnectée :', socket.id);
+            // });
         });
 
-        httpServer.listen(
-            process.env.PORT || 8085,
-            async () => {
-                console.log(`🚀💥 Serveur en cours d\'exécution sur http://localhost:${process.env.PORT} `);
-            });
+        // Démarrage du serveur HTTP
+        const port = process.env.PORT || 8085;
+        server.listen(port, () => {
+            console.log(`🚀💥 Serveur en cours d'exécution sur http://localhost:${port}`);
+        });
     })
     .catch((error) => {
         console.log(error);
