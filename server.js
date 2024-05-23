@@ -66,9 +66,7 @@ app.use(session({
 
 
 // Définir le chemin vers le répertoire des images
-const staticsPath = path.join('./');
-app.use("/profile_images", express.static(path.join(staticsPath, "profile_images")));
-
+app.use('/private/images_profile', express.static('./public/images/images_profile'));
 
 
 //
@@ -125,9 +123,9 @@ connectMongoDB(process.env.MONGODB_URL)
             console.log('Nouvelle connexion socket établie :', socket.id);
 
             // Ajoute ici la logique de gestion des événements Socket.io si nécessaire
-            // socket.on('disconnect', () => {
-            //     console.log('Connexion socket déconnectée :', socket.id);
-            // });
+            socket.on('disconnect', () => {
+                console.log('Connexion socket déconnectée :', socket.id);
+            });
         });
 
         // Démarrage du serveur HTTP

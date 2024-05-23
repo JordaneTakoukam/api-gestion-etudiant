@@ -1,6 +1,58 @@
 import User from '../../../models/user.model.js';
 import { message } from '../../../configs/message.js';
 import { appConfigs } from "../../../configs/app_configs.js";
+import mongoose from 'mongoose';
+
+export const getCurrentUserData = async (req, res) => {
+    const { userId } = req.query;
+
+    if (!userId) {
+        return res.status(400).json({
+            success: false,
+            message: {
+                fr: "Identifiant requis",
+                en: "User ID is required"
+            }
+        });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({
+            success: false,
+            message: message.identifiant_invalide
+        });
+    }
+
+    try {
+        const user = await User.findById(userId, '-historique_connexion -mot_de_passe -date_creation -verificationCode -__v').lean();
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: {
+                    fr: "L'utilisateur n'existe pas",
+                    en: "User does not exist"
+                }
+            });
+        }
+
+        res.json({
+            success: true,
+            data: user
+        });
+    } catch (error) {
+        console.error("Erreur lors de la récupération de l'utilisateur :", error);
+        res.status(500).json({
+            success: false,
+            message: {
+                fr: "Une erreur s'est produite lors de la récupération des données de l'utilisateur",
+                en: "An error occurred while retrieving user data"
+            }
+        });
+    }
+};
+
+
 
 // Fonction générique pour récupérer tous les utilisateurs d'un certain rôle
 const getAllUsersByRole = async (req, res, role) => {
