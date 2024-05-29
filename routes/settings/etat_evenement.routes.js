@@ -1,7 +1,7 @@
 import express from "express";
 
 // controllers
-import { readStatutEvenement, readStatutEvenements, createStatutEvenement, deleteStatutEvenement, updateStatutEvenement } from "../../controllers/setting/etat_evenement/etat_evenement.controller.js";
+import { readEtatsEvenement, readEtatsEvenements, createEtatsEvenement, deleteEtatsEvenement, updateEtatsEvenement } from "../../controllers/setting/etat_evenement/etat_evenement.controller.js";
 
 
 // middlewares
@@ -9,20 +9,20 @@ import { readStatutEvenement, readStatutEvenements, createStatutEvenement, delet
 const router = express.Router();
 
 // create
-router.post("/create", createStatutEvenement);
+router.post("/create", createEtatsEvenement);
 
 //  read
-router.get("/get/:id", readStatutEvenement);
-router.get("/get/:params", readStatutEvenements);
-router.get("", readStatutEvenements);
+router.get("/get/:id", readEtatsEvenement);
+router.get("/get/:params", readEtatsEvenements);
+router.get("", readEtatsEvenements);
 
 
 
 // update
-router.put("/update/:id", updateStatutEvenement);
+router.put("/update/:id", updateEtatsEvenement);
 
 // delete
-router.delete("/delete/:id", deleteStatutEvenement);
+router.delete("/delete/:id", deleteEtatsEvenement);
 
 
 

@@ -5,7 +5,7 @@ import { createDefaultSuperAdmin } from "../controllers/user/create/create_defau
 import { deleteUser, updateUser } from "../controllers/user/update_and_delete.js";
 import { createAdminController } from "../controllers/user/create/create_admin_controller.js";
 import { createEtudiant, updateEtudiant, getEtudiantsByLevelAndYear, getAllEtudiantsByLevelAndYear, getTotalEtudiantsByYear, getTotalEtudiantsByNiveau, getNbEtudiantsParSection, getNbAbsencesParSection, generateListEtudiant } from "../controllers/user/create/create_etudiant_controller.js";
-import { createEnseignant, updateEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter, getEnseignantsByNomPrenom, getTotalEnseignants, getNiveauxByEnseignant, generateListEnseignant } from "../controllers/user/create/create_enseignant_controller.js";
+import { createEnseignant, updateEnseignant, getEnseignantsByFilter, getAllEnseignantsByFilter, getEnseignantsByNomPrenom, getTotalEnseignants, getNiveauxByEnseignant, generateListEnseignant, searchEnseignant } from "../controllers/user/create/create_enseignant_controller.js";
 import { getAllAdministrateurs, getAllEnseignants, getAllEtudiants, getCurrentUserData } from "../controllers/user/get/get_user_controller.js";
 import { ajouterEtModifierImageProfil } from "../controllers/user/create/photo_profil/save_update_photo_profil.js";
 import { deletePhotoProfil } from "../controllers/user/create/photo_profil/delete_photo_profil.js";
@@ -28,6 +28,7 @@ router.get("/getAllEtudiantsByLevelAndYear/:niveauId", getAllEtudiantsByLevelAnd
 router.get("/generateListEtudiant/:annee", generateListEtudiant);
 
 router.get("/getEnseignantsByFilter", getEnseignantsByFilter);
+router.get("/searchEnseignant/:searchString", searchEnseignant);
 router.get("/getAllEnseignantsByFilter", getAllEnseignantsByFilter);
 router.get("/getEnseignantsByNomPrenom", getEnseignantsByNomPrenom);
 router.get("/generateListEnseignant", generateListEnseignant);

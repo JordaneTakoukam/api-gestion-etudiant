@@ -519,6 +519,44 @@ export const getEnseignantsByNomPrenom = async (req, res) => {
     }
 };
 
+
+export const searchEnseignant = async (req, res) => {
+    const role = appConfigs.role.enseignant;
+    const { searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    console.log(searchString);
+    try {
+        // Construire la requête de base pour filtrer les enseignants
+        const query = {
+            roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
+        };
+
+        // Ajouter une condition pour chercher par nom si searchString est fourni
+        if (searchString) {
+            query.nom = { $regex: `^${searchString}`, $options: 'i' }; // Filtrer par nom commençant par searchString, insensible à la casse
+        }
+
+        const enseignants = await User.find(query)
+            .select("_id nom prenom")
+            .sort({ nom: 1, prenom:1 }) 
+            .limit(5); // Limite à 5 résultats
+
+        res.json({
+            success: true,
+            data: {
+                enseignants,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: enseignants.length,
+                pageSize: 5,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des enseignants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
+
 export const getTotalEnseignants = async (req, res) => {
     try {
         const role = appConfigs.role.enseignant;
@@ -700,4 +738,6 @@ async function fillTemplate (title, langue, enseignants, filePath, annee) {
         return '';
     }
 };
+
+
 

@@ -9,11 +9,11 @@ import Setting from '../../models/setting.model.js';
 
 // create
 export const createEvenement = async (req, res) => {
-    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
+    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat, promotion, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !etat || !annee) {
+        if (!libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !etat || !promotion || !annee) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -28,52 +28,61 @@ export const createEvenement = async (req, res) => {
             });
         }
 
-        // Vérifier si le code de l'événement existe déjà
-        const existingCode = await Evenement.findOne({ code: code });
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code
+        if (!mongoose.Types.ObjectId.isValid(promotion)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide
             });
+        }
+
+        // Vérifier si le code de l'événement existe déjà
+        if(code){
+            const existingCode = await Evenement.findOne({ code: code });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
         }
 
         // Vérifier si le libelle fr de l'évènement existe déjà
-        const existingLibelleFr = await Evenement.findOne({libelleFr: libelleFr});
-        if (existingLibelleFr) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_libelle_fr,
-            });
-        }
+        // const existingLibelleFr = await Evenement.findOne({libelleFr: libelleFr});
+        // if (existingLibelleFr) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_fr,
+        //     });
+        // }
         // Vérifier si le libelle en de l'évènement existe déjà
-        const existingLibelleEn = await Evenement.findOne({libelleEn: libelleEn});
+        // const existingLibelleEn = await Evenement.findOne({libelleEn: libelleEn});
 
-        if (existingLibelleEn) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_libelle_en,
-            });
-        }
+        // if (existingLibelleEn) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_libelle_en,
+        //     });
+        // }
         
         // Vérifier si le periode fr de l'évènement existe déjà
-        const existingPeriodeFr = await Evenement.findOne({periodeFr: periodeFr});
+        // const existingPeriodeFr = await Evenement.findOne({periodeFr: periodeFr});
 
-        if (existingPeriodeFr) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_periode_fr,
-            });
-        }
+        // if (existingPeriodeFr) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_periode_fr,
+        //     });
+        // }
 
         // Vérifier si le periode en de l'évènement existe déjà
-        const existingPeriodeEn = await Evenement.findOne({periodeEn: periodeEn});
+        // const existingPeriodeEn = await Evenement.findOne({periodeEn: periodeEn});
 
-        if (existingPeriodeEn) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_periode_en,
-            });
-        }
+        // if (existingPeriodeEn) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.existe_periode_en,
+        //     });
+        // }
 
         const isInteger = Number.isInteger(annee);
         if (!isInteger) {
@@ -88,34 +97,34 @@ export const createEvenement = async (req, res) => {
 
         // Créer un nouvel événement
         const newEvenement = new Evenement({
-            code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat,
+            code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat, promotion,
             personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, date_creation, annee
         });
 
         // Vérifier le chevauchement des dates
-        const overlappingEvenements = await Evenement.find({
-            $or: [
-                {
-                    $and: [
-                        { dateDebut: { $lte: newEvenement.dateFin } },
-                        { dateFin: { $gte: newEvenement.dateDebut } },
-                    ],
-                },
-                {
-                    $and: [
-                        { dateDebut: { $gte: newEvenement.dateDebut } },
-                        { dateFin: { $lte: newEvenement.dateFin } },
-                    ],
-                },
-            ],
-        });
+        // const overlappingEvenements = await Evenement.find({
+        //     $or: [
+        //         {
+        //             $and: [
+        //                 { dateDebut: { $lte: newEvenement.dateFin } },
+        //                 { dateFin: { $gte: newEvenement.dateDebut } },
+        //             ],
+        //         },
+        //         {
+        //             $and: [
+        //                 { dateDebut: { $gte: newEvenement.dateDebut } },
+        //                 { dateFin: { $lte: newEvenement.dateFin } },
+        //             ],
+        //         },
+        //     ],
+        // });
 
-        if (overlappingEvenements.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: message.chevauchement
-            });
-        }
+        // if (overlappingEvenements.length > 0) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.chevauchement
+        //     });
+        // }
 
         // Enregistrer le nouvel événement
         const savedEvenement = await newEvenement.save();
@@ -138,11 +147,11 @@ export const createEvenement = async (req, res) => {
 // update
 export const updateEvenement = async (req, res) => {
     const { evenementId } = req.params;
-    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
+    const { code, libelleFr, libelleEn, dateDebut, dateFin, periodeFr, periodeEn, etat, promotion, personnelFr, personnelEn, descriptionObservationFr, descriptionObservationEn, annee } = req.body;
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !etat || !annee) {
+        if (!libelleFr || !libelleEn || !dateDebut || !dateFin || !periodeFr || !periodeEn || !etat || !promotion || !annee) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -174,8 +183,15 @@ export const updateEvenement = async (req, res) => {
             });
         }
 
+        if (!mongoose.Types.ObjectId.isValid(promotion)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide
+            });
+        }
+
         // Vérifier si le code de l'événement existe déjà (sauf pour l'événement actuel)
-        if (existingEvenement.code !== code) {
+        if (code && existingEvenement.code !== code) {
             const existingCode = await Evenement.findOne({ code: code });
             if (existingCode) {
                 return res.status(400).json({
@@ -186,48 +202,48 @@ export const updateEvenement = async (req, res) => {
         }
 
         //vérifier si le libelle fr de l'évènement existe déjà
-        if (existingEvenement.libelleFr !== libelleFr) {
-            const existingCode = await Evenement.findOne({ libelleFr: libelleFr });
-            if (existingCode) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.existe_libelle_fr
-                });
-            }
-        }
+        // if (existingEvenement.libelleFr !== libelleFr) {
+        //     const existingCode = await Evenement.findOne({ libelleFr: libelleFr });
+        //     if (existingCode) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_libelle_fr
+        //         });
+        //     }
+        // }
 
         //vérifier si le libelle en de l'évènement existe déjà
-        if (existingEvenement.libelleEn !== libelleEn) {
-            const existingCode = await Evenement.findOne({ libelleEn: libelleEn });
-            if (existingCode) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.existe_libelle_en
-                });
-            }
-        }
+        // if (existingEvenement.libelleEn !== libelleEn) {
+        //     const existingCode = await Evenement.findOne({ libelleEn: libelleEn });
+        //     if (existingCode) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_libelle_en
+        //         });
+        //     }
+        // }
 
         //vérifier si la période fr de l'évènement existe déjà
-        if (existingEvenement.periodeFr !== periodeFr) {
-            const existingCode = await Evenement.findOne({ periodeFr: periodeFr });
-            if (existingCode) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.existe_periode_fr
-                });
-            }
-        }
+        // if (existingEvenement.periodeFr !== periodeFr) {
+        //     const existingCode = await Evenement.findOne({ periodeFr: periodeFr });
+        //     if (existingCode) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_periode_fr
+        //         });
+        //     }
+        // }
 
         //vérifier si la période en de l'évènement existe déjà
-        if (existingEvenement.periodeEn !== periodeEn) {
-            const existingCode = await Evenement.findOne({ periodeEn: periodeEn });
-            if (existingCode) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.existe_periode_en
-                });
-            }
-        }
+        // if (existingEvenement.periodeEn !== periodeEn) {
+        //     const existingCode = await Evenement.findOne({ periodeEn: periodeEn });
+        //     if (existingCode) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_periode_en
+        //         });
+        //     }
+        // }
 
         const isInteger = Number.isInteger(annee);
         if (!isInteger) {
@@ -239,30 +255,30 @@ export const updateEvenement = async (req, res) => {
         }
 
         // Vérifier le chevauchement des dates
-        const overlappingEvenements = await Evenement.find({
-            _id: { $ne: evenementId }, // Exclure l'événement actuel de la recherche
-            $or: [
-                {
-                    $and: [
-                        { dateDebut: { $lte: dateFin } },
-                        { dateFin: { $gte: dateDebut } },
-                    ],
-                },
-                {
-                    $and: [
-                        { dateDebut: { $gte: dateDebut } },
-                        { dateFin: { $lte: dateFin } },
-                    ],
-                },
-            ],
-        });
+        // const overlappingEvenements = await Evenement.find({
+        //     _id: { $ne: evenementId }, // Exclure l'événement actuel de la recherche
+        //     $or: [
+        //         {
+        //             $and: [
+        //                 { dateDebut: { $lte: dateFin } },
+        //                 { dateFin: { $gte: dateDebut } },
+        //             ],
+        //         },
+        //         {
+        //             $and: [
+        //                 { dateDebut: { $gte: dateDebut } },
+        //                 { dateFin: { $lte: dateFin } },
+        //             ],
+        //         },
+        //     ],
+        // });
 
-        if (overlappingEvenements.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: message.chevauchement
-            });
-        }
+        // if (overlappingEvenements.length > 0) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: message.chevauchement
+        //     });
+        // }
 
         // Mettre à jour l'événement
         existingEvenement.code = code;
@@ -273,6 +289,7 @@ export const updateEvenement = async (req, res) => {
         existingEvenement.periodeFr = periodeFr;
         existingEvenement.periodeEn = periodeEn;
         existingEvenement.etat = etat;
+        existingEvenement.promotion = promotion;
         existingEvenement.personnelFr = personnelFr;
         existingEvenement.personnelEn = personnelEn;
         existingEvenement.descriptionObservationFr = descriptionObservationFr;
@@ -343,7 +360,7 @@ export const deleteEvenement = async (req, res) => {
 //Récupérer la liste des évènements d'une année (a besoin de l'année en paramètre de la requête, de la page et du nombre d'élément a récupéré en query params)
 export const getEvenementsByYear = async (req, res) => {
     const { annee } = req.params;
-    const { page = 1, pageSize = 10 } = req.query; // Valeurs par défaut pour la pagination
+    const { promotion, page = 1, pageSize = 10 } = req.query; // Valeurs par défaut pour la pagination
 
     try {
         // Vérifier si l'année est valide
@@ -361,12 +378,13 @@ export const getEvenementsByYear = async (req, res) => {
         const startIndex = (page - 1) * pageSize;
 
         // Rechercher les événements pour l'année spécifiée avec pagination
-        const evenements = await Evenement.find({ annee: numericAnnee })
+        const evenements = await Evenement.find({ annee: numericAnnee, promotion:promotion })
+            .sort({ dateDebut: 1 })
             .skip(startIndex)
             .limit(parseInt(pageSize));
 
         // Compter le nombre total d'événements pour l'année spécifiée
-        const totalEvenements = await Evenement.countDocuments({ annee: numericAnnee });
+        const totalEvenements = await Evenement.countDocuments({ annee: numericAnnee, promotion:promotion });
 
         res.json({
             success: true,
@@ -464,9 +482,9 @@ export const getUpcommingEventsOfYear = async (req, res) => {
 }
 
 export const generateListEvent = async (req, res)=>{
-    const { annee = 2024 } = req.params;
+    const { annee = 2023 } = req.params;
     const {langue}=req.query;
-    const evenements = await Evenement.find({ annee: annee });
+    const evenements = await Evenement.find({ annee: annee }).sort({ dateDebut: 1 });
     let filePath='./templates/templates_fr/template_calendrier_fr.html';
     if(langue==='en'){
         filePath='./templates/templates_en/template_calendrier_en.html';
@@ -493,6 +511,7 @@ async function fillTemplate (langue, evenements, filePath, annee) {
         
         for (const event of evenements) {
             const clonedRow = rowTemplate.clone();
+            
             clonedRow.find('#libelle').text(langue==='fr'?event.libelleFr:event.libelleEn);
             clonedRow.find('#periode').text(langue==='fr'?event.periodeFr:event.periodeEn);
             clonedRow.find('#personnel').text(langue==='fr'?event.personnelFr:event.personnelEn);
