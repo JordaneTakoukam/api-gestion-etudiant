@@ -20,7 +20,7 @@ export const appConfigs = {
     },
     user: "suport.resetpass@gmail.com",
     pass: "nyxsjvahaavoilbg",
-    appName: "Gestion Etudiant",
+    appName: "SchoolApp",
     appEmail: "contact@gestion-etudiant.com",
     frontEndUrl: "http://localhost:5173/"
 

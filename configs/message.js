@@ -269,9 +269,10 @@ const message = {
         en: "User not found.",
     },
     userUpdated: {
-        fr: "Utilisateur mis à jour avec succès.",
-        en: "User updated successfully.",
+        fr: "Informations du profil mises à jour avec succès.",
+        en: "Profile information updated successfully.",
     },
+    
     userDeleted: {
         fr: "Utilisateur supprimé avec succès.",
         en: "User deleted successfully.",

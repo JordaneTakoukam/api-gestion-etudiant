@@ -10,6 +10,27 @@ export const signin = async (req, res) => {
 
     try {
 
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: {
+                    fr: 'Email est requis',
+                    en: 'Email is required',
+                },
+            });
+        }
+
+        if (!mot_de_passe) {
+            return res.status(400).json({
+                success: false,
+                message: {
+                    fr: 'Mot de passe est requis',
+                    en: 'Password is required',
+                },
+            });
+        }
+
+
         // Vérifier si l'utilisateur existe déjà avec cet e-mail
         const user = await User.findOne({ email });
         if (!user) {
@@ -22,7 +43,7 @@ export const signin = async (req, res) => {
 
         // Vérifier si le mot de passe est correct
         const passwordMatch = await bcrypt.compare(mot_de_passe, user.mot_de_passe);
-        
+
 
         if (passwordMatch) {
             // Le mot de passe est correct, générez un jeton JWT
@@ -55,7 +76,7 @@ export const signin = async (req, res) => {
             // Mettre à jour l'historique de connexion de l'utilisateur
             user.historique_connexion.push(DateTime.now());
             await user.save();
-            
+
             // on retourne tous sauf le mot de passe
             const userData = user.toObject();
             delete userData.mot_de_passe;
@@ -76,7 +97,7 @@ export const signin = async (req, res) => {
     }
 
     catch (e) {
-        console.error("Erreur interne au serveur : "+e);
+        console.error("Erreur interne au serveur : " + e);
         res.status(500).json({
             success: false,
             message: message.erreurServeur,
