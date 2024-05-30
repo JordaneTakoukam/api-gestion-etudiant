@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import { codeLibelleSchema, communeSchema, sectionSchema, cycleSchema, departementSchema, niveauSchema, salleSchema, categorieSchema } from './shemas/setting_shema.js';
+import { codeLibelleSchema, communeSchema, sectionSchema, cycleSchema, departementSchema, niveauSchema, salleSchema, categorieSchema, promotionSchema } from './shemas/setting_shema.js';
 import { string } from 'yup';
 
 const settingSchema = new Schema({
@@ -14,6 +14,7 @@ const settingSchema = new Schema({
     departements: [departementSchema],
     communes: [communeSchema],
     departementsAcademique:[codeLibelleSchema],
+    promotions:[promotionSchema],
     sections: [sectionSchema],
     cycles: [cycleSchema],
     niveaux: [niveauSchema],

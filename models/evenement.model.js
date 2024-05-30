@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 
 const evenementSchema = new Schema({
-    code:{type:String, required:true},
+    code:{type:String, required:false},
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
     dateDebut:{type:Date, required:true},
@@ -9,6 +9,7 @@ const evenementSchema = new Schema({
     periodeFr:{type:String, required:true},
     periodeEn:{type:String, required:true},
     etat: { type: mongoose.Schema.Types.ObjectId, ref: 'EtatEvenement', required: true },
+    promotion: { type: mongoose.Schema.Types.ObjectId, ref: 'Promotion', required: true },
     personnelFr:{type:String, required:false},
     personnelEn:{type:String, required:false},
     descriptionObservationFr:{type:String, required:false},

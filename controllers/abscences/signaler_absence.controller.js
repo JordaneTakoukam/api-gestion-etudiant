@@ -105,6 +105,7 @@ export const signalerAbsence = async (req, res) => {
     }
 };
 
+
 export const getAbsencesSignaler = async (req, res) => {
     const {userId}=req.params;
     const { niveauxId, role, annee, semestre } = req.query;

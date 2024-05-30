@@ -8,7 +8,14 @@ export const codeLibelleSchema = new Schema({
 
 });
 
-
+export const promotionSchema = new Schema({
+    // id_region: { type: mongoose.Schema.Types.ObjectId, required: true },
+    date_creation: { type: Date, required: true },
+    annee: { type: Number, required: true },
+    code: { type: String, required: false },
+    libelleFr: { type: String, required: true },
+    libelleEn: { type: String, required: true },
+});
 export const departementSchema = new Schema({
     // id_region: { type: mongoose.Schema.Types.ObjectId, required: true },
     date_creation: { type: Date, required: true },
