@@ -4,10 +4,23 @@ import { sendPasswordResetEmail } from '../../utils/reset_password.js';
 import { sendEmailConfirmation } from '../../utils/send_email_confirmation.js';
 import { DateTime } from 'luxon';
 import bcrypt from "bcrypt";
+import mongoose from 'mongoose';
+import { message } from '../../configs/message.js';
 
 export const sendVerificationCodeByEmail = async (req, res) => {
   try {
     const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: {
+          fr: 'Email est requis',
+          en: 'Email is required',
+        },
+      });
+    }
+
     let verificationCode;
     const expirationDate = DateTime.now().plus({ hours: 24 }); // Ajoute 24 heures à la date actuelle
 
@@ -39,7 +52,7 @@ export const sendVerificationCodeByEmail = async (req, res) => {
     }
 
     try {
-      await sendPasswordResetEmail(user.nom, email, verificationCode);
+      sendPasswordResetEmail(`${user.nom} ${user.prenom}`, email, verificationCode);
     } catch (error) {
       console.error("Erreur lors de l'envoi du code de vérification par e-mail:", error);
       return res.status(500).json({
@@ -47,11 +60,12 @@ export const sendVerificationCodeByEmail = async (req, res) => {
         message: {
           fr: "Une erreur est survenue lors de l'envoi du code de vérification par e-mail.",
           en: "An error occurred while sending the verification code via email."
-        }
+        },
       });
     }
 
     return res.status(200).json({
+      data: user._id,
       success: true,
       message: {
         fr: "Le code de vérification a été envoyé avec succès.",
@@ -84,6 +98,41 @@ export const sendVerificationCodeByEmail = async (req, res) => {
 export const verifyVerificationCode = async (req, res) => {
   try {
     const { userId, code } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: {
+          fr: 'Identifiant utilisateur est requis',
+          en: 'User ID is required',
+        },
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({
+        success: false,
+        message: {
+          fr: 'Identifiant utilisateur invalide',
+          en: 'Invalid user ID',
+        },
+      });
+    }
+
+    if (!code || code.length < 6) {
+      return res.status(402).json({
+        success: false,
+        message: {
+          fr: 'Le code de vérification doit comporter au moins 6 caractères',
+          en: 'Verification code must be at least 6 characters long',
+        },
+      });
+    }
+
+
+
+
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -97,20 +146,29 @@ export const verifyVerificationCode = async (req, res) => {
     }
 
     // Vérifier si la date d'expiration est dépassée
-    if (user.verificationCode.code !== code || DateTime.now() > DateTime.fromJSDate(user.verificationCode.expirationDate)) {
-      return res.status(400).json({
+    if (DateTime.now() > DateTime.fromJSDate(user.verificationCode.expirationDate) || user.verificationCode.code !== code) {
+      if (user.verificationCode.code !== code) {
+        return res.status(406).json({
+          success: false,
+          message: {
+            fr: "Code invalide",
+            en: "Invalid code"
+          }
+        });
+      }
+      return res.status(405).json({
         success: false,
         message: {
-          fr: "Code de vérification invalide, expiré ou non vérifier",
-          en: "Invalid or expired verification code"
+          fr: "Code expiré",
+          en: "Expired code"
         }
       });
     } else {
       return res.json({
         success: true,
         message: {
-          fr: "Code de vérification valide",
-          en: "Valid verification code"
+          fr: "Code valide",
+          en: "Valid code"
         }
       });
     }
@@ -146,6 +204,7 @@ export const verifyVerificationCode = async (req, res) => {
 export const updatePassword = async (req, res) => {
   try {
     const { userId, newPassword } = req.body;
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -205,3 +264,76 @@ export const updatePassword = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+// verifier le mot de passe
+
+// verifier le mot de passe
+
+export const verifierMotDePasse = async (req, res) => {
+  try {
+    const { userId, motDePasse } = req.body;
+
+    // Vérification de la validité de l'ID utilisateur
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: {
+          fr: "Identifiant invalide",
+          en: "Invalid ID"
+        }
+      });
+    }
+
+    // Recherche de l'utilisateur par ID
+    const user = await User.findById(userId);
+
+    // Vérification de l'existence de l'utilisateur
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: {
+          fr: "Utilisateur non trouvé",
+          en: "User not found"
+        }
+      });
+    }
+
+    // Vérification du mot de passe
+    const isPasswordCorrect = await bcrypt.compare(motDePasse, user.mot_de_passe);
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: {
+          fr: "Mot de passe incorrect",
+          en: "Incorrect password"
+        }
+      });
+    }
+
+    // Réponse de succès si le mot de passe est correct
+    return res.json({
+      success: true,
+      message: {
+        fr: "Mot de passe correct",
+        en: "Password correct"
+      }
+    });
+  } catch (error) {
+    console.error("Erreur inattendue lors de la vérification du mot de passe:", error);
+    return res.status(500).json({
+      success: false,
+      message: {
+        fr: "Erreur inattendue lors de la vérification du mot de passe",
+        en: "Unexpected error verifying password"
+      }
+    });
+  }
+};
+
+
+

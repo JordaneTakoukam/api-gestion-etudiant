@@ -45,6 +45,15 @@ const userSchema = new Schema({
     fonction: { type: mongoose.Schema.Types.ObjectId, ref: 'Fonction', required: false },
     service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: false },
     commune: { type: mongoose.Schema.Types.ObjectId, ref: 'Commune', required: false },
+
+
+    // 
+    // info pour reset le mot de passe
+    verification: {
+        code: { type: String, default: null },
+        expirationDate: { type: Date, default: null },
+    },
+
 });
 
 const User = mongoose.model('User', userSchema, 'users');
