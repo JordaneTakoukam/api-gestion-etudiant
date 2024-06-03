@@ -12,7 +12,7 @@ export const createSalleDeCours = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !nbPlace) {
+        if (!libelleFr || !libelleEn || !nbPlace) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -20,19 +20,21 @@ export const createSalleDeCours = async (req, res) => {
         }
 
         // Vérifier si le code de la salle de cours existe déjà
-        const existingCode = await Setting.findOne({
-            'salleDeCours.code': code,
-        });
-        
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
+        if(code){
+            const existingCode = await Setting.findOne({
+                'sallesDeCours.code': code,
             });
+            
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
         // Vérifier si le libelle fr de la salle de cours existe déjà
         const existingLibelleFr = await Setting.findOne({
-            'salleDeCours.libelleFr': libelleFr,
+            'sallesDeCours.libelleFr': libelleFr,
         });
         if (existingLibelleFr) {
             return res.status(400).json({
@@ -42,7 +44,7 @@ export const createSalleDeCours = async (req, res) => {
         }
         // Vérifier si le libelle en de la salle de cours existe déjà
         const existingLibelleEn = await Setting.findOne({
-            'salleDeCours.libelleEn': libelleEn,
+            'sallesDeCours.libelleEn': libelleEn,
         });
 
         if (existingLibelleEn) {
@@ -73,14 +75,14 @@ export const createSalleDeCours = async (req, res) => {
         let data;
         if (!setting) {
             // Créer la collection et le document
-            data = await Setting.create({ salleDeCours: [newSalleDeCours] });
+            data = await Setting.create({ sallesDeCours: [newSalleDeCours] });
         } else {
             // Mettre à jour le document existant
-            data = await Setting.findOneAndUpdate({}, { $push: { salleDeCours: newSalleDeCours } }, { new: true });
+            data = await Setting.findOneAndUpdate({}, { $push: { sallesDeCours: newSalleDeCours } }, { new: true });
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdSalleDeCours = data.salleDeCours.find((salleDeCours) => salleDeCours.code === code);
+        const createdSalleDeCours = data.sallesDeCours.find((salleDeCours) => salleDeCours.libelleFr === libelleFr);
 
         res.json({
             success: true,
@@ -103,7 +105,7 @@ export const updateSalleDeCours = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !nbPlace) {
+        if (!libelleFr || !libelleEn || !nbPlace) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -119,8 +121,8 @@ export const updateSalleDeCours = async (req, res) => {
 
          // Trouver la salle de cours en cours de modification
          const existingSalledeCours = await Setting.findOne(
-            { "salleDeCours._id": salleDeCoursId },
-            { "salleDeCours.$": 1 }//récupéré uniquement l'élément de la recherche
+            { "sallesDeCours._id": salleDeCoursId },
+            { "sallesDeCours.$": 1 }//récupéré uniquement l'élément de la recherche
         );
         
         if (!existingSalledeCours) {
@@ -131,9 +133,9 @@ export const updateSalleDeCours = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception de la salle de cours en cours de modification
-        if (existingSalledeCours.salleDeCours[0].code !== code) {
+        if (code && existingSalledeCours.sallesDeCours[0].code !== code) {
             const existingCode = await Setting.findOne({
-                'salleDeCours.code': code,
+                'sallesDeCours.code': code,
             });
 
             if (existingCode) {
@@ -144,9 +146,9 @@ export const updateSalleDeCours = async (req, res) => {
             }
         }
         // Vérifier si le libelle fr existe déjà, à l'exception de la salla de cours en cours de modification
-        if (existingSalledeCours.salleDeCours[0].libelleFr !== libelleFr) {
+        if (existingSalledeCours.sallesDeCours[0].libelleFr !== libelleFr) {
             const existingLibelleFr = await Setting.findOne({
-                'salleDeCours.libelleFr': libelleFr,
+                'sallesDeCours.libelleFr': libelleFr,
             });
 
             if (existingLibelleFr) {
@@ -158,9 +160,9 @@ export const updateSalleDeCours = async (req, res) => {
         }
 
         // Vérifier si le libelle en existe déjà, à l'exception de la salle de cours en cours de modification
-        if (existingSalledeCours.salleDeCours[0].libelleEn !== libelleEn) {
+        if (existingSalledeCours.sallesDeCours[0].libelleEn !== libelleEn) {
             const existingLibelleEn = await Setting.findOne({
-                'salleDeCours.libelleEn': libelleEn,
+                'sallesDeCours.libelleEn': libelleEn,
             });
 
             if (existingLibelleEn) {
@@ -180,16 +182,15 @@ export const updateSalleDeCours = async (req, res) => {
             });
             
         }
-        console.log("nbPlace ==="+nbPlace);
         // Mettre à jour la salle de cours dans la base de données
         const updatedSalleDeCours = await Setting.findOneAndUpdate(
-            { "salleDeCours._id": new mongoose.Types.ObjectId(salleDeCoursId) }, // Trouver la salle de cours par son ID
-            { $set: { "salleDeCours.$.code": code, "salleDeCours.$.libelleFr": libelleFr, "salleDeCours.$.libelleEn": libelleEn, "salleDeCours.$.nbPlace" : nbPlace, "salleDeCours.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour la salle de cours
-            { new: true, projection: { _id: 0, salleDeCours: { $elemMatch: { _id: new mongoose.Types.ObjectId(salleDeCoursId) } } } } // Renvoyer uniquement la salle de cours mise à jour
+            { "sallesDeCours._id": new mongoose.Types.ObjectId(salleDeCoursId) }, // Trouver la salle de cours par son ID
+            { $set: { "sallesDeCours.$.code": code, "sallesDeCours.$.libelleFr": libelleFr, "sallesDeCours.$.libelleEn": libelleEn, "sallesDeCours.$.nbPlace" : nbPlace, "sallesDeCours.$.date_creation": DateTime.now().toJSDate() } }, // Mettre à jour la salle de cours
+            { new: true, projection: { _id: 0, sallesDeCours: { $elemMatch: { _id: new mongoose.Types.ObjectId(salleDeCoursId) } } } } // Renvoyer uniquement la salle de cours mise à jour
         );
 
         // Vérifier si la salle de cours existe
-        if (!updatedSalleDeCours || !updatedSalleDeCours.salleDeCours || !updatedSalleDeCours.salleDeCours.length) {
+        if (!updatedSalleDeCours || !updatedSalleDeCours.sallesDeCours || !updatedSalleDeCours.sallesDeCours.length) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,
@@ -200,7 +201,7 @@ export const updateSalleDeCours = async (req, res) => {
         return res.json({
             success: true,
             message: message.mis_a_jour,
-            data: updatedSalleDeCours.salleDeCours[0],
+            data: updatedSalleDeCours.sallesDeCours[0],
         });
     } catch (error) {
         console.error("Erreur interne au serveur :", error);
@@ -227,11 +228,11 @@ export const deleteSalleDeCours = async (req, res) => {
 
         const setting = await Setting.findOneAndUpdate(
             {},
-            { $pull: { salleDeCours: { _id: new mongoose.Types.ObjectId(salleDeCoursId) } } },
+            { $pull: { sallesDeCours: { _id: new mongoose.Types.ObjectId(salleDeCoursId) } } },
             { new: true }
         );
 
-        if (!setting || !setting.salleDeCours) {
+        if (!setting || !setting.sallesDeCours) {
             return res.status(404).json({
                 success: false,
                 message: message.non_trouvee,

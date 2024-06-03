@@ -9,7 +9,9 @@ const objectifSchema = new mongoose.Schema({
 
 
 const chapitreSchema = new mongoose.Schema({
-    code: { type: String, required: true },
+    annee:{type:Number, required:true},
+    semestre:{type:Number, required:true, enum: [1, 2, 3]},
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
     typesEnseignement: [{
@@ -17,9 +19,9 @@ const chapitreSchema = new mongoose.Schema({
         volumeHoraire: Number
     }],
     matiere: { type: mongoose.Schema.Types.ObjectId, ref: 'Matiere', required: true },
-    objectifs: [objectifSchema],
+    // objectifs: [objectifSchema],
 });
 
-const Chapitre = mongoose.model('Chapitre', chapitreSchema, 'chapitre');
+const Chapitre = mongoose.model('Chapitre', chapitreSchema, 'chapitres');
 
 export default Chapitre;

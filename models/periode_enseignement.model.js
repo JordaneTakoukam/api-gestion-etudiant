@@ -24,6 +24,6 @@ const periodeEnseignementSchema = new Schema({
     date_creation:{ type: Date, required: true },
 });
 
-const PeriodeEnseignement = mongoose.model('PeriodeEnseignement', periodeEnseignementSchema, 'periodeEnseignement'); // matieres
+const PeriodeEnseignement = mongoose.model('PeriodeEnseignement', periodeEnseignementSchema, 'periodesEnseignement'); // matieres
 
 export default PeriodeEnseignement;

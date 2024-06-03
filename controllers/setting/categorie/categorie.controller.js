@@ -10,7 +10,7 @@ export const createCategorie = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !grade) {
+        if (!libelleFr || !libelleEn || !grade) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -37,19 +37,21 @@ export const createCategorie = async (req, res) => {
         }
 
         // Vérifier si le code de la categorie existe déjà
-        const existingCode = await Setting.findOne({
-            categories: {
-                $elemMatch: {
-                    code: code,
-                    grade: grade // Assurez-vous d'avoir l'ID de la grade à vérifier
+        if(code){
+            const existingCode = await Setting.findOne({
+                categories: {
+                    $elemMatch: {
+                        code: code,
+                        grade: grade // Assurez-vous d'avoir l'ID de la grade à vérifier
+                    }
                 }
-            }
-        });
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
             });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
         // Vérifier si le libelle fr du categorie existe déjà
         const existingLibelleFr = await Setting.findOne({
@@ -101,7 +103,7 @@ export const createCategorie = async (req, res) => {
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdcategorie = data.categories.find((categorie) => categorie.code === code && categorie.grade.toString() === grade);
+        const createdcategorie = data.categories.find((categorie) => categorie.libelleFr === libelleFr && categorie.grade.toString() === grade);
         res.json({
             success: true,
             message: message.ajouter_avec_success,
@@ -123,7 +125,7 @@ export const updateCategorie = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !grade) {
+        if (!libelleFr || !libelleEn || !grade) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -164,7 +166,7 @@ export const updateCategorie = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà, à l'exception du categorie en cours de modification
-        if (existingCategorie.categories[0].code !== code) {
+        if (code && existingCategorie.categories[0].code !== code) {
             const existingCode = await Setting.findOne({
                 categories: {
                     $elemMatch: {

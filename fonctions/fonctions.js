@@ -308,20 +308,25 @@ export function nbTotalAbsencesNonJustifier(listeAbsences) {
     return '0';
 }
 
-export function calculateProgress (matiere) {
+export function calculateProgress (matiere, annee, semestre) {
     let totalObjectifs = 0;
     let objectifsAvecEtat1 = 0;
     if(matiere && matiere.objectifs){
-        totalObjectifs = matiere.objectifs.length;
+        
         matiere.objectifs.forEach((objectif) => {
-            if (objectif.etat == 1) {
-                objectifsAvecEtat1++;
+            if(objectif.annee==annee && objectif.semestre==semestre){
+                totalObjectifs += 1;
+                if (objectif.etat == 1) {
+                    objectifsAvecEtat1++;
+                }
             }
+            
         });
     }
     
 
     const progress = totalObjectifs === 0 ? 0 : (objectifsAvecEtat1 / totalObjectifs) * 100;
+    console.log(objectifsAvecEtat1+"/"+totalObjectifs)
 
     return parseFloat(progress.toFixed(2));
 }

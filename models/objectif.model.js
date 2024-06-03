@@ -1,7 +1,9 @@
 import mongoose, { Schema } from 'mongoose';
 
 const objectifSchema = new mongoose.Schema({
-    code: { type: String, required: true },
+    annee:{type:Number, required:true},
+    semestre:{type:Number, required:true, enum: [1, 2, 3]},
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
     etat: { type: Number, required: true, enum: [0, 1] },
@@ -10,6 +12,6 @@ const objectifSchema = new mongoose.Schema({
 });
 
 
-const Objectif = mongoose.model('Objectif', objectifSchema, 'objectif');
+const Objectif = mongoose.model('Objectif', objectifSchema, 'objectifs');
 
 export default Objectif;

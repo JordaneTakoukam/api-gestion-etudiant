@@ -4,14 +4,15 @@ import Periode from '../../../models/periode.model.js'
 import { message } from '../../../configs/message.js';
 import mongoose from 'mongoose';
 import { DateTime } from 'luxon';
+import { extractRawText } from 'mammoth';
 
 // create
 export const createObjectif = async (req, res) => {
-    const { code, libelleFr, libelleEn, etat, matiere } = req.body;
+    const {annee, semestre, code, libelleFr, libelleEn, etat, matiere } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !matiere) {
+        if (!annee || !semestre || !libelleFr || !libelleEn || !matiere) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.champ_obligatoire
@@ -24,12 +25,14 @@ export const createObjectif = async (req, res) => {
         }
 
         // Vérifier si le code de existe déjà
-        const existingCode = await Objectif.findOne({ code: code, matiere: matiere });
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code
-            });
+        if(code){
+            const existingCode = await Objectif.findOne({ code: code, matiere: matiere });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
         }
 
         // Vérifier si le libelle fr de  existe déjà
@@ -52,6 +55,8 @@ export const createObjectif = async (req, res) => {
         const date_etat=undefined;
         // Créer une nouvelle instance d'Objectif
         const nouveauObjectif = new Objectif({
+            annee,
+            semestre,
             code,
             libelleFr,
             libelleEn,
@@ -75,11 +80,11 @@ export const createObjectif = async (req, res) => {
 // update
 export const updateObjectif = async (req, res) => {
     const {objectifId} = req.params;
-    const { code, libelleFr, libelleEn, etat, date_etat, matiere } = req.body;
+    const {annee, semestre, code, libelleFr, libelleEn, etat, date_etat, matiere } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !matiere) {
+        if (!annee || !semestre || !libelleFr || !libelleEn || !matiere) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.champ_obligatoire
@@ -103,7 +108,7 @@ export const updateObjectif = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà (sauf pour l'événement actuel)
-        if (existingObjectif.code !== code) {
+        if (code && existingObjectif.code !== code) {
             const existingCode = await Objectif.findOne({ code: code, matiere: matiere });
             if (existingCode) {
                 return res.status(400).json({
@@ -135,6 +140,8 @@ export const updateObjectif = async (req, res) => {
             }
         }
         // Mettre à jour les champs du objectif
+        existingObjectif.annee = annee;
+        existingObjectif.semestre = semestre;
         existingObjectif.code = code;
         existingObjectif.libelleFr = libelleFr;
         existingObjectif.libelleEn = libelleEn;
@@ -237,13 +244,36 @@ export const updateObjectifEtatObj = async (req, res) => {
     }
 };
 
-export const getProgressionGlobalEnseignantsObj = async (req, res) => {
+export const getProgressionMatiere = async (req, res) => {
+    const{matiereId}=req.params;
+    const {annee=2023, semestre=1}=req.query;
     try {
         // Compter le nombre total d'objectifs avec l'état 1
-        const totalObjectifsAvecEtat1 = await Objectif.countDocuments({ etat: 1 });
+        const totalObjectifsAvecEtat1 = await Objectif.countDocuments({ matiere:matiereId, etat: 1, annee:annee, semestre:semestre});
 
         // Compter le nombre total d'objectifs
-        const totalObjectifs = await Objectif.countDocuments();
+        const totalObjectifs = await Objectif.countDocuments({matiere:matiereId, annee:annee, semestre:semestre});
+
+        // Calculer la progression globale
+        const progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs;
+        res.json({
+            success: true,
+            data: (progressionGlobale*100),
+        });
+    } catch (error) {
+        console.error('Erreur lors du calcul de la progression globale des objectifs :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors du calcul de la progression globale des objectifs.' });
+    }
+};
+
+export const getProgressionGlobalEnseignantsObj = async (req, res) => {
+    const {annee=2023, semestre=1}=req.query;
+    try {
+        // Compter le nombre total d'objectifs avec l'état 1
+        const totalObjectifsAvecEtat1 = await Objectif.countDocuments({ etat: 1 , annee:annee, semestre:semestre});
+
+        // Compter le nombre total d'objectifs
+        const totalObjectifs = await Objectif.countDocuments({annee:annee, semestre:semestre});
 
         // Calculer la progression globale
         const progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs;
@@ -260,9 +290,35 @@ export const getProgressionGlobalEnseignantsObj = async (req, res) => {
 
 export const getProgressionGlobalEnseignantsNiveauObj = async (req, res) => {
     const { niveauId } = req.params;
+    const {annee=2023, semestre=1}=req.query;
     try {
         // Récupérer toutes les matières liées au niveau
-        const matieres = await Matiere.find({ niveau: niveauId }).populate('objectifs');
+        // const matieres = await Matiere.find({ niveau: niveauId }).populate('objectifs');
+
+        const filter = { 
+            niveau: niveauId
+        };
+
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+        }
+
+        // Si un semestre est spécifié dans la requête, l'utiliser
+        if (semestre && !isNaN(semestre)) {
+            filter.semestre = parseInt(semestre);
+        }
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('matiere').exec();
+
+        // Extraire les identifiants uniques des matières
+        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+        // Récupérer les détails de chaque matière à partir des identifiants uniques
+        const matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                        .populate('objectifs');
+
 
         let totalObjectifsAvecEtat1 = 0;
         let totalObjectifs = 0;
@@ -270,10 +326,14 @@ export const getProgressionGlobalEnseignantsNiveauObj = async (req, res) => {
         // Pour chaque matière, compter le nombre total d'objectifs avec l'état 1 et le nombre total d'objectifs
         matieres.forEach(matiere => {
             matiere.objectifs.forEach(objectif => {
-                if (objectif.etat == 1) {
-                    totalObjectifsAvecEtat1++;
+                if ( objectif.annee==annee && objectif.semestre==semestre) {
+                    if(objectif.etat == 1){
+                        totalObjectifsAvecEtat1++;
+                    }
+                    totalObjectifs++;
                 }
-                totalObjectifs++;
+                
+                
             });
         });
 
@@ -293,7 +353,7 @@ export const getProgressionGlobalEnseignantsNiveauObj = async (req, res) => {
 
 export const getProgressionGlobalEnseignantObj = async (req, res) => {
     const { enseignantId } = req.params;
-    const {annee=2024, semestre=1}=req.query;
+    const {annee=2023, semestre=1}=req.query;
     try {
         // Récupérer toutes les matières où l'enseignant est soit l'enseignant principal, soit l'enseignant suppléant
         // const matieres = await Matiere.find({
@@ -313,22 +373,7 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
 
         // Si une année est spécifiée dans la requête, l'utiliser
         if (annee && !isNaN(annee)) {
-            filter.annee = parseInt(annee);
-            let periodesCurrentYear = await Periode.findOne(filter).exec();
-            if (!periodesCurrentYear) {
-                // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-                let found = false;
-                let previousYear = parseInt(annee) - 1;
-                while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-                    periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-                    if (periodesCurrentYear) {
-                        filter.annee = previousYear;
-                        found = true;
-                    } else {
-                        previousYear--;
-                    }
-                }
-            } 
+            filter.annee = parseInt(annee); 
         }
 
         // Si un semestre est spécifié dans la requête, l'utiliser
@@ -352,10 +397,13 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
         // Pour chaque période de cours, compter le nombre total d'objectifs avec l'état 1 et le nombre total d'objectifs
         matieres.forEach(matiere => {
             matiere.objectifs.forEach(objectif => {
-                if (objectif.etat === 1) {
-                    totalObjectifsAvecEtat1++;
+                if(objectif.annee==annee && objectif.semestre == semestre){
+                    if (objectif.etat === 1) {
+                        totalObjectifsAvecEtat1++;
+                    }
+                    totalObjectifs++;
                 }
-                totalObjectifs++;
+                
             });
         });
 
@@ -386,21 +434,28 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
 
 
 export const getObjectifs = async (req, res) => {
-
+    const {matiereId}=req.params;
+    const {page=1, pageSize=10, annee, semestre}=req.query;
     try {
-        // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-        const objectifs = await Objectif.find();
-        
-        
+         // Récupération des objectifs avec pagination
+         const startIndex = (page - 1) * pageSize;
 
+        // Récupérer la liste des objectifs d'une matière
+        const objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
+        .skip(startIndex)
+        .limit(parseInt(pageSize));
+        // Comptage total des objectifs pour la pagination
+        const totalObjectifs = await Objectif.countDocuments({matiere:matiereId, annee:annee, semestre:semestre});
+        const totalPages = Math.ceil(totalObjectifs / parseInt(pageSize));
+        
         res.status(200).json({ 
             success: true, 
             data: {
                 objectifs ,
-                totalPages: 0,
-                currentPage: 0,
-                totalItems: 0,
-                pageSize:0
+                totalPages: totalPages,
+                currentPage: page,
+                totalItems: totalObjectifs,
+                pageSize:pageSize
             }
         });
     } catch (error) {
@@ -408,6 +463,93 @@ export const getObjectifs = async (req, res) => {
         res.status(500).json({ success: false, message: message.erreurServeur });
     }
 };
+
+
+async function lireDonneesFichierWord(matieres, fichier, fichierEn) {
+    const data = await extractRawText({ path: fichier });
+    const dataEn = await extractRawText({ path: fichierEn });
+    const text = data.value;
+    const textEn = dataEn.value;
+    
+    // Structure pour stocker les données
+    const donnees = [];
+    let currentObjectif = null;
+    let currentMatiere = null;
+
+    // Split text into lines
+    const lines = text.split('\n');
+    const linesEn = textEn.split('\n');
+    
+    lines.forEach((line, index) => {
+        line = line.trim();
+        
+        if (line.length === 0) return;
+
+        // Détection du titre de la matière
+        const matiere = matieres.find(m => line.includes(m.libelleFr));
+        if (matiere) {
+            currentMatiere = matiere;
+        }
+
+        // Si on doit capturer les lignes après "Compétences acquises"
+        if (line.startsWith('Compétences acquises')) {
+            const competencesFr = line.replace("Compétences acquises :", "").trim().split(';');
+            const competencesEn = linesEn[index].replace("Acquired skills :", "").trim().split(';');
+            
+            competencesFr.forEach((competenceFr, ind) => {
+                currentObjectif = {
+                    annee:2023,
+                    semestre:3,
+                    code:"",
+                    libelleFr: competenceFr,
+                    libelleEn: competencesEn[ind],
+                    matiere: currentMatiere ? currentMatiere._id : '',
+                    etat:0,
+                    date_etat:undefined
+                };
+                donnees.push(currentObjectif);
+            });
+        }
+    });
+    
+    return donnees;
+}
+
+export const createManyObjectif = async (req, res) => {
+    try {
+        const filePath = './maquette_fr.docx';
+        const filePathEn = './maquette_en.docx';
+        // const matieres = await Matiere.find({}).select('_id libelleFr');
+        // const donnees = await lireDonneesFichierWord(matieres, filePath, filePathEn);
+
+        // // Insérer les objectifs dans la base de données
+        // const result = await Objectif.insertMany(donnees);
+
+        // // Mettre à jour chaque matière avec les ObjectIds des objectifs créés
+        // for (const objectif of result) {
+        //     await Matiere.findByIdAndUpdate(objectif.matiere, { $push: { objectifs: objectif._id } });
+        // }
+        const matiereId = "6659d2d721eb5da854409fa7";
+        const semestre = 2;
+        const objectifs = await Objectif.find({ matiere: matiereId, semestre: semestre });
+
+        // Récupérer les IDs des objectifs trouvés
+        const objectifIds = objectifs.map(objectif => objectif._id);
+
+        // Mettre à jour la matière pour supprimer les références des chapitres (objectifs)
+        const result = await Matiere.updateOne(
+            { _id: matiereId },
+            { $pull: { chapitres: { $in: objectifIds } } }
+        );
+
+        
+
+        res.status(201).json({ success: true, message: "Ajouté avec succès", data: objectifs });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ success: false, message: "Erreur lors de l'ajout des objectifs", error: e.message });
+    }
+}
 
 
 

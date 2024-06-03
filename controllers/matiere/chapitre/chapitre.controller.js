@@ -2,14 +2,15 @@ import Chapitre from '../../../models/chapitre.model.js';
 import Matiere from '../../../models/matiere.model.js'
 import { message } from '../../../configs/message.js';
 import mongoose from 'mongoose';
+import { extractRawText } from 'mammoth';
 
 // create
 export const createChapitre = async (req, res) => {
-    const { code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
+    const {annee, semestre, code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !typesEnseignement || !matiere) {
+        if (!annee || !semestre || !libelleFr || !libelleEn || !typesEnseignement || !matiere) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.champ_obligatoire
@@ -28,12 +29,14 @@ export const createChapitre = async (req, res) => {
         }
 
         // Vérifier si le code de existe déjà
-        const existingCode = await Chapitre.findOne({ code: code, matiere: matiere });
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code
-            });
+        if(code){
+            const existingCode = await Chapitre.findOne({ code: code, matiere: matiere });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code
+                });
+            }
         }
 
         // Vérifier si le libelle fr de  existe déjà
@@ -56,12 +59,13 @@ export const createChapitre = async (req, res) => {
 
         // Créer une nouvelle instance de Chapitre
         const nouveauChapitre = new Chapitre({
+            annee,
+            semestre,
             code,
             libelleFr,
             libelleEn,
             typesEnseignement,
             matiere,
-            objectifs
         });
 
         // Enregistrer le nouveau chapitre dans la base de données
@@ -79,11 +83,11 @@ export const createChapitre = async (req, res) => {
 // update
 export const updateChapitre = async (req, res) => {
     const {chapitreId} = req.params;
-    const { code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
+    const { annee, semestre, code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !typesEnseignement || !matiere) {
+        if (!annee || !semestre || !libelleFr || !libelleEn || !typesEnseignement || !matiere) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.champ_obligatoire
@@ -116,7 +120,7 @@ export const updateChapitre = async (req, res) => {
         }
 
         // Vérifier si le code existe déjà (sauf pour l'événement actuel)
-        if (existingChapitre.code !== code) {
+        if (code && existingChapitre.code !== code) {
             const existingCode = await Chapitre.findOne({ code: code, matiere: matiere });
             if (existingCode) {
                 return res.status(400).json({
@@ -148,6 +152,8 @@ export const updateChapitre = async (req, res) => {
             }
         }
         // Mettre à jour les champs du chapitre
+        existingChapitre.annee = annee;
+        existingChapitre.semestre = semestre;
         existingChapitre.code = code;
         existingChapitre.libelleFr = libelleFr;
         existingChapitre.libelleEn = libelleEn;
@@ -357,28 +363,149 @@ export const getProgressionGlobalEnseignant = async (req, res) => {
 
 
 export const getChapitres = async (req, res) => {
-
+    const {matiereId}=req.params;
+    const {page=1, pageSize=10, annee, semestre}=req.query;
     try {
-        // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-        const chapitres = await Chapitre.find();
-        
-        
+         // Récupération des chapitres avec pagination
+         const startIndex = (page - 1) * pageSize;
 
+        // Récupérer la liste des chapitres d'une matière
+        const chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
+        .skip(startIndex)
+        .limit(parseInt(pageSize));
+        // Comptage total des chapitres pour la pagination
+        const totalChapitres = await Chapitre.countDocuments({matiere:matiereId, annee:annee, semestre:semestre});
+        const totalPages = Math.ceil(totalChapitres / parseInt(pageSize));
+        
         res.status(200).json({ 
             success: true, 
             data: {
                 chapitres ,
-                totalPages: 0,
-                currentPage: 0,
-                totalItems: 0,
-                pageSize:0
+                totalPages: totalPages,
+                currentPage: page,
+                totalItems: totalChapitres,
+                pageSize:pageSize
             }
         });
     } catch (error) {
-        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        console.error('Erreur lors de la récupération des chapitre :', error);
         res.status(500).json({ success: false, message: message.erreurServeur });
     }
 };
+
+async function lireDonneesFichierWord(matieres,fichier, fichierEn) {
+    const data = await extractRawText({ path: fichier });
+    const dataEn = await extractRawText({ path: fichierEn });
+    const text = data.value;
+    const textEn = dataEn.value;
+    let currentMatiere = null;
+    let currentChapitre = null;
+    let CM = 0, TD = 0, TP = 0;
+    
+    // Structure pour stocker les données
+    const donnees = [];
+    let captureNextLines = false;
+    let captureNextLinesAcquis = false; 
+
+    // Split text into lines
+    // const lines = text.trim().split('\n');
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    let previousLineWasText = false;
+    const linesEn = textEn.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    lines.forEach((line, index) => {
+        line = line.trim();
+            
+        if (line.length === 0) return;
+        
+        if (line.startsWith('Matières') || line.startsWith('CM') || line.startsWith('TD') || line.startsWith('TP') 
+        || line.startsWith('Intervenants') || line.startsWith('Compétences acquises') || line.startsWith('Prérequis') 
+        || line.startsWith('Approche pédagogique') || line.startsWith('Evaluation des acquis')) {
+            // captureNextLines = true;
+            return; // Skip the "Compétences acquises" line
+        }
+       
+
+        if (!isNaN(line)) {
+            const hours = parseInt(line, 10);
+            if (previousLineWasText) {
+                // La ligne précédente était un texte, donc c'est le titre du chapitre
+                currentChapitre = {
+                    annee:2023,
+                    semestre:3,
+                    code:"",
+                    libelleFr: lines[index - 1],
+                    libelleEn: linesEn[index - 1],
+                    typesEnseignement: [{
+                        typeEnseignement: "660238e437b0ee5bea8089ce",
+                        volumeHoraire: 0
+                    },
+                    {
+                        typeEnseignement: "66023adcd4b5f4df62c2d219",
+                        volumeHoraire: 0
+                    },
+                    {
+                        typeEnseignement:"66023b02d4b5f4df62c2d255", 
+                        volumeHoraire: 0
+                    }],
+                    matiere: currentMatiere._id,
+                };
+                donnees.push(currentChapitre);
+            }
+
+            // Déterminer le type d'heures
+            if (currentChapitre.typesEnseignement[0].volumeHoraire === 0) {
+                currentChapitre.typesEnseignement[0].volumeHoraire = hours;
+            } else if (currentChapitre.typesEnseignement[1].volumeHoraire === 0) {
+                currentChapitre.typesEnseignement[1].volumeHoraire = hours;
+            } else if (currentChapitre.typesEnseignement[2].volumeHoraire === 0) {
+                currentChapitre.typesEnseignement[2].volumeHoraire = hours;
+            }
+
+            previousLineWasText = false;
+        } else {
+            if (previousLineWasText) {
+                // Si la ligne précédente était aussi du texte, alors c'est une nouvelle matière
+                // currentMatiere = lines[index - 1];
+                const matiere = matieres.find(m => lines[index - 1].includes(m.libelleFr));
+                if (matiere) {
+                    currentMatiere = matiere;
+                }
+            }
+
+            previousLineWasText = true;
+        }
+
+        
+    });
+    
+    // console.log(donnees);
+    return donnees;
+}
+
+export const createManyChapitre = async (req, res) => {
+    try {
+        const filePath = './maquette_fr.docx';
+        const filePathEn = './maquette_en.docx';
+        const matieres = await Matiere.find({}).select('_id libelleFr');
+        const donnees = await lireDonneesFichierWord(matieres,filePath, filePathEn);
+
+        // Insérer les chapitres dans la base de données
+        const result = await Chapitre.insertMany(donnees);
+
+        // Mettre à jour chaque matière avec les ObjectIds des chapitres créés
+        for (const chapitre of result) {
+            await Matiere.findByIdAndUpdate(chapitre.matiere, { $push: { chapitres: chapitre._id } });
+        }
+
+        
+
+        res.status(201).json({ success: true, message: "Ajouté avec succès", data: result });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ success: false, message: "Erreur lors de l'ajout des chapitres", error: e.message });
+    }
+}
 
 
 

@@ -10,22 +10,24 @@ export const createService = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn) {
+        if (!libelleFr || !libelleEn) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
             });
         }
          // Vérifier si le code du service existe déjà
-         const existingCode = await Setting.findOne({
-            'services.code': code,
-        });
-        
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
+         if(code){
+            const existingCode = await Setting.findOne({
+                'services.code': code,
             });
+            
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
         // Vérifier si le libelle fr du service existe déjà
         const existingLibelleFr = await Setting.findOne({
@@ -152,7 +154,7 @@ export const updateService = async (req, res) => {
         }
 
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn) {
+        if (!libelleFr || !libelleEn) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -186,7 +188,7 @@ export const updateService = async (req, res) => {
         }
 
         //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
-        if (existingService.code !== code) {
+        if (code && existingService.code !== code) {
             const existingCode = await Setting.findOne({ 'services.code': code });
             if (existingCode) {
                 return res.status(400).json({

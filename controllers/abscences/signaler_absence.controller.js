@@ -1,6 +1,7 @@
 import { message } from "../../configs/message.js";
 import mongoose from "mongoose";
 import SignalementAbsence from "../../models/absences/signaler_absence.model.js";
+import NotificationReadStatus from "../../models/absences/notification_read.model.js";
 import User, { validRoles } from "../../models/user.model.js";
 import { io } from "../../server.js";
 import Setting from '../../models/setting.model.js';
@@ -104,6 +105,85 @@ export const signalerAbsence = async (req, res) => {
         res.status(500).json({ success: false, message: message.erreurServeur });
     }
 };
+
+export const getUserNotifications = async (req, res) => {
+    const userId = req.params.userId;
+    const { niveauxId, role, annee, semestre } = req.query;
+
+    try {
+        let absences=[];
+        if(niveauxId && niveauxId.length>0){
+            if(role===appConfigs.role.enseignant ){
+                absences = await SignalementAbsence.find({
+                    user: { $ne: userId },
+                    enseignant:userId,
+                    niveau: { $in: niveauxId },
+                    annee: annee,
+                    semestre: semestre,
+                    date_absence_signaler: { $gte: jour }
+                }).populate('user', '_id nom prenom');
+            }else if( role===appConfigs.role.delegue){
+                absences = await SignalementAbsence.find({
+                    user: { $ne: userId },
+                    niveau: { $in: niveauxId },
+                    annee: annee,
+                    semestre: semestre,
+                    date_absence_signaler: { $gte: jour }
+                }).populate('user', '_id nom prenom');
+            }else if(role===appConfigs.role.etudiant){
+                absences = await SignalementAbsence.find({
+                    role:appConfigs.role.enseignant,
+                    niveau: { $in: niveauxId },
+                    annee: annee,
+                    semestre: semestre,
+                    date_absence_signaler: { $gte: jour }
+                }).populate('user', '_id nom prenom');
+            }
+        }else{
+            absences = await SignalementAbsence.find({
+                annee: annee,
+                semestre: semestre,
+                date_absence_signaler: { $gte: jour }
+            }).populate('user', '_id nom prenom');
+        }
+        const readStatuses = await NotificationReadStatus.find({ user: userId });
+
+        // Marquer les notifications lues
+        const notificationsWithReadStatus = absences.map(notification => {
+            const status = readStatuses.find(status => status.notification.toString() === notification._id.toString());
+            return {
+                ...notification.toObject(),
+                read: status ? status.read : false
+            };
+        });
+
+        res.status(200).json({ success: true, data: notificationsWithReadStatus });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des notifications :', error);
+        res.status(500).json({ success: false, message: 'Erreur lors de la récupération des notifications', error: error.message });
+    }
+};
+
+export const markNotificationAsRead = async (req, res) => {
+    const { notificationId, userId } = req.body;
+
+    try {
+        let status = await NotificationReadStatus.findOne({ notification: notificationId, user: userId });
+
+        if (!status) {
+            status = new NotificationReadStatus({ notification: notificationId, user: userId, read: true });
+        } else {
+            status.read = true;
+        }
+
+        await status.save();
+        res.status(200).json({ success: true, message: 'Notification marquée comme lue' });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour de la notification :', error);
+        res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour de la notification', error: error.message });
+    }
+};
+
 
 
 export const getAbsencesSignaler = async (req, res) => {

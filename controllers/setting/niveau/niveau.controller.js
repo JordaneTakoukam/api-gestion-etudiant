@@ -11,7 +11,7 @@ export const createNiveau = async (req, res) => {
     try {
 
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !cycle) {
+        if (!libelleFr || !libelleEn || !cycle) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -39,19 +39,21 @@ export const createNiveau = async (req, res) => {
 
 
         // Vérifier si le code du niveau existe déjà
-        const existingCode = await Setting.findOne({
-            niveaux: {
-                $elemMatch: {
-                    code: code,
-                    cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+        if(code){
+            const existingCode = await Setting.findOne({
+                niveaux: {
+                    $elemMatch: {
+                        code: code,
+                        cycle: cycle // Assurez-vous d'avoir l'ID du cycle à vérifier
+                    }
                 }
-            }
-        });
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
             });
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
         // Vérifier si le libelle fr du cycle existe déjà
         const existingLibelleFr = await Setting.findOne({
@@ -103,7 +105,7 @@ export const createNiveau = async (req, res) => {
         }
 
         // Retourner uniquement l'objet ajouté
-        const createdNiveau = data.niveaux.find((niveau) => niveau.code === code && niveau.cycle.toString() === cycle);
+        const createdNiveau = data.niveaux.find((niveau) => niveau.libelleFr === libelleFr && niveau.cycle.toString() === cycle);
 
         res.json({
             success: true,
@@ -126,7 +128,7 @@ export const updateNiveau = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn || !cycle) {
+        if (!libelleFr || !libelleEn || !cycle) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -169,7 +171,7 @@ export const updateNiveau = async (req, res) => {
 
         // Vérifier si le code existe déjà, à l'exception du niveau en cours de modification
         
-        if (existingNiveau.niveaux[0].code !== code) {
+        if (code && existingNiveau.niveaux[0].code !== code) {
             const existingCode = await Setting.findOne({
                 niveaux: {
                     $elemMatch: {

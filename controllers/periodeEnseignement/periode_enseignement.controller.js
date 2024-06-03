@@ -475,7 +475,7 @@ export const getPeriodesEnseignement = async (req, res) => {
                 // Calculer le nombre de séances pratiquées pour chaque matière
                 enseignement.nbSeancesPratiquees = enseignement.matiere.objectifs.reduce((acc, obj) => {
                     
-                    if (obj.date_etat && obj.etat==1 && formatDate(obj.date_etat) >= formatDate(periode.dateDebut) && formatDate(obj.date_etat) <= formatDate(periode.dateFin)) {
+                    if (obj.annee==annee && obj.semestre==semestre && obj.date_etat && obj.etat==1 && formatDate(obj.date_etat) >= formatDate(periode.dateDebut) && formatDate(obj.date_etat) <= formatDate(periode.dateFin)) {
                         
                         acc.add(moment(obj.date_etat).format('YYYY-MM-DD'));
                     }

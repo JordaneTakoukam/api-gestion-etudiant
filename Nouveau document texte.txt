@@ -1,0 +1,10 @@
+Laurent;Paul;Homme;paul.laurent@example.com
+Lefebvre;Claire;Femme;claire.lefebvre@example.com
+Michel;David;Homme;david.michel@example.com
+Garcia;Lucie;Femme;lucie.garcia@example.com
+Thomas;Jacques;Homme;jacques.thomas@example.com
+Leroy;Sarah;Femme;sarah.leroy@example.com
+Roux;Patrick;Homme;patrick.roux@example.com
+Morel;Lisa;Femme;lisa.morel@example.com
+Fournier;Marc;Homme;marc.fournier@example.com
+Girard;Elodie;Femme;elodie.girard@example.com

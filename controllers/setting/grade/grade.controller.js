@@ -10,7 +10,7 @@ export const createGrade = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn) {
+        if (!libelleFr || !libelleEn) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -18,15 +18,17 @@ export const createGrade = async (req, res) => {
         }
 
          // Vérifier si le code du grade existe déjà
-        const existingCode = await Setting.findOne({
-            'grades.code': code,
-        });
-        
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
+         if(code){
+            const existingCode = await Setting.findOne({
+                'grades.code': code,
             });
+            
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
         // Vérifier si le libelle fr du grade existe déjà
         const existingLibelleFr = await Setting.findOne({
@@ -156,7 +158,7 @@ export const updateGrade = async (req, res) => {
         }
 
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn) {
+        if (!libelleFr || !libelleEn) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -190,7 +192,7 @@ export const updateGrade = async (req, res) => {
         }
 
         //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
-        if (existingGrade.code !== code) {
+        if (code && existingGrade.code !== code) {
             const existingCode = await Setting.findOne({ 'grades.code': code });
             if (existingCode) {
                 return res.status(400).json({

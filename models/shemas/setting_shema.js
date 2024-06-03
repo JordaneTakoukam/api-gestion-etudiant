@@ -2,7 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 
 export const codeLibelleSchema = new Schema({
     date_creation: { type: Date, required: true },
-    code: { type: String, required: true },
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
 

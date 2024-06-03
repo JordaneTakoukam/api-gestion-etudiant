@@ -16,6 +16,8 @@ const signalementAbsenceSchema = new Schema({
     niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },
 });
 
+
 const SignalementAbsence = mongoose.model('SignalementAbsence', signalementAbsenceSchema, 'signalementsAbsences');
 
 export default SignalementAbsence;
+

@@ -19,6 +19,8 @@ export const createPeriode = async (req, res) => {
         niveau,
         matiere,
         typeEnseignement,
+        enseignantPrincipal, 
+        enseignantSuppleant,
         heureDebut,
         heureFin,
         salleCours,
@@ -35,7 +37,7 @@ export const createPeriode = async (req, res) => {
                 });
             }
         }else{
-            if (!jour || !semestre || !annee || !niveau || !matiere || !typeEnseignement || !heureDebut || !heureFin || !salleCours) {
+            if (!jour || !semestre || !annee || !niveau || !matiere || !typeEnseignement || !enseignantPrincipal || !heureDebut || !heureFin || !salleCours) {
                 return res.status(400).json({ 
                     success: false, 
                     message: message.champ_obligatoire,
@@ -53,6 +55,18 @@ export const createPeriode = async (req, res) => {
             });
         }
         if (!pause && !mongoose.Types.ObjectId.isValid(matiere._id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide,
+            });
+        }
+        if (!pause && !mongoose.Types.ObjectId.isValid(enseignantPrincipal._id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide,
+            });
+        }
+        if (!pause && enseignantSuppleant && !mongoose.Types.ObjectId.isValid(enseignantSuppleant._id)) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -103,24 +117,24 @@ export const createPeriode = async (req, res) => {
 
         // Trouver le type d'enseignement correspondant à l'identifiant 
         
-        let typeEnseignementFind = undefined;
-        if(matiere && typeEnseignement){
-            typeEnseignementFind = matiere.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
-        }
+        // let typeEnseignementFind = undefined;
+        // if(matiere && typeEnseignement){
+        //     typeEnseignementFind = matiere.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
+        // }
         
 
-        if (!pause && !typeEnseignementFind) {
-            return res.status(404).json({ 
-                success: false, 
-                message: message.type_ens_non_trouve
-            });
-        }
-        let enseignantPrincipal = undefined;
-        let enseignantSuppleant = undefined;
-        if(typeEnseignementFind){
+        // if (!pause && !typeEnseignementFind) {
+        //     return res.status(404).json({ 
+        //         success: false, 
+        //         message: message.type_ens_non_trouve
+        //     });
+        // }
+        // let enseignantPrincipal = undefined;
+        // let enseignantSuppleant = undefined;
+        // if(typeEnseignementFind){
             // Extraire l'enseignant principal et l'enseignant suppléant
-            enseignantPrincipal = typeEnseignementFind.enseignantPrincipal;
-            enseignantSuppleant = typeEnseignementFind.enseignantSuppleant;
+            // enseignantPrincipal = typeEnseignementFind.enseignantPrincipal;
+            // enseignantSuppleant = typeEnseignementFind.enseignantSuppleant;
             // Vérifier si un enseignant principal a déjà un cours programmé au même moment
             const existingEnseignantPrincipalCours = await Periode.findOne({
                 jour,
@@ -203,7 +217,7 @@ export const createPeriode = async (req, res) => {
                 });
             }
 
-        }
+        // }
         
         if(salleCours){
             // Vérifier si une salle de cours a déjà un cours programmé au même moment
@@ -245,6 +259,17 @@ export const createPeriode = async (req, res) => {
         if(matiere){
             matiereId=matiere._id
         }
+
+        let enseignantPrincipalId=undefined;
+        if(enseignantPrincipal){
+            enseignantPrincipalId=enseignantPrincipal._id;
+        }
+
+        let enseignantSuppleantId=undefined;
+        if(enseignantSuppleant){
+            enseignantSuppleantId=enseignantSuppleant._id;
+        }
+
         const newPeriodeCours = new Periode({
             jour,
             semestre,
@@ -256,14 +281,14 @@ export const createPeriode = async (req, res) => {
             heureDebut,
             heureFin,
             salleCours,
-            enseignantPrincipal,
-            enseignantSuppleant
+            enseignantPrincipal:enseignantPrincipalId,
+            enseignantSuppleant:enseignantSuppleantId
         });
 
         // Enregistrer la période de cours dans la base de données
         const savedPeriodeCours = await newPeriodeCours.save();
         const populatedPeriodeCours = await Periode.populate(savedPeriodeCours, [
-            { path: 'matiere', select: '_id code' }, // Peupler avec l'_id et le code de la matière
+            { path: 'matiere', select: '_id code libelleFr libelleEn' }, // Peupler avec l'_id et le code de la matière
             { path: 'enseignantPrincipal', select: '_id nom prenom' }, // Peupler avec l'_id, le nom et le prénom de l'enseignant principal
             { path: 'enseignantSuppleant', select: '_id nom prenom' } // Peupler avec l'_id, le nom et le prénom de l'enseignant suppléant
         ]);
@@ -283,6 +308,7 @@ export const createPeriode = async (req, res) => {
 }
 
 
+
 // update
 export const updatePeriode = async (req, res) => {
     const {periodeId} = req.params;
@@ -293,6 +319,8 @@ export const updatePeriode = async (req, res) => {
         niveau,
         matiere,
         typeEnseignement,
+        enseignantPrincipal, 
+        enseignantSuppleant,
         heureDebut,
         heureFin,
         salleCours,
@@ -309,7 +337,7 @@ export const updatePeriode = async (req, res) => {
                 });
             }
         }else{
-            if (!jour || !semestre || !annee || !niveau || !matiere || !typeEnseignement || !heureDebut || !heureFin || !salleCours) {
+            if (!jour || !semestre || !annee || !niveau || !matiere || !enseignantPrincipal || !typeEnseignement || !heureDebut || !heureFin || !salleCours) {
                 return res.status(400).json({ 
                     success: false, 
                     message: message.champ_obligatoire,
@@ -331,6 +359,18 @@ export const updatePeriode = async (req, res) => {
             });
         }
         if (!pause && !mongoose.Types.ObjectId.isValid(typeEnseignement)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide,
+            });
+        }
+        if (!pause && !mongoose.Types.ObjectId.isValid(enseignantPrincipal._id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide,
+            });
+        }
+        if (!pause && enseignantSuppleant && !mongoose.Types.ObjectId.isValid(enseignantSuppleant._id)) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide,
@@ -371,37 +411,35 @@ export const updatePeriode = async (req, res) => {
                 message: message.existe_periode_cours
             });
         }
-        // Récupérer la matière correspondante
-        let matiereFind = undefined;
-        if(matiere){
-            matiereFind = await Matiere.findById(matiere);
-        }
+        // // Récupérer la matière correspondante
+        // let matiereFind = undefined;
+        // if(matiere){
+        //     matiereFind = await Matiere.findById(matiere);
+        // }
 
-        if (!pause && !matiereFind) {
-            return res.status(404).json({ 
-                success: false, 
-                message: message.matiere_non_trouvee,
-            });
-        }
-        let enseignantPrincipal = undefined;
-        let enseignantSuppleant = undefined;
-
-        if(matiereFind){
+        // if (!pause && !matiereFind) {
+        //     return res.status(404).json({ 
+        //         success: false, 
+        //         message: message.matiere_non_trouvee,
+        //     });
+        // }
+        
+        // if(matiereFind){
             // Trouver le type d'enseignement correspondant à l'identifiant fourni
-            let typeEnseignementFind = undefined;
-            if(typeEnseignement){
-                typeEnseignementFind = matiereFind.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
-            }
+            // let typeEnseignementFind = undefined;
+            // if(typeEnseignement){
+            //     typeEnseignementFind = matiereFind.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
+            // }
 
-            if (!typeEnseignementFind) {
-                return res.status(404).json({ 
-                    success: false, 
-                    message: message.type_ens_non_trouve
-                });
-            }
+            // if (!typeEnseignementFind) {
+            //     return res.status(404).json({ 
+            //         success: false, 
+            //         message: message.type_ens_non_trouve
+            //     });
+            // }
             // Extraire l'enseignant principal et l'enseignant suppléant
-            enseignantPrincipal = typeEnseignementFind.enseignantPrincipal;
-            enseignantSuppleant = typeEnseignementFind.enseignantSuppleant;
+            // enseignantPrincipal = typeEnseignementFind.enseignantPrincipal;
+            // enseignantSuppleant = typeEnseignementFind.enseignantSuppleant;
             // Vérifier si un enseignant principal a déjà un cours programmé au même moment
             const existingEnseignantPrincipalCours = await Periode.findOne({
                 _id: { $ne: periodeId },
@@ -485,7 +523,7 @@ export const updatePeriode = async (req, res) => {
                     message: message.existe_enseignant_s_cours,
                 });
             }
-        }
+        // }
         if(salleCours){
             // Vérifier si une salle de cours a déjà un cours programmé au même moment
             const existingSalleCoursCours = await Periode.findOne({
@@ -528,6 +566,17 @@ export const updatePeriode = async (req, res) => {
         if(matiere){
             matiereId=matiere._id;
         }
+
+        let enseignantPrincipalId=undefined;
+        if(enseignantPrincipal){
+            enseignantPrincipalId=enseignantPrincipal._id;
+        }
+
+        let enseignantSuppleantId=undefined;
+        if(enseignantSuppleant){
+            enseignantSuppleantId=enseignantSuppleant._id;
+        }
+
         const updatedPeriodeCours = await Periode.findByIdAndUpdate(periodeId, {
             jour,
             semestre,
@@ -539,11 +588,11 @@ export const updatePeriode = async (req, res) => {
             heureDebut,
             heureFin,
             salleCours,
-            enseignantPrincipal,
-            enseignantSuppleant
+            enseignantPrincipal:enseignantPrincipalId,
+            enseignantSuppleant:enseignantSuppleantId
         }, { new: true });
         const populatedPeriodeCours = await Periode.populate(updatedPeriodeCours, [
-            { path: 'matiere', select: '_id code' }, // Peupler avec l'_id et le code de la matière
+            { path: 'matiere', select: '_id code libelleFr libelleEn' }, // Peupler avec l'_id et le code de la matière
             { path: 'enseignantPrincipal', select: '_id nom prenom' }, // Peupler avec l'_id, le nom et le prénom de l'enseignant principal
             { path: 'enseignantSuppleant', select: '_id nom prenom' } // Peupler avec l'_id, le nom et le prénom de l'enseignant suppléant
         ]);
@@ -611,21 +660,21 @@ export const getPeriodesByNiveau = async (req, res) => {
         // Si une année est spécifiée dans la requête, l'utiliser
         if (annee && !isNaN(annee)) {
             filter.annee = parseInt(annee);
-            const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
-            if (!periodesCurrentYear) {
-                // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-                let found = false;
-                let previousYear = parseInt(annee) - 1;
-                while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-                    const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
-                    if (periodesPreviousYear) {
-                        filter.annee = previousYear;
-                        found = true;
-                    } else {
-                        previousYear--;
-                    }
-                }
-            } 
+            // const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
+            // if (!periodesCurrentYear) {
+            //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+            //     let found = false;
+            //     let previousYear = parseInt(annee) - 1;
+            //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+            //         const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
+            //         if (periodesPreviousYear) {
+            //             filter.annee = previousYear;
+            //             found = true;
+            //         } else {
+            //             previousYear--;
+            //         }
+            //     }
+            // } 
         }
 
         // Si un semestre est spécifié dans la requête, l'utiliser
@@ -638,15 +687,15 @@ export const getPeriodesByNiveau = async (req, res) => {
         const periodes = await Periode.find(filter)
             .populate({
                 path: 'matiere',
-                select: 'code libelleFr libelleEn'
+                select: '_id code libelleFr libelleEn typesEnseignement'
             })
             .populate({
                 path: 'enseignantPrincipal',
-                select: 'nom prenom'
+                select: '_id nom prenom'
             })
             .populate({
                 path: 'enseignantSuppleant',
-                select: 'nom prenom'
+                select: '_id nom prenom'
             })
             .exec();
 
@@ -673,7 +722,7 @@ export const getPeriodesByNiveau = async (req, res) => {
 
 export const getPeriodesAVenirByNiveau = async (req, res) => {
     const { niveauId } = req.params;
-    const { nbElement = 5, annee = 2024, semestre = 1 } = req.query;
+    const { nbElement = 5, annee = 2023, semestre = 1 } = req.query;
     
     try {
         // Récupérer toutes les périodes de cours pour le niveau spécifié
@@ -683,21 +732,21 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
        // Si une année est spécifiée dans la requête, l'utiliser
        if (annee && !isNaN(annee)) {
            filter.annee = parseInt(annee);
-           const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
-           if (!periodesCurrentYear) {
-               // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-               let found = false;
-               let previousYear = parseInt(annee) - 1;
-               while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-                   const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
-                   if (periodesPreviousYear) {
-                       filter.annee = previousYear;
-                       found = true;
-                   } else {
-                       previousYear--;
-                   }
-               }
-           } 
+        //    const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
+        //    if (!periodesCurrentYear) {
+        //        // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+        //        let found = false;
+        //        let previousYear = parseInt(annee) - 1;
+        //        while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+        //            const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
+        //            if (periodesPreviousYear) {
+        //                filter.annee = previousYear;
+        //                found = true;
+        //            } else {
+        //                previousYear--;
+        //            }
+        //        }
+        //    } 
        }
 
        // Si un semestre est spécifié dans la requête, l'utiliser
@@ -803,7 +852,7 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
 
 export const getPeriodesAVenirByEnseignant = async (req, res) => {
     const { enseignantId } = req.params;
-    const { nbElement = 5, annee = 2024, semestre = 1 } = req.query;
+    const { nbElement = 5, annee = 2023, semestre = 1 } = req.query;
 
     try {
         // Récupérer toutes les périodes de cours pour l'enseignant spécifié
@@ -941,21 +990,21 @@ export const generateEmploisDuTemps = async (req, res) => {
     // Si une année est spécifiée dans la requête, l'utiliser
     if (annee && !isNaN(annee)) {
         filter.annee = parseInt(annee);
-        const periodesCurrentYear = await Periode.findOne({ niveau: niveau._id, annee }).exec();
-        if (!periodesCurrentYear) {
-            // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-            let found = false;
-            let previousYear = parseInt(annee) - 1;
-            while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-                const periodesPreviousYear = await Periode.findOne({ niveau: niveau._id, annee: previousYear }).exec();
-                if (periodesPreviousYear) {
-                    filter.annee = previousYear;
-                    found = true;
-                } else {
-                    previousYear--;
-                }
-            }
-        } 
+        // const periodesCurrentYear = await Periode.findOne({ niveau: niveau._id, annee }).exec();
+        // if (!periodesCurrentYear) {
+        //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+        //     let found = false;
+        //     let previousYear = parseInt(annee) - 1;
+        //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+        //         const periodesPreviousYear = await Periode.findOne({ niveau: niveau._id, annee: previousYear }).exec();
+        //         if (periodesPreviousYear) {
+        //             filter.annee = previousYear;
+        //             found = true;
+        //         } else {
+        //             previousYear--;
+        //         }
+        //     }
+        // } 
     }
 
     // Si un semestre est spécifié dans la requête, l'utiliser

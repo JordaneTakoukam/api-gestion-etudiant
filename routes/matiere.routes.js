@@ -1,7 +1,7 @@
 import express from "express";
-import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau,generateProgressByNiveau, generateProgressByEnseignant, generateListMatByNiveau, generateListMatByEnseignantNiveau} from "../controllers/matiere/matiere.controller.js";
-import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant } from "../controllers/matiere/chapitre/chapitre.controller.js";
-import { createObjectif, deleteObjectif, readObjectif, readObjectifs, updateObjectif, updateObjectifEtatObj,getObjectifs, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj } from "../controllers/matiere/objectif/objectif.controller.js";
+import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau,generateProgressByNiveau, generateProgressByEnseignant, generateListMatByNiveau, generateListMatByEnseignantNiveau, searchMatiere, createManyMatiere,updateMatiereTypeEns} from "../controllers/matiere/matiere.controller.js";
+import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant, createManyChapitre } from "../controllers/matiere/chapitre/chapitre.controller.js";
+import { createObjectif, deleteObjectif, readObjectif, readObjectifs, updateObjectif, updateObjectifEtatObj,getObjectifs,getProgressionMatiere, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj, createManyObjectif} from "../controllers/matiere/objectif/objectif.controller.js";
 
 // controllers
 
@@ -12,11 +12,14 @@ const router = express.Router();
 
 // create
 router.post("/create", createMatiere);
+router.post("/createManyMatiere", createManyMatiere);
+router.post("/updateMatiereTypeEns", updateMatiereTypeEns);
 
 //  read
 router.get("/get/:id", readMatiere);
 router.get("/get/:params", readMatieres);
 router.get("/getMatieresByNiveau/:niveauId", getMatieresByNiveau);
+router.get("/searchMatiere/:langue/:searchString", searchMatiere);
 router.get("/generateListMatByNiveau/:annee/:semestre", generateListMatByNiveau);
 router.get("/generateProgressByNiveau/:annee/:semestre", generateProgressByNiveau);
 router.get("/getMatieresByNiveauWithPagination/:niveauId", getMatieresByNiveauWithPagination);
@@ -35,10 +38,11 @@ router.delete("/delete/:matiereId", deleteMatiere);
 // chapitre associer a une matieres
 // create
 router.post("/chapitre/create", createChapitre);
+router.post("/chapitre/createManyChapitre", createManyChapitre);
 router.get("/chapitre/getProgressionGlobalEnseignants", getProgressionGlobalEnseignants);
 router.get("/chapitre/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveau);
 router.get("/chapitre/getProgressionGlobalEnseignant/:enseignantId", getProgressionGlobalEnseignant);
-router.get("/chapitre/getChapitres", getChapitres);
+router.get("/chapitre/getChapitres/:matiereId", getChapitres);
 
 
 //  read
@@ -57,10 +61,13 @@ router.put("/chapitre/update_etat/:chapitreId", updateObjectifEtat);
 // objectif associer a une matiere
 // create
 router.post("/objectif/create", createObjectif);
+router.post("/objectif/createManyObjectif", createManyObjectif);
+router.get("/objectif/getProgressionMatiere/:matiereId", getProgressionMatiere);
 router.get("/objectif/getProgressionGlobalEnseignants", getProgressionGlobalEnseignantsObj);
 router.get("/objectif/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveauObj);
 router.get("/objectif/getProgressionGlobalEnseignant/:enseignantId", getProgressionGlobalEnseignantObj);
-router.get("/objectif/getObjectifs", getObjectifs);
+router.get("/objectif/getObjectifs/:matiereId", getObjectifs);
+
 
 
 //  read

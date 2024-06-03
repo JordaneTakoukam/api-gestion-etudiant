@@ -9,7 +9,7 @@ export const createFonction = async (req, res) => {
 
     try {
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn) {
+        if (!libelleFr || !libelleEn) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -17,15 +17,17 @@ export const createFonction = async (req, res) => {
         }
 
         // Vérifier si le code de la fonction existe déjà
-        const existingCode = await Setting.findOne({
-            'fonctions.code': code,
-        });
-        
-        if (existingCode) {
-            return res.status(400).json({
-                success: false,
-                message: message.existe_code,
+        if(code){
+            const existingCode = await Setting.findOne({
+                'fonctions.code': code,
             });
+            
+            if (existingCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.existe_code,
+                });
+            }
         }
         // Vérifier si le libelle fr de la fonction existe déjà
         const existingLibelleFr = await Setting.findOne({
@@ -154,7 +156,7 @@ export const updateFonction = async (req, res) => {
         }
 
         // Vérifier si tous les champs obligatoires sont présents
-        if (!code || !libelleFr || !libelleEn) {
+        if (!libelleFr || !libelleEn) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -188,7 +190,7 @@ export const updateFonction = async (req, res) => {
         }
 
         //vérifier si le code existe déjà or mis le code de l'élément en cours de modification
-        if (existingFonction.code !== code) {
+        if (code && existingFonction.code !== code) {
             const existingCode = await Setting.findOne({ 'fonctions.code': code });
             if (existingCode) {
                 return res.status(400).json({

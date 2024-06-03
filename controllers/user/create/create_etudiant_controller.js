@@ -9,6 +9,7 @@ import Absences from '../../../models/absences/absence.model.js';
 import Setting from '../../../models/setting.model.js';
 import { formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
+import { readFileSync } from 'fs';
 
 export const createEtudiant = async (req, res) => {
     const {
@@ -812,6 +813,67 @@ async function fillTemplate (departement, section, cycle, niveau, etudiants, fil
         return '';
     }
 };
+
+async function lireDonneesFichierCSV(niveau, fichier) {
+    
+    // // Structure pour stocker les données
+    const donnees = [];
+    const mot_de_passe = process.env.DEFAULT_USERS_PASSWORD
+
+    const saltRounds = 10; // Nombre de tours pour le hachage
+    const hashedPassword = await bcrypt.hash(mot_de_passe, saltRounds);
+    try {
+        // Lire le fichier texte de manière synchrone
+        const data = readFileSync(fichier, 'utf8');
+        
+    
+        // // Split data into lines
+        const lines = data.split('\n');
+        lines.forEach((line, index) => {
+        line = line.split(';');
+        
+
+        const currentDate = DateTime.now();
+        
+        if (line.length === 0) return;
+
+           
+            let currentStudent = {
+                nom: line[0].trim(),
+                prenom:line[1].trim(),
+                mot_de_passe:hashedPassword,
+                genre:line[2].trim(),
+                roles:[appConfigs.role.etudiant],
+                niveaux:[{niveau:niveau, annee:2023}],
+                email:line[3].replace('\r', "").trim(),
+                date_creation:currentDate
+            };
+
+            donnees.push(currentStudent);
+            
+    });
+    
+      } catch (err) {
+        console.error('Erreur lors de la lecture du fichier:', err);
+      }
+    
+    
+    return donnees;
+}
+
+export const createManyEtudiant = async (req, res) => {
+    try {
+        const filePath = './liste_etudiant.csv';
+        const niveau="665c40a406d18fba0d8236ae";
+        const donnees = await lireDonneesFichierCSV(niveau,filePath);
+        const result = await User.insertMany(donnees);
+        res.status(201).json({ success: true, message: "Ajouté avec succès", data: result });
+        
+
+    } catch(e) {
+        console.log(e);
+    }
+}
 
 
 
