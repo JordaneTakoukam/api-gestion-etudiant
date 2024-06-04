@@ -503,6 +503,70 @@ export const getPeriodesEnseignement = async (req, res) => {
     }
 }
 
+// export const getMatierePeriodesEnseignement = async (req, res) => {
+//     const { periodeId } = req.params;
+//     const { page, pageSize, annee, semestre } = req.query;
+
+//     try {
+//         if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+//             return res.status(400).json({ 
+//                 success: false, 
+//                 message: 'Identifiant du niveau invalide.'
+//             });
+//         }
+
+//         const periodes = await PeriodeEnseignement.find({ 
+//             niveau: niveauId,
+//             annee: annee,
+//             semestre: semestre,
+//         });
+
+//         periodes.forEach(periode => {
+//             periode.dateDebut = moment(new Date(periode.dateDebut)).toDate();
+//             periode.dateFin = moment(new Date(periode.dateFin)).toDate();
+//         });
+
+//         await Promise.all(periodes.map(async (periode) => {
+//             await Promise.all(periode.enseignements.map(async (enseignement) => {
+//                 const enseignementPopulated = await Matiere.populate(enseignement, {
+//                     path: 'matiere',
+//                     select: '_id code libelleFr libelleEn', 
+//                     populate: {
+//                         path: 'objectifs', 
+//                     }
+//                 });
+//                 enseignement.matiere = enseignementPopulated.matiere;
+//                 // Calculer le nombre de séances pratiquées pour chaque matière
+//                 enseignement.nbSeancesPratiquees = enseignement.matiere.objectifs.reduce((acc, obj) => {
+                    
+//                     if (obj.annee==annee && obj.semestre==semestre && obj.date_etat && obj.etat==1 && formatDate(obj.date_etat) >= formatDate(periode.dateDebut) && formatDate(obj.date_etat) <= formatDate(periode.dateFin)) {
+                        
+//                         acc.add(moment(obj.date_etat).format('YYYY-MM-DD'));
+//                     }
+//                     return acc;
+//                 }, new Set()).size;
+//             }));
+//         }));
+
+//         res.status(200).json({ 
+//             success: true, 
+//             data: {
+//                 periodes,
+//                 totalPages: 0,
+//                 currentPage: 0,
+//                 totalItems: 0,
+//                 pageSize: 0
+//             } 
+//         });
+//     } catch (error) {
+//         console.error('Erreur lors de la récupération des périodes d\'enseignement :', error);
+//         res.status(500).json({ 
+//             success: false, 
+//             message: 'Erreur interne du serveur.'
+//         });
+//     }
+// }
+
 export const generateListPeriodeEnseignement = async (req, res)=>{
     const { annee, semestre } = req.params;
     const {  departement, section, cycle, niveau, langue } = req.query;
@@ -510,7 +574,7 @@ export const generateListPeriodeEnseignement = async (req, res)=>{
     if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Identifiant du niveau invalide.'
+            message: message.identifiant_invalide
         });
     }
 
@@ -598,15 +662,54 @@ async function fillTemplate (departement, section, cycle, niveau, langue, period
 
 
 export const generateProgressionPeriodeEnseignement = async (req, res)=>{
-    const {periode, departement, section, cycle, niveau, langue}=req.query;
-    let filePath='./templates/templates_fr/template_progression_periode_enseignement_fr.html'
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_progression_periode_enseignement_en.html';
-    }
-    const htmlContent = await fillTemplateProg(departement, section, cycle, niveau, langue, periode, filePath, periode.annee, periode.semestre);
+    const {periodeId}=req.params;
+    const {departement, section, cycle, niveau, langue, annee, semestre}=req.query;
+    try{
+        if (!mongoose.Types.ObjectId.isValid(periodeId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide
+            });
+        }
+        const periode = await PeriodeEnseignement.findOne({ 
+            _id: periodeId,
+        });
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+        periode.dateDebut = moment(new Date(periode.dateDebut)).toDate();
+        periode.dateFin = moment(new Date(periode.dateFin)).toDate();
+
+        
+        await Promise.all(periode.enseignements.map(async (enseignement) => {
+            const enseignementPopulated = await Matiere.populate(enseignement, {
+                path: 'matiere',
+                select: '_id code libelleFr libelleEn', 
+                populate: {
+                    path: 'objectifs', 
+                }
+            });
+            enseignement.matiere = enseignementPopulated.matiere;
+            // Calculer le nombre de séances pratiquées pour chaque matière
+            enseignement.nbSeancesPratiquees = enseignement.matiere.objectifs.reduce((acc, obj) => {
+                
+                if (obj.annee==annee && obj.semestre==semestre && obj.date_etat && obj.etat==1 && formatDate(obj.date_etat) >= formatDate(periode.dateDebut) && formatDate(obj.date_etat) <= formatDate(periode.dateFin)) {
+                    
+                    acc.add(moment(obj.date_etat).format('YYYY-MM-DD'));
+                }
+                return acc;
+            }, new Set()).size;
+        }));
+
+        let filePath='./templates/templates_fr/template_progression_periode_enseignement_fr.html'
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_progression_periode_enseignement_en.html';
+        }
+        const htmlContent = await fillTemplateProg(departement, section, cycle, niveau, langue, periode, filePath, annee, semestre);
+
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+    }catch(e){
+
+    }
 }
 
 async function fillTemplateProg (departement, section, cycle, niveau, langue, periode, filePath, annee, semestre) {

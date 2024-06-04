@@ -22,7 +22,7 @@ router.get("/getPeriodesEnseignementWithPagination/:niveauId", getPeriodesEnseig
 
 router.get("/getPeriodesEnseignement/:niveauId", getPeriodesEnseignement);
 router.get("/generateListPeriodeEnseignement/:annee/:semestre", generateListPeriodeEnseignement);
-router.get("/generateProgressionPeriodeEnseignement", generateProgressionPeriodeEnseignement);
+router.get("/generateProgressionPeriodeEnseignement/:periodeId", generateProgressionPeriodeEnseignement);
 
 
 export default router;

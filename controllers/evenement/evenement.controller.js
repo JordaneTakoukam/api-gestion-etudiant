@@ -449,7 +449,7 @@ export const getAllEvenementsByYear = async (req, res) => {
 export const getUpcommingEventsOfYear = async (req, res) => {
     try {
         const annee = req.params; // Année spécifiée dans la requête
-        const { nbEvenement=10 } = req.query;
+        const { nbEvenement=5 } = req.query;
         const currentDate = new Date(); // Date du jour
         // Assurez-vous que currentDate est bien une date valide
         if (isNaN(currentDate.getTime())) {

@@ -1,7 +1,7 @@
 import express from "express";
 import { ajouterAbsence, retirerAbsence, justifierAbsence } from "../controllers/abscences/absence.controller.js";
 import { getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter, getAllAbsencesWithEnseignantsByFilter, getAllAbsencesWithEtudiantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent, generateListAbsenceEtudiant, generateListAbsenceEnseignant } from "../controllers/abscences/get_absences.js";
-import { signalerAbsence, getAbsencesSignaler, getUserNotifications, markNotificationAsRead } from "../controllers/abscences/signaler_absence.controller.js";
+import { signalerAbsence, getAbsencesSignaler, getUserNotifications, markNotificationAsRead,markAllNotificationAsRead } from "../controllers/abscences/signaler_absence.controller.js";
 
 
 // controllers
@@ -11,6 +11,7 @@ import { signalerAbsence, getAbsencesSignaler, getUserNotifications, markNotific
 const router = express.Router();
 router.get('/notifications/:userId', getUserNotifications);
 router.post('/notifications/markAsRead', markNotificationAsRead);
+router.post('/notifications/markAllAsRead', markAllNotificationAsRead);
 router.get("/getAbsencesByUserAndFilter/:userId", getAbsencesByUserAndFilter);
 router.get("/getAbsencesWithEnseignantsByFilter", getAbsencesWithEnseignantsByFilter);
 router.get("/getAllAbsencesWithEnseignantsByFilter", getAllAbsencesWithEnseignantsByFilter);

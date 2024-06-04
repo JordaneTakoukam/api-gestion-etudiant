@@ -877,7 +877,7 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
         const periodes = await Periode.find(filter)
             .populate({
                 path: 'matiere',
-                select: 'code'
+                select: 'code libelleFr libelleEn'
             })
             .populate({
                 path: 'enseignantPrincipal',

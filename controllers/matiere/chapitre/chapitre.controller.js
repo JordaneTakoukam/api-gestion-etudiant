@@ -258,6 +258,7 @@ export const updateObjectifEtat = async (req, res) => {
 };
 
 export const getProgressionGlobalEnseignants = async (req, res) => {
+    const {annee, semestre}=req.query;
     try {
         // Compter le nombre total d'objectifs des chapitres avec l'état 1
         const totalObjectifsAvecEtat1 = await Chapitre.countDocuments({ 'objectifs.etat': 1 });

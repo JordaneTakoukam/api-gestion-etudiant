@@ -276,7 +276,10 @@ export const getProgressionGlobalEnseignantsObj = async (req, res) => {
         const totalObjectifs = await Objectif.countDocuments({annee:annee, semestre:semestre});
 
         // Calculer la progression globale
-        const progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs;
+        let progressionGlobale = 0;
+        if(totalObjectifs != 0){
+            progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs;
+        }
         res.json({
             success: true,
             data: (progressionGlobale*100),
@@ -338,12 +341,16 @@ export const getProgressionGlobalEnseignantsNiveauObj = async (req, res) => {
         });
 
         // Calculer la progression globale
-        const progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs * 100;
-
+        let progressionGlobale = 0;
+        if(totalObjectifs != 0){
+            progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs;
+        }
         res.json({
             success: true,
-            data: progressionGlobale
+            data: (progressionGlobale*100),
         });
+
+        
         
     } catch (error) {
         console.error('Erreur lors du calcul de la progression globale des enseignants :', error);
@@ -419,11 +426,13 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
 
         // Calculer la progression globale
         
-        const progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs * 100;
-
+        let progressionGlobale = 0;
+        if(totalObjectifs != 0){
+            progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs;
+        }
         res.json({
             success: true,
-            data: progressionGlobale
+            data: (progressionGlobale*100),
         });
         
     } catch (error) {

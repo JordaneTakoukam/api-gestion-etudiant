@@ -143,6 +143,7 @@ export function generatePDFAndSendToBrowser(htmlContent, res, orientation) {
             stream.pipe(res);
         }
     });
+    
 }
 
 export function nbTotalAbsences(listeAbsences) {

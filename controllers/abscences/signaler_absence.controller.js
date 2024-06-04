@@ -64,10 +64,14 @@ export const signalerAbsence = async (req, res) => {
         //     date_fin_absence,
         // });
         const date_absence_signaler = DateTime.now().toJSDate();
+        let enseignantId=undefined;
+        if(enseignant){
+            enseignantId=enseignant._id;
+        }
         const nouvelleAbsenceSignaler = new SignalementAbsence({
             role,
             user:user._id,
-            enseignant:enseignant._id,
+            enseignant:enseignantId,
             heure_debut_absence,
             heure_fin_absence,
             jour_absence,
@@ -97,7 +101,7 @@ export const signalerAbsence = async (req, res) => {
         // Répondre avec les informations de signalement d'absence
         return res.status(201).json({
             success: true,
-            message: 'success',
+            message: message.absence_signale_success,
             data: dataReturn,
         });
     } catch (error) {
@@ -109,26 +113,40 @@ export const signalerAbsence = async (req, res) => {
 export const getUserNotifications = async (req, res) => {
     const userId = req.params.userId;
     const { niveauxId, role, annee, semestre } = req.query;
-
+    
     try {
         let absences=[];
+        
         if(niveauxId && niveauxId.length>0){
+            
             if(role===appConfigs.role.enseignant ){
-                absences = await SignalementAbsence.find({
+                
+                const allAbsences = await SignalementAbsence.find({
                     user: { $ne: userId },
-                    enseignant:userId,
+                    // enseignant:userId,
                     niveau: { $in: niveauxId },
                     annee: annee,
                     semestre: semestre,
-                    date_absence_signaler: { $gte: jour }
+                    // date_absence_signaler: { $gte: jour }
                 }).populate('user', '_id nom prenom');
+
+                allAbsences.forEach(abs=>{
+                    if(!abs.enseignant){
+                        absences.push(abs);
+                    }else{
+                        if(abs.enseignant.toString() === userId.toString()){
+                            absences.push(abs);
+                        }
+                    }
+                })
             }else if( role===appConfigs.role.delegue){
+                
                 absences = await SignalementAbsence.find({
                     user: { $ne: userId },
                     niveau: { $in: niveauxId },
                     annee: annee,
                     semestre: semestre,
-                    date_absence_signaler: { $gte: jour }
+                    // date_absence_signaler: { $gte: jour }
                 }).populate('user', '_id nom prenom');
             }else if(role===appConfigs.role.etudiant){
                 absences = await SignalementAbsence.find({
@@ -136,33 +154,35 @@ export const getUserNotifications = async (req, res) => {
                     niveau: { $in: niveauxId },
                     annee: annee,
                     semestre: semestre,
-                    date_absence_signaler: { $gte: jour }
+                    // date_absence_signaler: { $gte: jour }
                 }).populate('user', '_id nom prenom');
             }
         }else{
             absences = await SignalementAbsence.find({
                 annee: annee,
                 semestre: semestre,
-                date_absence_signaler: { $gte: jour }
+                // date_absence_signaler: { $gte: jour }
             }).populate('user', '_id nom prenom');
         }
         const readStatuses = await NotificationReadStatus.find({ user: userId });
 
         // Marquer les notifications lues
-        const notificationsWithReadStatus = absences.map(notification => {
+        const notifications = absences.map(notification => {
             const status = readStatuses.find(status => status.notification.toString() === notification._id.toString());
             return {
                 ...notification.toObject(),
                 read: status ? status.read : false
             };
         });
-
+        const notificationsWithReadStatus = notifications.filter(n => n.read == false);
         res.status(200).json({ success: true, data: notificationsWithReadStatus });
     } catch (error) {
         console.error('Erreur lors de la récupération des notifications :', error);
         res.status(500).json({ success: false, message: 'Erreur lors de la récupération des notifications', error: error.message });
     }
 };
+
+
 
 export const markNotificationAsRead = async (req, res) => {
     const { notificationId, userId } = req.body;
@@ -184,12 +204,36 @@ export const markNotificationAsRead = async (req, res) => {
     }
 };
 
+export const markAllNotificationAsRead = async (req, res) => {
+    const { notificationIds, userId } = req.body;
+    try {
+        if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'Liste des notifications invalide' });
+        }
+
+        // Utiliser bulkWrite pour effectuer les opérations en masse
+        const bulkOps = notificationIds.map(notificationId => ({
+            updateOne: {
+                filter: { notification: notificationId, user: userId },
+                update: { $set: { read: true } },
+                upsert: true
+            }
+        }));
+
+        await NotificationReadStatus.bulkWrite(bulkOps);
+
+        res.status(200).json({ success: true, message: 'Notifications marquées comme lues' });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour des notifications :', error);
+        res.status(500).json({ success: false, message: 'Erreur lors de la mise à jour des notifications', error: error.message });
+    }
+};
+
 
 
 export const getAbsencesSignaler = async (req, res) => {
     const {userId}=req.params;
     const { niveauxId, role, annee, semestre } = req.query;
-    console.log(niveauxId);
     // console.log(userId+" "+semestre+" "+annee)
     try {
         // Rechercher les absences de l'utilisateur correspondant au semestre et à l'année

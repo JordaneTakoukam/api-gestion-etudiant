@@ -293,6 +293,10 @@ const message = {
         fr: "Alerte non trouvée",
         en: "Alert not found",
     },
+    absence_signale_success: {
+        fr: "Absence signalée avec succès",
+        en: "Absence reported with success",
+    },
     page_non_existante: {
         fr: "La page demandée n'existe pas.",
         en: "The requested page does not exist.",

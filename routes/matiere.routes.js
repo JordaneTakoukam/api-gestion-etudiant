@@ -63,7 +63,7 @@ router.put("/chapitre/update_etat/:chapitreId", updateObjectifEtat);
 router.post("/objectif/create", createObjectif);
 router.post("/objectif/createManyObjectif", createManyObjectif);
 router.get("/objectif/getProgressionMatiere/:matiereId", getProgressionMatiere);
-router.get("/objectif/getProgressionGlobalEnseignants", getProgressionGlobalEnseignantsObj);
+router.get("/objectif/getProgressionGlobalEnseignantsObj", getProgressionGlobalEnseignantsObj);
 router.get("/objectif/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveauObj);
 router.get("/objectif/getProgressionGlobalEnseignant/:enseignantId", getProgressionGlobalEnseignantObj);
 router.get("/objectif/getObjectifs/:matiereId", getObjectifs);
