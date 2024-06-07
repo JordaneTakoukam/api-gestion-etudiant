@@ -29,9 +29,8 @@ export const getAbsencesByUserAndFilter = async (req, res) => {
     }
 };
 
-
 export const getAbsencesWithEnseignantsByFilter = async (req, res) => {
-    let { semestre = 1, annee = 2024, page = 1, pageSize = 10 } = req.query; // Default values for semester, year, and pagination
+    let { semestre = 1, annee = 2023, page = 1, pageSize = 10 } = req.query; // Default values for semester, year, and pagination
 
     // Convert semestre and annee to numbers
     semestre = parseInt(semestre);
@@ -44,6 +43,272 @@ export const getAbsencesWithEnseignantsByFilter = async (req, res) => {
         let enseignantsWithFilteredAbsences = await User.aggregate([
             {
                 $match: { roles: { $in: [appConfigs.role.enseignant] } }
+            },
+            {
+                $sort: { nom: 1, prenom:1 } // Trier par nom en ordre croissant
+            },
+            {
+                $skip: (page - 1) * pageSize // Sauter les résultats pour la pagination
+            },
+            {
+                $limit: pageSize // Limiter les résultats par page
+            },
+            {
+                $lookup: {
+                    from: "absences",
+                    localField: "absences",
+                    foreignField: "_id",
+                    as: "absences"
+                }
+            },
+            {
+                $addFields: {
+                    absences: {
+                        $filter: {
+                            input: "$absences",
+                            as: "absence",
+                            cond: {
+                                $and: [
+                                    { $eq: ["$$absence.semestre", semestre] },
+                                    { $eq: ["$$absence.annee", annee] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            
+            {
+                $project: {
+                    verificationCode: 0,
+                    roles: 0,
+                    date_creation: 0,
+                    mot_de_passe: 0,
+                    grade: 0,
+                    categorie: 0,
+                    fonction: 0,
+                    service: 0,
+                    commune: 0,
+                    __v: 0,
+                    niveaux: 0,
+                    historique_connexion: 0
+                }
+            }
+        ]);
+
+        // Sort the enseignantsWithFilteredAbsences array in descending order by the length of absences array
+        enseignantsWithFilteredAbsences.forEach(enseignant => {
+            // Sorting the absences array by the dateAbsence field in ascending order
+            enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
+        });
+        // Pagination
+        const totalEnseignants = await User.countDocuments({ roles: { $in: [appConfigs.role.enseignant] } });
+        const totalPages = Math.ceil(totalEnseignants / pageSize);
+        // const totalEnseignants = enseignantsWithFilteredAbsences.length;
+        // const totalPages = Math.ceil(totalEnseignants / pageSize);
+        // const startIndex = (page - 1) * pageSize;
+        // const endIndex = page * pageSize;
+        // const enseignantsPerPage = enseignantsWithFilteredAbsences.slice(startIndex, endIndex);
+        
+        res.json({
+            success: true,
+            data: {
+                enseignants: enseignantsWithFilteredAbsences,
+                currentPage: page,
+                totalPages: totalPages,
+                totalItems: totalEnseignants,
+                pageSize: pageSize
+            }
+        });
+    } catch (error) {
+        console.error("Internal Server Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
+export const getAbsencesWithEtudiantsByFilter = async (req, res) => {
+    const { niveauId } = req.params;
+    const { annee = 2023, semestre = 1, page = 1, pageSize = 10 } = req.query;
+
+    try {
+        // Vérifier si l'ID du niveau est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        const skip = (page - 1) * pageSize;
+
+        // Construire la requête en utilisant $elemMatch pour correspondre exactement au niveau et à l'année dans 'niveaux',
+        // et en ajoutant un filtre pour le semestre et l'année dans 'absences'
+        const query = {
+            'niveaux': {
+                $elemMatch: {
+                    niveau: niveauId,
+                    annee: Number(annee),
+                },
+            },
+
+        };
+
+        const etudiants = await User.find(query).populate('absences')
+            .sort({nom:1, prenom:1})
+            .skip(skip)
+            .limit(Number(pageSize));
+
+        // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
+        etudiants.forEach((etudiant) => {
+            etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee));
+            etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
+        });
+        
+
+        const totalEtudiants = await User.countDocuments(query);
+
+        res.json({
+            success: true,
+            data: {
+                etudiants,
+                currentPage: page,
+                totalPages: Math.ceil(totalEtudiants / pageSize),
+                totalItems: totalEtudiants,
+                pageSize,
+            },
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
+export const searchUser = async (req, res) => {
+    const {searchText} = req.params;
+    let { semestre = 1, annee = 2023, limit=10 } = req.query;
+    semestre = parseInt(semestre);
+    annee = parseInt(annee);
+    try {
+        // Construire le filtre de recherche pour le nom et le prénom
+        const nameFilter = {};
+        if (searchText) {
+            nameFilter.nom = { $regex: `^${searchText}`, $options: 'i' }; // Recherche insensible à la casse
+        }
+
+        // Recherche des enseignants avec des absences correspondant au semestre et à l'année
+        let enseignantsWithFilteredAbsences = await User.aggregate([
+            {
+                $match: { 
+                    roles: { $in: [appConfigs.role.enseignant] },
+                    ...nameFilter // Ajouter le filtre de recherche par nom
+                }
+            },
+            {
+                $sort: { nom: 1, prenom:1 } // Trier par nom en ordre croissant
+            },
+            {
+                $limit: parseInt(limit) // Limiter les résultats par page
+            },
+            {
+                $lookup: {
+                    from: "absences",
+                    localField: "absences",
+                    foreignField: "_id",
+                    as: "absences"
+                }
+            },
+            {
+                $addFields: {
+                    absences: {
+                        $filter: {
+                            input: "$absences",
+                            as: "absence",
+                            cond: {
+                                $and: [
+                                    { $eq: ["$$absence.semestre", semestre] },
+                                    { $eq: ["$$absence.annee", annee] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            
+            {
+                $project: {
+                    verificationCode: 0,
+                    roles: 0,
+                    date_creation: 0,
+                    mot_de_passe: 0,
+                    grade: 0,
+                    categorie: 0,
+                    fonction: 0,
+                    service: 0,
+                    commune: 0,
+                    __v: 0,
+                    niveaux: 0,
+                    historique_connexion: 0
+                }
+            }
+        ]);
+
+        // Sort the enseignantsWithFilteredAbsences array in descending order by the length of absences array
+        enseignantsWithFilteredAbsences.forEach(enseignant => {
+            // Sorting the absences array by the dateAbsence field in ascending order
+            enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
+        });
+       
+
+        res.json({
+            success: true,
+            data: {
+                enseignants: enseignantsWithFilteredAbsences,
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: enseignantsWithFilteredAbsences.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error("Internal Server Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        });
+    }
+};
+
+export const searchUserEtudiant = async (req, res) => {
+    const { searchText } = req.params;
+    let { semestre = 1, annee = 2023, limit = 10 } = req.query;
+    semestre = parseInt(semestre);
+    annee = parseInt(annee);
+    limit = parseInt(limit);
+
+    try {
+        // Construire le filtre de recherche pour le nom et le prénom
+        const nameFilter = {};
+        if (searchText) {
+            nameFilter.nom = { $regex: `^${searchText}`, $options: 'i' }; // Recherche insensible à la casse
+        }
+
+        // Recherche des etudiants avec des absences correspondant au semestre et à l'année
+        let etudiantsWithFilteredAbsences = await User.aggregate([
+            {
+                $match: {
+                    roles: { $in: [appConfigs.role.etudiant] },
+                    ...nameFilter, // Ajouter le filtre de recherche par nom
+                    'niveaux.annee': annee // Filtrer par niveaux.annee
+                }
+            },
+            {
+                $sort: { nom: 1, prenom: 1 } // Trier par nom en ordre croissant
+            },
+            {
+                $limit: limit // Limiter les résultats par page
             },
             {
                 $lookup: {
@@ -87,26 +352,20 @@ export const getAbsencesWithEnseignantsByFilter = async (req, res) => {
             }
         ]);
 
-        // Sort the enseignantsWithFilteredAbsences array in descending order by the length of absences array
-        enseignantsWithFilteredAbsences.forEach(enseignant => {
-            // Sorting the absences array by the dateAbsence field in ascending order
-            enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
+        // Trier les étudiants par le nombre d'absences dans l'ordre décroissant
+        etudiantsWithFilteredAbsences.forEach(etudiant => {
+            // Trier les absences par date d'absence dans l'ordre croissant
+            etudiant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
         });
-        // Pagination
-        const totalEnseignants = enseignantsWithFilteredAbsences.length;
-        const totalPages = Math.ceil(totalEnseignants / pageSize);
-        const startIndex = (page - 1) * pageSize;
-        const endIndex = page * pageSize;
-        const enseignantsPerPage = enseignantsWithFilteredAbsences.slice(startIndex, endIndex);
-        
+
         res.json({
             success: true,
             data: {
-                enseignants: enseignantsPerPage,
-                currentPage: page,
-                totalPages: totalPages,
-                totalItems: totalEnseignants,
-                pageSize: pageSize
+                etudiants: etudiantsWithFilteredAbsences,
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: etudiantsWithFilteredAbsences.length,
+                pageSize: limit,
             }
         });
     } catch (error) {
@@ -118,61 +377,8 @@ export const getAbsencesWithEnseignantsByFilter = async (req, res) => {
     }
 };
 
-export const getAbsencesWithEtudiantsByFilter = async (req, res) => {
-    const { niveauId } = req.params;
-    const { annee = 2024, semestre = 1, page = 1, pageSize = 10 } = req.query;
 
-    try {
-        // Vérifier si l'ID du niveau est un ObjectId valide
-        if (!mongoose.Types.ObjectId.isValid(niveauId)) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide,
-            });
-        }
 
-        const skip = (page - 1) * pageSize;
-
-        // Construire la requête en utilisant $elemMatch pour correspondre exactement au niveau et à l'année dans 'niveaux',
-        // et en ajoutant un filtre pour le semestre et l'année dans 'absences'
-        const query = {
-            'niveaux': {
-                $elemMatch: {
-                    niveau: niveauId,
-                    annee: Number(annee),
-                },
-            },
-
-        };
-
-        const etudiants = await User.find(query).populate('absences')
-            .skip(skip)
-            .limit(Number(pageSize));
-
-        // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
-        etudiants.forEach((etudiant) => {
-            etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveauId && niveau.annee === Number(annee));
-            etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
-        });
-        
-
-        const totalEtudiants = await User.countDocuments(query);
-
-        res.json({
-            success: true,
-            data: {
-                etudiants,
-                currentPage: page,
-                totalPages: Math.ceil(totalEtudiants / pageSize),
-                totalItems: totalEtudiants,
-                pageSize,
-            },
-        });
-    } catch (error) {
-        console.error('Erreur lors de la récupération des étudiants :', error);
-        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
-    }
-};
 
 
 // export const getAbsencesWithEtudiantsByFilter = async (req, res) => {
@@ -259,7 +465,7 @@ export const getAbsencesWithEtudiantsByFilter = async (req, res) => {
 
 
 export const getAllAbsencesWithEnseignantsByFilter = async (req, res) => {
-    let { semestre = 1, annee = 2024 } = req.query; // Default values for semester, year, and pagination
+    let { semestre = 1, annee = 2023 } = req.query; // Default values for semester, year, and pagination
 
     // Convert semestre and annee to numbers
     semestre = parseInt(semestre);
@@ -270,6 +476,9 @@ export const getAllAbsencesWithEnseignantsByFilter = async (req, res) => {
         let enseignantsWithFilteredAbsences = await User.aggregate([
             {
                 $match: { roles: { $in: [appConfigs.role.enseignant] } }
+            },
+            {
+                $sort: { nom: 1, prenom:1 } // Trier par nom en ordre croissant
             },
             {
                 $lookup: {
@@ -345,7 +554,7 @@ export const getAllAbsencesWithEnseignantsByFilter = async (req, res) => {
 };
 
 export const generateListAbsenceEnseignant = async (req, res)=>{
-    let { semestre = 1, annee = 2024, langue } = req.query; // Default values for semester, year, and pagination
+    let { semestre = 1, annee = 2023, langue } = req.query; // Default values for semester, year, and pagination
     
     // Convert semestre and annee to numbers
     semestre = parseInt(semestre);
@@ -354,6 +563,9 @@ export const generateListAbsenceEnseignant = async (req, res)=>{
     let enseignantsWithFilteredAbsences = await User.aggregate([
         {
             $match: { roles: { $in: [appConfigs.role.enseignant] } }
+        },
+        {
+            $sort: { nom: 1, prenom:1 } // Trier par nom en ordre croissant
         },
         {
             $lookup: {
@@ -449,7 +661,7 @@ async function fillTemplateE (langue, enseignants, filePath, annee, semestre) {
 
 export const getAllAbsencesWithEtudiantsByFilter = async (req, res) => {
     const { niveauId } = req.params;
-    const { annee = 2024, semestre = 1 } = req.query;
+    const { annee = 2023, semestre = 1 } = req.query;
 
     try {
         // Vérifier si l'ID du niveau est un ObjectId valide
@@ -471,7 +683,7 @@ export const getAllAbsencesWithEtudiantsByFilter = async (req, res) => {
 
         };
 
-        const etudiants = await User.find(query).populate('absences');
+        const etudiants = await User.find(query).populate('absences').sort({nom:1, prenom:1});
 
         // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
         etudiants.forEach((etudiant) => {
@@ -520,7 +732,7 @@ export const generateListAbsenceEtudiant = async (req, res)=>{
 
     };
 
-    const etudiants = await User.find(query).populate('absences');
+    const etudiants = await User.find(query).populate('absences').sort({nom:1, prenom:1});
 
     // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
     etudiants.forEach((etudiant) => {

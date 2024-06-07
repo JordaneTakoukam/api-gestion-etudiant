@@ -412,6 +412,7 @@ export const getEtudiantsByLevelAndYear = async (req, res) => {
         };
 
         const etudiants = await User.find(query)
+            .sort({nom:1, prenom:1})
             .skip(skip)
             .limit(Number(pageSize));
 
@@ -440,6 +441,48 @@ export const getEtudiantsByLevelAndYear = async (req, res) => {
     }
 };
 
+export const searchEtudiant = async (req, res) => {
+    const role = appConfigs.role.etudiant;
+    const { searchString, limit=5 } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    try {
+        // Construire la requête de base pour filtrer les etudiants
+        const query = {
+            roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle etudiant
+        };
+
+        // Ajouter une condition pour chercher par nom si searchString est fourni
+        if (searchString) {
+            query.nom = { $regex: `^${searchString}`, $options: 'i' }; // Filtrer par nom commençant par searchString, insensible à la casse
+        }
+
+        let etudiants = [];
+        if(limit>5){
+            etudiants = await User.find(query)
+            // .select("_id nom prenom")
+            .sort({ nom: 1, prenom:1 }) 
+            .limit(limit);
+        } else{
+            etudiants = await User.find(query)
+            .select("_id nom prenom")
+            .sort({ nom: 1, prenom:1 }) 
+            .limit(limit);
+        }
+
+        res.json({
+            success: true,
+            data: {
+                etudiants,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: etudiants.length,
+                pageSize: 5,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des etudiants :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
 
 export const getAllEtudiantsByLevelAndYear = async (req, res) => {
     const { niveauId } = req.params;
@@ -464,7 +507,7 @@ export const getAllEtudiantsByLevelAndYear = async (req, res) => {
             },
         };
 
-        const etudiants = await User.find(query);
+        const etudiants = await User.find(query).sort({nom:1, prenom:1});
 
         // Filtrer les niveaux qui ne correspondent pas à l'année et au niveau de recherche
         // etudiants.forEach((etudiant) => {
@@ -766,7 +809,7 @@ export const generateListEtudiant = async (req, res)=>{
         },
     };
 
-    const etudiants = await User.find(query);
+    const etudiants = await User.find(query).sort({nom:1, prenom:1});
     let filePath='./templates/templates_fr/template_liste_etudiant_fr.html';
     
     if(langue==='en'){

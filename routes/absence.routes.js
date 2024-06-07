@@ -1,6 +1,6 @@
 import express from "express";
 import { ajouterAbsence, retirerAbsence, justifierAbsence } from "../controllers/abscences/absence.controller.js";
-import { getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter, getAllAbsencesWithEnseignantsByFilter, getAllAbsencesWithEtudiantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent, generateListAbsenceEtudiant, generateListAbsenceEnseignant } from "../controllers/abscences/get_absences.js";
+import { getAbsencesByUserAndFilter, getAbsencesWithEnseignantsByFilter, getAllAbsencesWithEnseignantsByFilter, getAllAbsencesWithEtudiantsByFilter, getAbsencesWithEtudiantsByFilter, getTotalHoursOfAbsenceByTeacher, getTotalHoursOfAbsenceByStudent, generateListAbsenceEtudiant, generateListAbsenceEnseignant, searchUser, searchUserEtudiant } from "../controllers/abscences/get_absences.js";
 import { signalerAbsence, getAbsencesSignaler, getUserNotifications, markNotificationAsRead,markAllNotificationAsRead } from "../controllers/abscences/signaler_absence.controller.js";
 
 
@@ -14,6 +14,8 @@ router.post('/notifications/markAsRead', markNotificationAsRead);
 router.post('/notifications/markAllAsRead', markAllNotificationAsRead);
 router.get("/getAbsencesByUserAndFilter/:userId", getAbsencesByUserAndFilter);
 router.get("/getAbsencesWithEnseignantsByFilter", getAbsencesWithEnseignantsByFilter);
+router.get("/searchUser/:searchText", searchUser);
+router.get("/searchUserEtudiant/:searchText", searchUserEtudiant);
 router.get("/getAllAbsencesWithEnseignantsByFilter", getAllAbsencesWithEnseignantsByFilter);
 router.get("/generateListAbsenceEnseignant", generateListAbsenceEnseignant);
 router.get("/getAbsencesWithEtudiantsByFilter/:niveauId", getAbsencesWithEtudiantsByFilter);

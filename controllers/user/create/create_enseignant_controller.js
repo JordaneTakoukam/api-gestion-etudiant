@@ -426,6 +426,7 @@ export const getEnseignantsByFilter = async (req, res) => {
         const skip = (page - 1) * pageSize;
 
         const enseignants = await User.find(query)
+        .sort({nom:1, prenom:1})
             .skip(skip)
             .limit(Number(pageSize));
 
@@ -473,7 +474,7 @@ export const getAllEnseignantsByFilter = async (req, res) => {
             query.fonction = fonction;
         }
 
-        const enseignants = await User.find(query);
+        const enseignants = await User.find(query).sort({nom:1, prenom:1});
 
 
         res.json({
@@ -523,8 +524,7 @@ export const getEnseignantsByNomPrenom = async (req, res) => {
 
 export const searchEnseignant = async (req, res) => {
     const role = appConfigs.role.enseignant;
-    const { searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
-    console.log(searchString);
+    const { searchString, limit=5 } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
     try {
         // Construire la requête de base pour filtrer les enseignants
         const query = {
@@ -536,10 +536,18 @@ export const searchEnseignant = async (req, res) => {
             query.nom = { $regex: `^${searchString}`, $options: 'i' }; // Filtrer par nom commençant par searchString, insensible à la casse
         }
 
-        const enseignants = await User.find(query)
+        let enseignants = [];
+        if(limit>5){
+            enseignants = await User.find(query)
+            // .select("_id nom prenom")
+            .sort({ nom: 1, prenom:1 }) 
+            .limit(limit);
+        } else{
+            enseignants = await User.find(query)
             .select("_id nom prenom")
             .sort({ nom: 1, prenom:1 }) 
-            .limit(5); // Limite à 5 résultats
+            .limit(limit);
+        }
 
         res.json({
             success: true,
@@ -671,7 +679,7 @@ export const generateListEnseignant = async (req, res)=>{
         title=langue==='fr'?"PAR FONCTION":"PER FUNCTION";
     }
 
-    const enseignants = await User.find(query);
+    const enseignants = await User.find(query).sort({nom:1, prenom:1});
     let filePath='./templates/templates_fr/template_liste_enseignant_fr.html';
     if(langue==='en'){
         filePath='./templates/templates_en/template_liste_enseignant_en.html'
