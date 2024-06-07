@@ -12,7 +12,7 @@ const periodeSchema = new Schema({
     heureDebut: { type: String, required: true }, // Heure de début de la période de cours
     heureFin: { type: String, required: true }, // Heure de fin de la période de cours
     salleCours: { type: mongoose.Schema.Types.ObjectId, ref: 'SalleDeCours', required: false }, // Référence à la salle de cours
-    enseignantPrincipal:{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    enseignantPrincipal:{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     enseignantSuppleant:{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
     
 });

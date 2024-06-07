@@ -288,7 +288,7 @@ export const createPeriode = async (req, res) => {
         // Enregistrer la période de cours dans la base de données
         const savedPeriodeCours = await newPeriodeCours.save();
         const populatedPeriodeCours = await Periode.populate(savedPeriodeCours, [
-            { path: 'matiere', select: '_id code libelleFr libelleEn' }, // Peupler avec l'_id et le code de la matière
+            { path: 'matiere', select: '_id code libelleFr libelleEn typesEnseignement' }, // Peupler avec l'_id et le code de la matière
             { path: 'enseignantPrincipal', select: '_id nom prenom' }, // Peupler avec l'_id, le nom et le prénom de l'enseignant principal
             { path: 'enseignantSuppleant', select: '_id nom prenom' } // Peupler avec l'_id, le nom et le prénom de l'enseignant suppléant
         ]);

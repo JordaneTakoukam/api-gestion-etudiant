@@ -681,9 +681,9 @@ export const generateListMatByEnseignantNiveau = async (req, res)=>{
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
 
-    let filePath='./templates/template_liste_matiere_fr.html';
+    let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_liste_matiere_en.html';
+        filePath='./templates/templates_en/template_liste_matiere_en.html';
     }
     const htmlContent = await fillTemplateListMat( langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
@@ -739,9 +739,9 @@ export const generateProgressByEnseignant = async (req, res)=>{
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
     
-    let filePath='./templates/template_progression_matiere_fr.html';
+    let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
     if(langue==='en'){
-        filePath='./templates/template_progression_matiere_en.html';
+        filePath='./templates/templates_en/template_progression_matiere_en.html';
     }
     const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
@@ -794,24 +794,26 @@ async function fillTemplateListMat (langue, departement, section, cycle, niveau,
             
             if(matiere.chapitres){
                 for(const chapitre of matiere.chapitres){
-                    const clonedRow = rowTemplate.clone();
-                    clonedRow.find('#title-chapitre').text(langue==='fr'?chapitre.libelleFr:chapitre.libelleEn);
-                    if(chapitre.typesEnseignement!=null && setting){
-                        for(const typeEns of chapitre.typesEnseignement){
-                            let type = setting.typesEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).code.toString().toLowerCase();
-                            if(type){
-                                clonedRow.find('#'+type).text(typeEns.volumeHoraire);
+                    if(chapitre.annee==annee && chapitre.semestre==semestre){
+                        const clonedRow = rowTemplate.clone();
+                        clonedRow.find('#title-chapitre').text(langue==='fr'?chapitre.libelleFr:chapitre.libelleEn);
+                        if(chapitre.typesEnseignement!=null && setting){
+                            for(const typeEns of chapitre.typesEnseignement){
+                                let type = setting.typesEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).code.toString().toLowerCase();
+                                if(type){
+                                    clonedRow.find('#'+type).text(typeEns.volumeHoraire);
+                                }
+                                
+                                // if(setting.typeEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).code.toString().toLowerCase()==='cm'){
+                                //     clonedRow.find('#cm').text(typeEns.volumeHoraire);
+                                // }
+                                // if(setting.typeEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).libelleFr.toString().toLowerCase()==='td'){
+                                //     clonedRow.find('#td').text(typeEns.volumeHoraire);
+                                // }
+                                userTable.append(clonedRow);
                             }
-                            
-                            // if(setting.typeEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).code.toString().toLowerCase()==='cm'){
-                            //     clonedRow.find('#cm').text(typeEns.volumeHoraire);
-                            // }
-                            // if(setting.typeEnseignement.find(type=>type._id.toString()===typeEns.typeEnseignement.toString()).libelleFr.toString().toLowerCase()==='td'){
-                            //     clonedRow.find('#td').text(typeEns.volumeHoraire);
-                            // }
-                            userTable.append(clonedRow);
-                        }
 
+                        }
                     }
                 }
             }
@@ -830,10 +832,12 @@ async function fillTemplateListMat (langue, departement, section, cycle, niveau,
             let objectifs="";
             if(matiere.objectifs){
                 for(const objectif of matiere.objectifs){
-                    if (objectifs.length > 0) {
-                        objectifs = objectifs + "," +langue==='fr'?objectif.libelleFr:objectif.libelleEn;
-                    } else {
-                        objectifs = langue==='fr'?objectif.libelleFr:objectif.libelleEn;
+                    if(objectif.annee==annee && objectif.semestre==semestre){
+                        if (objectifs.length > 0) {
+                            objectifs = (objectifs) + ";" +(langue==='fr'?objectif.libelleFr:objectif.libelleEn);
+                        } else {
+                            objectifs = langue==='fr'?objectif.libelleFr:objectif.libelleEn;
+                        }
                     }
                 }
             }
