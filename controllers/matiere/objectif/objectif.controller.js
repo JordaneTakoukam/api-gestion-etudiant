@@ -441,21 +441,35 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
     }
 };
 
-
 export const getObjectifs = async (req, res) => {
     const {matiereId}=req.params;
-    const {page=1, pageSize=10, annee, semestre}=req.query;
+    let {page=1, pageSize=10, annee, semestre, langue}=req.query;
+    
     try {
+        page=parseInt(page);
+        pageSize=parseInt(pageSize);
+        semestre = parseInt(semestre);
+        annee=parseInt(annee);
          // Récupération des objectifs avec pagination
          const startIndex = (page - 1) * pageSize;
 
         // Récupérer la liste des objectifs d'une matière
-        const objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
-        .skip(startIndex)
-        .limit(parseInt(pageSize));
+        let objectifs = [];
+        if(langue === 'fr'){
+            objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .sort({libelleFr:1})
+                        .skip(startIndex)
+                        .limit(pageSize);
+        }else{
+            objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .sort({libelleEn:1})
+                        .skip(startIndex)
+                        .limit(pageSize);
+        }
+        console.log(objectifs);
         // Comptage total des objectifs pour la pagination
         const totalObjectifs = await Objectif.countDocuments({matiere:matiereId, annee:annee, semestre:semestre});
-        const totalPages = Math.ceil(totalObjectifs / parseInt(pageSize));
+        const totalPages = Math.ceil(totalObjectifs / pageSize);
         
         res.status(200).json({ 
             success: true, 
@@ -468,8 +482,57 @@ export const getObjectifs = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        console.error('Erreur lors de la récupération des objectif :', error);
         res.status(500).json({ success: false, message: message.erreurServeur });
+    }
+};
+
+export const searchObjectif = async (req, res) => {
+    const { langue, searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    let {limit = 10, matiereId, annee} = req.query;
+    limit = parseInt(limit);
+    // console.log(searchString);
+    try {
+        // Construire la requête pour filtrer les matières
+        let query = {
+             libelleFr: { $regex: `^${searchString}`, $options: 'i' }, 
+             matiere:matiereId,
+             annee:annee
+        }
+        if(langue!=='fr'){
+            query = {
+                libelleEn: { $regex: `^${searchString}`, $options: 'i' },
+                matiere:matiereId,
+                annee:annee 
+            }
+        }
+
+        let objectifs = [];
+
+        if(langue ==='fr'){
+            objectifs = await Objectif.find(query)
+                .sort({ libelleFr: 1 }) 
+                .limit(limit); // Limite à 5 résultats
+        }else{
+            objectifs = await Objectif.find(query)
+                .sort({libelleEn: 1 }) 
+                .limit(limit); // Limite à 5 résultats
+        }
+        
+
+        res.json({
+            success: true,
+            data: {
+                objectifs,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: objectifs.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 };
 
@@ -510,8 +573,8 @@ async function lireDonneesFichierWord(matieres, fichier, fichierEn) {
                     annee:2023,
                     semestre:3,
                     code:"",
-                    libelleFr: competenceFr,
-                    libelleEn: competencesEn[ind],
+                    libelleFr: competenceFr.trim(),
+                    libelleEn: competencesEn[ind].trim(),
                     matiere: currentMatiere ? currentMatiere._id : '',
                     etat:0,
                     date_etat:undefined
@@ -560,6 +623,38 @@ export const createManyObjectif = async (req, res) => {
     }
 }
 
+const capitalizeFirstLetter = (str) => {
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
+export const updateLibelles = async (req, res) => {
+    try {
+      // Mettre à jour tous les libelleFr et libelleEn en retirant les espaces en début et en fin
+      const objectifs = await Objectif.find({});
+
+      // Parcourir chaque objectif pour mettre à jour les libelles
+      for (let objectif of objectifs) {
+        const updatedLibelleFr = capitalizeFirstLetter(objectif.libelleFr.trim());
+        const updatedLibelleEn = capitalizeFirstLetter(objectif.libelleEn.trim());
+  
+        await Objectif.updateOne(
+          { _id: objectif._id },
+          {
+            $set: {
+              libelleFr: updatedLibelleFr,
+              libelleEn: updatedLibelleEn,
+            },
+          }
+        );
+      }
+  
+      res.status(201).json({ success: true, message: "Modifié avec succès"});
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des libelles :', error);
+      
+    }
+  };
 
 
 // read

@@ -259,7 +259,7 @@ export const deleteMatiere = async (req, res) => {
 
 export const getMatieresByNiveau = async (req, res) => {
     const {niveauId} = req.params; // Supposons que le niveauId soit passé en tant que paramètre d'URL
-    const {annee, semestre}=req.query;
+    const {annee, semestre, langue}=req.query;
 
     try {
 
@@ -285,7 +285,12 @@ export const getMatieresByNiveau = async (req, res) => {
             const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
 
             // Récupérer les détails de chaque matière à partir des identifiants uniques
-            const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs');
+            let matieres = [];
+            if(langue==='fr'){
+                matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs');
+            }else{
+                matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs');
+            }
             res.status(200).json({ 
                 success: true, 
                 data: {
@@ -299,7 +304,12 @@ export const getMatieresByNiveau = async (req, res) => {
         }else{
             
             // Récupérer la liste des matières avec tous leurs détails
-            const matieres = await Matiere.find({}).populate('chapitres').populate('objectifs');
+            let matieres = [];
+            if(langue==='fr'){
+                matieres = await Matiere.find({}).sort({libelleFr:1}).populate('chapitres').populate('objectifs');
+            }else{
+                matieres = await Matiere.find({}).sort({libelleEn:1}).populate('chapitres').populate('objectifs');
+            }
             res.status(200).json({ 
                 success: true, 
                 data: {
@@ -358,21 +368,30 @@ export const generateListMatByNiveau = async (req, res)=>{
         const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
-        matieres = await Matiere.find({ _id: { $in: matiereIds } })
-                        // .populate({
-                        //     path: 'typesEnseignement.enseignantPrincipal',
-                        //     select: '_id nom prenom'
-                        // })
-                        // .populate({
-                        //     path: 'typesEnseignement.enseignantSuppleant',
-                        //     select: '_id nom prenom'
-                        // })
+        if(langue==='fr'){
+            matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                        .sort({libelleFr:1})
                         .populate('chapitres')
                         .populate('objectifs');
+        }else{
+            matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                        .sort({libelleEn:1})
+                        .populate('chapitres')
+                        .populate('objectifs');
+        }
     }else{
-        matieres = await Matiere.find({})
+        if(langue==='fr'){
+            matieres = await Matiere.find({})
+                    .sort({libelleFr:1})
                     .populate('chapitres')
                     .populate('objectifs');
+        }else{
+            matieres = await Matiere.find({})
+                    .sort({libelleEn:1})
+                    .populate('chapitres')
+                    .populate('objectifs');
+        }
+        
     }
     
     let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
@@ -437,7 +456,12 @@ export const generateProgressByNiveau = async (req, res)=>{
     const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
-    const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('objectifs').exec();
+    let matieres = [];
+    if(langue==='fr'){
+        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('objectifs').exec();
+    }else{
+        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('objectifs').exec();
+    }
     
     let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
     if(langue==='en'){
@@ -466,7 +490,7 @@ export const generateProgressByNiveau = async (req, res)=>{
 
 export const getMatieresByNiveauWithPagination = async (req, res) => {
     const niveauId = req.params.niveauId;
-    const { page = 1, pageSize = 10, annee, semestre } = req.query;
+    const { page = 1, pageSize = 10, annee, semestre, langue } = req.query;
     
     try {
         const startIndex = (page - 1) * pageSize;
@@ -508,14 +532,27 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
             const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
 
             // Récupérer les détails de chaque matière à partir des identifiants uniques
-            const matieres = await Matiere.find({ _id: { $in: matiereIds } })
+            let matieres = [];
+            if(langue==='fr'){
+                
+                matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                            .sort({libelleFr:1})
                             .populate({
                                 path: 'chapitres',
-                                select: '_id typesEnseignement'
+                                select: '_id typesEnseignement annee semestre'
                             })
-                            .sort({ libelleFr: 1}) 
                             .skip(startIndex)
                             .limit(parseInt(pageSize))
+            }else{
+                matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                            .sort({libelleEn:1})
+                            .populate({
+                                path: 'chapitres',
+                                select: '_id typesEnseignement annee semestre'
+                            })
+                            .skip(startIndex)
+                            .limit(parseInt(pageSize))
+            }
             // Comptage total des matières pour la pagination
             const totalMatiere = await Matiere.countDocuments({ _id: { $in: matiereIds } });
             const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
@@ -533,13 +570,24 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
             });
         }else{
             
-            const matieres = await Matiere.find({}).populate({
-                path: 'chapitres',
-                select: '_id typesEnseignement'
-            })
-            
-            .skip(startIndex)
-            .limit(parseInt(pageSize));
+            let matieres = [];
+            if(langue === 'fr'){
+                matieres = await Matiere.find({}).populate({
+                    path: 'chapitres',
+                    select: '_id typesEnseignement annee semestre'
+                })
+                .sort({libelleFr:1})
+                .skip(startIndex)
+                .limit(parseInt(pageSize));
+            }else{
+                matieres = await Matiere.find({}).populate({
+                    path: 'chapitres',
+                    select: '_id typesEnseignement annee semestre'
+                })
+                .sort({libelleEn:1})
+                .skip(startIndex)
+                .limit(parseInt(pageSize));
+            }
             
             // Comptage total des matières pour la pagination
             const totalMatiere = await Matiere.countDocuments();
@@ -566,7 +614,7 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
 
 export const getMatieresByEnseignantNiveau = async (req, res) => {
     const niveauId = req.params.niveauId;
-    const { enseignantId, annee, semestre } = req.query;
+    const { enseignantId, annee, semestre, langue } = req.query;
 
     try {
         // Récupération des matières avec pagination
@@ -614,7 +662,12 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
         const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
-        const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
+        let matieres = [];
+        if(langue==='fr'){
+            matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs').exec();
+        }else{
+            matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
+        }
             
 
         res.status(200).json({ 
@@ -679,7 +732,12 @@ export const generateListMatByEnseignantNiveau = async (req, res)=>{
     const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
-    const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
+    let matieres = [];
+    if(langue === 'fr'){
+        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs').exec();
+    }else{
+        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
+    }
 
     let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
     if(langue==='en'){
@@ -737,7 +795,12 @@ export const generateProgressByEnseignant = async (req, res)=>{
     const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
-    const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('chapitres').populate('objectifs').exec();
+    let matieres = [];
+    if(langue === 'fr'){
+        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs').exec();
+    }else{
+        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
+    }
     
     let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
     if(langue==='en'){
@@ -897,6 +960,8 @@ async function fillTemplate (langue, departement, section, cycle, niveau, matier
 
 export const searchMatiere = async (req, res) => {
     const { langue, searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    let {limit = 5} = req.query;
+    limit = parseInt(limit);
     // console.log(searchString);
     try {
         // Construire la requête pour filtrer les matières
@@ -909,10 +974,33 @@ export const searchMatiere = async (req, res) => {
             }
         }
 
-        const matieres = await Matiere.find(query)
-            .select("_id libelleFr libelleEn typesEnseignement")
-            .sort({ libelleFr: 1, libelleEn: 1 }) 
-            .limit(5); // Limite à 5 résultats
+        let matieres = [];
+
+        if(limit>5){
+            if(langue ==='fr'){
+                matieres = await Matiere.find(query)
+                    .sort({ libelleFr: 1 }) 
+                    .populate('chapitres')
+                    .limit(limit); // Limite à 5 résultats
+            }else{
+                matieres = await Matiere.find(query)
+                    .sort({libelleEn: 1 }) 
+                    .populate('chapitres')
+                    .limit(limit); // Limite à 5 résultats
+            }
+        }else{
+            if(langue ==='fr'){
+                matieres = await Matiere.find(query)
+                    .select("_id libelleFr libelleEn typesEnseignement")
+                    .sort({ libelleFr: 1 }) 
+                    .limit(limit); // Limite à 5 résultats
+            }else{
+                matieres = await Matiere.find(query)
+                    .select("_id libelleFr libelleEn typesEnseignement")
+                    .sort({libelleEn: 1 }) 
+                    .limit(limit); // Limite à 5 résultats
+            }
+        }
 
         res.json({
             success: true,
@@ -927,6 +1015,66 @@ export const searchMatiere = async (req, res) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des matières :', error);
         res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
+export const searchMatiereByEnseignant = async (req, res) => {
+    const {searchString, langue} = req.params;
+    let { enseignantId, annee, limit } = req.query;
+    limit = parseInt(limit);
+    try {
+        // Récupération des matières avec pagination
+        
+
+        const filter = { 
+            $or: [
+                { enseignantPrincipal: enseignantId },
+                { enseignantSuppleant: enseignantId }
+            ]
+        };
+
+        // Si une année est spécifiée dans la requête, l'utiliser
+        if (annee && !isNaN(annee)) {
+            filter.annee = parseInt(annee);
+        }
+
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('matiere').exec();
+
+        // Extraire les identifiants uniques des matières
+        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+        // Récupérer les détails de chaque matière à partir des identifiants uniques
+        let matieres = [];
+    
+        if(langue==='fr'){
+            let query = {
+                _id: { $in: matiereIds },
+                libelleFr: { $regex: `^${searchString}`, $options: 'i' } 
+            }
+            matieres = await Matiere.find(query).sort({libelleFr:1}).limit(limit).populate('chapitres').populate('objectifs').exec();
+        }else{
+            let query = {
+                _id: { $in: matiereIds },
+                libelleEn: { $regex: `^${searchString}`, $options: 'i' } 
+            }
+            matieres = await Matiere.find(query).sort({libelleEn:1}).limit(limit).populate('chapitres').populate('objectifs').exec();
+        }
+            
+
+        res.json({
+            success: true,
+            data: {
+                matieres,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: matieres.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières par niveau.' });
     }
 };
 

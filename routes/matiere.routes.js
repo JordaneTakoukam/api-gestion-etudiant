@@ -1,7 +1,7 @@
 import express from "express";
-import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau,generateProgressByNiveau, generateProgressByEnseignant, generateListMatByNiveau, generateListMatByEnseignantNiveau, searchMatiere, createManyMatiere,updateMatiereTypeEns} from "../controllers/matiere/matiere.controller.js";
-import { createChapitre, deleteChapitre, readChapitre, readChapitres, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant, createManyChapitre } from "../controllers/matiere/chapitre/chapitre.controller.js";
-import { createObjectif, deleteObjectif, readObjectif, readObjectifs, updateObjectif, updateObjectifEtatObj,getObjectifs,getProgressionMatiere, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj, createManyObjectif} from "../controllers/matiere/objectif/objectif.controller.js";
+import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau,generateProgressByNiveau, generateProgressByEnseignant, generateListMatByNiveau, generateListMatByEnseignantNiveau, searchMatiere, searchMatiereByEnseignant, createManyMatiere,updateMatiereTypeEns} from "../controllers/matiere/matiere.controller.js";
+import { createChapitre, deleteChapitre, readChapitre, readChapitres, searchChapitre, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant, createManyChapitre } from "../controllers/matiere/chapitre/chapitre.controller.js";
+import { createObjectif, deleteObjectif, readObjectif, readObjectifs, searchObjectif, updateObjectif, updateObjectifEtatObj,getObjectifs,getProgressionMatiere, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj, createManyObjectif, updateLibelles} from "../controllers/matiere/objectif/objectif.controller.js";
 
 // controllers
 
@@ -20,6 +20,7 @@ router.get("/get/:id", readMatiere);
 router.get("/get/:params", readMatieres);
 router.get("/getMatieresByNiveau/:niveauId", getMatieresByNiveau);
 router.get("/searchMatiere/:langue/:searchString", searchMatiere);
+router.get("/searchMatiereByEnseignant/:langue/:searchString", searchMatiereByEnseignant);
 router.get("/generateListMatByNiveau/:annee/:semestre", generateListMatByNiveau);
 router.get("/generateProgressByNiveau/:annee/:semestre", generateProgressByNiveau);
 router.get("/getMatieresByNiveauWithPagination/:niveauId", getMatieresByNiveauWithPagination);
@@ -39,6 +40,7 @@ router.delete("/delete/:matiereId", deleteMatiere);
 // create
 router.post("/chapitre/create", createChapitre);
 router.post("/chapitre/createManyChapitre", createManyChapitre);
+router.get("/chapitre/searchChapitre/:langue/:searchString", searchChapitre);
 router.get("/chapitre/getProgressionGlobalEnseignants", getProgressionGlobalEnseignants);
 router.get("/chapitre/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveau);
 router.get("/chapitre/getProgressionGlobalEnseignant/:enseignantId", getProgressionGlobalEnseignant);
@@ -62,6 +64,8 @@ router.put("/chapitre/update_etat/:chapitreId", updateObjectifEtat);
 // create
 router.post("/objectif/create", createObjectif);
 router.post("/objectif/createManyObjectif", createManyObjectif);
+router.put("/objectif/updateLibelles", updateLibelles);
+router.get("/objectif/searchObjectif/:langue/:searchString", searchObjectif);
 router.get("/objectif/getProgressionMatiere/:matiereId", getProgressionMatiere);
 router.get("/objectif/getProgressionGlobalEnseignantsObj", getProgressionGlobalEnseignantsObj);
 router.get("/objectif/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveauObj);

@@ -406,6 +406,44 @@ export const getEvenementsByYear = async (req, res) => {
     }
 }
 
+export const searchEvent = async (req, res) => {
+    const {searchString, langue} = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    let {limit = 5, annee=2023} = req.query;
+    limit = parseInt(limit);
+    // console.log(searchString);
+    try {
+        // Construire la requête pour filtrer les matières
+        let query = {
+             libelleFr: { $regex: `^${searchString}`, $options: 'i' },
+             annee:annee 
+        }
+        if(langue!=='fr'){
+            query = {
+                libelleEn: { $regex: `^${searchString}`, $options: 'i' },
+                annee:annee 
+            }
+        }
+
+        const evenements = await Evenement.find(query)
+            .sort({ dateDebut: 1 })
+            .limit(limit);
+
+        res.json({
+            success: true,
+            data: {
+                evenements,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: evenements.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
 //Récupérer la liste des évènements d'une année (a besoin de l'année en paramètre de la requête, de la page et du nombre d'élément a récupéré en query params)
 export const getAllEvenementsByYear = async (req, res) => {
     const { annee } = req.params;

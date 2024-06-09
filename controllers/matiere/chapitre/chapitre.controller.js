@@ -365,15 +365,24 @@ export const getProgressionGlobalEnseignant = async (req, res) => {
 
 export const getChapitres = async (req, res) => {
     const {matiereId}=req.params;
-    const {page=1, pageSize=10, annee, semestre}=req.query;
+    const {page=1, pageSize=10, annee, semestre, langue}=req.query;
     try {
          // Récupération des chapitres avec pagination
          const startIndex = (page - 1) * pageSize;
 
         // Récupérer la liste des chapitres d'une matière
-        const chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
-        .skip(startIndex)
-        .limit(parseInt(pageSize));
+        let chapitres = [];
+        if(langue === 'fr'){
+            chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .sort({libelleFr:1})
+                        .skip(startIndex)
+                        .limit(parseInt(pageSize));
+        }else{
+            chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .sort({libelleEn:1})
+                        .skip(startIndex)
+                        .limit(parseInt(pageSize));
+        }
         // Comptage total des chapitres pour la pagination
         const totalChapitres = await Chapitre.countDocuments({matiere:matiereId, annee:annee, semestre:semestre});
         const totalPages = Math.ceil(totalChapitres / parseInt(pageSize));
@@ -391,6 +400,55 @@ export const getChapitres = async (req, res) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des chapitre :', error);
         res.status(500).json({ success: false, message: message.erreurServeur });
+    }
+};
+
+export const searchChapitre = async (req, res) => {
+    const { langue, searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    let {limit = 10, matiereId, annee} = req.query;
+    limit = parseInt(limit);
+    // console.log(searchString);
+    try {
+        // Construire la requête pour filtrer les matières
+        let query = {
+             libelleFr: { $regex: `^${searchString}`, $options: 'i' },
+             matiere:matiereId,
+             annee:annee 
+        }
+        if(langue!=='fr'){
+            query = {
+                libelleEn: { $regex: `^${searchString}`, $options: 'i' },
+                matiere:matiereId,
+                annee:annee 
+            }
+        }
+
+        let chapitres = [];
+
+        if(langue ==='fr'){
+            chapitres = await Chapitre.find(query)
+                .sort({ libelleFr: 1 }) 
+                .limit(limit); // Limite à 5 résultats
+        }else{
+            chapitres = await Chapitre.find(query)
+                .sort({libelleEn: 1 }) 
+                .limit(limit); // Limite à 5 résultats
+        }
+        
+
+        res.json({
+            success: true,
+            data: {
+                chapitres,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: chapitres.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 };
 
