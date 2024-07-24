@@ -33,6 +33,7 @@ export const createAdminController = async (req, res) => {
         fonction,
         service,
         commune,
+        nationalite
 
     } = req.body;
 
@@ -153,6 +154,7 @@ export const createAdminController = async (req, res) => {
             fonction,
             service,
             commune,
+            nationalite,
         });
 
 

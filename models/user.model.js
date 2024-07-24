@@ -26,6 +26,8 @@ const userSchema = new Schema({
     prenom: { type: String, default: null },
     email: { type: String, required: true },
     matricule: { type: String, default: null },
+    nationalite: { type: String, default: null },
+    diplomeEntre: { type: String, default: null },
 
     lieu_naiss: { type: String, default: null },
     contact: { type: String, default: null },
@@ -45,6 +47,7 @@ const userSchema = new Schema({
     fonction: { type: mongoose.Schema.Types.ObjectId, ref: 'Fonction', required: false },
     service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: false },
     commune: { type: mongoose.Schema.Types.ObjectId, ref: 'Commune', required: false },
+    specialite: { type: mongoose.Schema.Types.ObjectId, ref: 'Specialite', required: false },
 
 
     // 

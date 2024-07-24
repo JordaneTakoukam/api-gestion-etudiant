@@ -327,9 +327,17 @@ export function calculateProgress (matiere, annee, semestre) {
     
 
     const progress = totalObjectifs === 0 ? 0 : (objectifsAvecEtat1 / totalObjectifs) * 100;
-    console.log(objectifsAvecEtat1+"/"+totalObjectifs)
+    // console.log(objectifsAvecEtat1+"/"+totalObjectifs)
 
     return parseFloat(progress.toFixed(2));
+}
+
+export function formatNameSurname (value) {
+    const values = value.split(" ");
+    if(values.length>1){
+        return values[0];
+    }
+    return value;
 }
 
 

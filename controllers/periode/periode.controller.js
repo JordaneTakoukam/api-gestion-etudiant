@@ -4,7 +4,7 @@ import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 import moment from 'moment';
 import Setting from '../../models/setting.model.js';
-import { formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import { formatDateFr, formatNameSurname, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
 
 // Définir la locale française pour moment
@@ -1078,20 +1078,37 @@ async function fillTemplateEmplois(langue, section, cycle, niveau, periodes, fil
             tbody.append(row);
         });
         
-        let settings = await Setting.find().select('salleDeCours typesEnseignement');
+        let settings = await Setting.find().select('sallesDeCours typesEnseignement');
         let setting = null;
         if(settings.length>0){
             setting=settings[0]
         }
+        
         periodes.forEach(periode => {
             const slot = `${periode.heureDebut}-${periode.heureFin}`;
             const timeSlot = $(`.time-slot[data-time="${slot}"][data-day="${periode.jour}"]`);
             if(!periode.pause){
                 const typeEns = setting.typesEnseignement.find(type=>type._id.toString()===periode.typeEnseignement.toString()).code;
-                const salle = setting.salleDeCours.find(salle=>salle._id.toString()===periode.salleCours.toString()).code;
+                const salle = setting.sallesDeCours.find(sal=>sal._id.toString()===periode.salleCours.toString());
                 if (timeSlot.length > 0) {
                     // const content = `${langue==='fr'?periode.matiere.libelleFr:periode.matiere.libelleEn} (${typeEns?typeEns:""}) - ${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal.prenom}/${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant.prenom} - ${salle?salle:""}`;
-                    const content = `${langue==='fr'?periode.matiere.libelleFr:periode.matiere.libelleEn} <br> ${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal.prenom}/${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant.prenom} <br> ${salle?salle:""}`;
+                    let nomPrinc = formatNameSurname(periode.enseignantPrincipal.nom);
+                    let prenomPrinc="";
+                    if(periode.enseignantPrincipal.prenom){
+                        prenomPrinc=formatNameSurname(periode.enseignantPrincipal.prenom);
+                    }
+                    let enseignant=nomPrinc.concat(" "+prenomPrinc)
+                    let nomSup="";
+                    let prenomSup="";
+                    if(periode.enseignantSuppleant){
+                        nomSup=formatNameSurname(periode.enseignantSuppleant.nom);
+                        if(periode.enseignantSuppleant.prenom){
+                            prenomSup=formatNameSurname(periode.enseignantSuppleant.prenom);
+                        }
+                        enseignant=enseignant.concat(" / ").concat(nomSup).concat(" "+prenomSup).trim();
+                    }
+
+                    const content = `${langue==='fr'?periode.matiere.libelleFr:periode.matiere.libelleEn} <br> ${enseignant}  <br> ${salle?langue==='fr'?salle.libelleFr:salle.libelleEn:""}`;
                     timeSlot.append(`<div>${content}</div>`);
                 }
             }else{

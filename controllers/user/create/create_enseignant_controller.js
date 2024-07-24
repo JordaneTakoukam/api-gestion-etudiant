@@ -37,6 +37,7 @@ export const createEnseignant = async (req, res) => {
         fonction,
         service,
         commune,
+        nationalite
 
     } = req.body;
 
@@ -184,6 +185,7 @@ export const createEnseignant = async (req, res) => {
             fonction,
             service,
             commune,
+            nationalite
         });
 
 
@@ -236,6 +238,7 @@ export const updateEnseignant = async (req, res) => {
         fonction,
         service,
         commune,
+        nationalite
 
     } = req.body;
 
@@ -377,6 +380,7 @@ export const updateEnseignant = async (req, res) => {
         existingEnseignant.fonction = fonction;
         existingEnseignant.service = service;
         existingEnseignant.commune = commune;
+        existingEnseignant.nationalite = nationalite;
 
         const updateEnseignant = await existingEnseignant.save();
         const userData = updateEnseignant.toObject();

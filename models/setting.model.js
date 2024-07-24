@@ -7,6 +7,7 @@ const settingSchema = new Schema({
     premiereAnnee:{type:Number},
     semestreCourant:{type:Number},
     services: [codeLibelleSchema],
+    specialites: [codeLibelleSchema],
     fonctions: [codeLibelleSchema],
     grades: [codeLibelleSchema],
     categories: [categorieSchema],

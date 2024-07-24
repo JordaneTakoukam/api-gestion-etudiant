@@ -101,6 +101,11 @@ const message = {
         fr: "Le service est invalide!",
         en: "Service is invalid!"
     },
+
+    specialite_invalide: {
+        fr: "La specialite est invalide!",
+        en: "Specialite is invalid!"
+    },
     region_invalide: {
         fr: "La région est invalide!",
         en: "Region is invalid!"

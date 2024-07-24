@@ -37,7 +37,7 @@ export const communeSchema = new Schema({
 export const sectionSchema = new Schema({
     date_creation: { type: Date, required: true },
     departement: { type: mongoose.Schema.Types.ObjectId, ref: 'DepartementAcademique', required: true },
-    code: { type: String, required: true },
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
 });
@@ -46,7 +46,7 @@ export const sectionSchema = new Schema({
 export const cycleSchema = new Schema({
     date_creation: { type: Date, required: true },
     section: { type: mongoose.Schema.Types.ObjectId, ref: 'Section', required: true },
-    code: { type: String, required: true },
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
 });
@@ -54,7 +54,7 @@ export const cycleSchema = new Schema({
 export const niveauSchema = new Schema({
     date_creation: { type: Date, required: true },
     cycle: { type: mongoose.Schema.Types.ObjectId, ref: 'Cycle', required: true },
-    code: { type: String, required: true },
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
 });
@@ -62,7 +62,7 @@ export const niveauSchema = new Schema({
 
 export const salleSchema = new Schema({
     date_creation: { type: Date, required: true },
-    code: { type: String, required: true },
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
     nbPlace:{type: Number, required:true}
@@ -71,7 +71,7 @@ export const salleSchema = new Schema({
 export const categorieSchema = new Schema({
     date_creation: { type: Date, required: true },
     grade: { type: mongoose.Schema.Types.ObjectId, ref: 'Grade', required: true },
-    code: { type: String, required: true },
+    code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
 });

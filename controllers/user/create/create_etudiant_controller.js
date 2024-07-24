@@ -34,6 +34,9 @@ export const createEtudiant = async (req, res) => {
         fonction,
         service,
         commune,
+        nationalite,
+        diplomeEntre,
+        specialite
 
     } = req.body;
 
@@ -111,6 +114,15 @@ export const createEtudiant = async (req, res) => {
             }
         }
 
+        if (specialite) {
+            if (!mongoose.Types.ObjectId.isValid(specialite)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.specialite_invalide,
+                });
+            }
+        }
+
         //vérifier la catégorie
         if (categorie) {
             if (!mongoose.Types.ObjectId.isValid(categorie)) {
@@ -181,6 +193,9 @@ export const createEtudiant = async (req, res) => {
             fonction,
             service,
             commune,
+            nationalite,
+            diplomeEntre,
+            specialite
         });
 
 
@@ -233,6 +248,9 @@ export const updateEtudiant = async (req, res) => {
         fonction,
         service,
         commune,
+        nationalite,
+        diplomeEntre,
+        specialite
 
     } = req.body;
     // console.log(roles);
@@ -316,6 +334,15 @@ export const updateEtudiant = async (req, res) => {
             }
         }
 
+        if (specialite) {
+            if (!mongoose.Types.ObjectId.isValid(specialite)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.specialite_invalide,
+                });
+            }
+        }
+
         //vérifier la catégorie
         if (categorie) {
             if (!mongoose.Types.ObjectId.isValid(categorie)) {
@@ -365,6 +392,9 @@ export const updateEtudiant = async (req, res) => {
         existingEtudiant.service = service;
         existingEtudiant.commune = commune;
         existingEtudiant.roles = roles;
+        existingEtudiant.nationalite = nationalite;
+        existingEtudiant.diplomeEntre = diplomeEntre;
+        existingEtudiant.specialite = specialite;
 
         const updateEtudiant = await existingEtudiant.save();
         const userData = updateEtudiant.toObject();
