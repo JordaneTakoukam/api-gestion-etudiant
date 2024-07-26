@@ -1,14 +1,12 @@
 import mongoose from 'mongoose';
 import Document from '../../models/document.model.js'
 import multer from 'multer';
+import archiver from 'archiver';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { DateTime } from 'luxon';
 import { message } from '../../configs/message.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename); 
 export const uploadDoc = async (req, res) => {
     
     const  {nomFr, nomEn}  = req.query;
@@ -66,11 +64,29 @@ export const uploadDoc = async (req, res) => {
 
 export const getDocuments = async (req, res) => {
     try {
-        const documents = await Document.find({});
-        res.status(200).json(documents);
-      } catch (error) {
+        const { page = 1, pageSize = 10 } = req.query;
+
+        const documents = await Document.find({})
+            .skip((page - 1) * pageSize)
+            .limit(parseInt(pageSize));
+
+        const totalDocuments = await Document.countDocuments();
+
+        res.json({
+            success: true,
+            message: message.liste_doc,
+            data: {
+                documents,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(totalDocuments / parseInt(pageSize)),
+                totalItems: totalDocuments,
+                pageSize : pageSize
+            },
+        });
+        
+    } catch (error) {
         res.status(500).json({ message: 'Erreur lors de la récupération des documents', error });
-      }
+    }
 }
 
 export const downloadDoc = async (req, res) => {
@@ -121,3 +137,39 @@ export const deleteDoc = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de la suppression du document', error });
       }
 }
+
+export const downloadPiecesJointes = async (req, res) => {
+    try {
+        const { file_paths } = req.query;  // Expecting a comma-separated list of IDs
+
+        
+        // Create a new archive
+        const archive = archiver('zip', {
+            zlib: { level: 9 } // Sets the compression level.
+        });
+
+        // Set the response header
+        res.setHeader('Content-disposition', 'attachment; filename=pieces_jointes.zip');
+        res.setHeader('Content-type', 'application/zip');
+
+        // Pipe the archive data to the response
+        archive.pipe(res);
+
+        // Add files to the archive
+        for (const file_path of file_paths) {
+            const fileName = path.basename(file_path);
+            const filePath = path.join('./public/documents/pieces_jointes', fileName);
+            
+
+            // Append files to the archive
+            archive.file(filePath, { name: fileName });
+        }
+
+        // Finalize the archive
+        archive.finalize();
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Erreur lors du téléchargement des documents', error });
+    }
+};

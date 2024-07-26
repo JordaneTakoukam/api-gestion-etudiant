@@ -1,7 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import { validRoles } from '../user.model.js';
 
-
 const signalementAbsenceSchema = new Schema({
     date_creation: { type: Date, default: Date.now },
     role: { type: String, enum: validRoles, required: true },
@@ -14,10 +13,10 @@ const signalementAbsenceSchema = new Schema({
     semestre: { type: Number, required: true },
     annee: { type: Number, required: true },
     niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },
+    motif: { type: String, required: false },
+    file_paths: [{ type: String, required: false }] // Array to hold paths of attached files
 });
-
 
 const SignalementAbsence = mongoose.model('SignalementAbsence', signalementAbsenceSchema, 'signalementsAbsences');
 
 export default SignalementAbsence;
-

@@ -7,108 +7,219 @@ import { io } from "../../server.js";
 import Setting from '../../models/setting.model.js';
 import { appConfigs } from "../../configs/app_configs.js";
 import { DateTime } from 'luxon';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import Notification from "../../models/notification.model.js";
 
+// Configuration de multer pour gérer plusieurs fichiers
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './public/documents/pieces_jointes/');
+    },
+    filename: function (req, file, cb) {
+        const extension = path.extname(file.originalname);
+        const timestamp = DateTime.now().toFormat('X');
+        const fileName = `${timestamp}-${file.originalname}`;
+        cb(null, fileName);
+    }
+});
+
+const upload = multer({ storage });
 // Contrôleur pour signaler une absence
-export const signalerAbsence = async (req, res) => {
-    const {
-        user,
-        enseignant,
-        role,
-        // motif,
-        // titre, 
-        // description,
-        heure_debut_absence,
-        heure_fin_absence,
-        jour_absence,
-
-        niveau,
-        semestre,
-        annee
-    } = req.body;
-
-    try {
-        // Vérifier si l'ID de l'user est valide
-        if (!mongoose.Types.ObjectId.isValid(user._id)) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide,
-            });
-        }
-
-        // Vérifier si l'ID de l'enseignant est valide
-        if (enseignant && !mongoose.Types.ObjectId.isValid(enseignant._id)) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide,
-            });
-        }
-
-        // Rechercher l'user dans la base de données
-        // const user = await User.findById(userId).select('_id nom prenom');
-        // if (!user) {
-        //     return res.status(404).json({ success: false, message: message.userNonTrouver });
-        // }
-
-        if (!role || !validRoles.includes(role)) {
-            return res.status(404).json({ success: false, message: 'Rôle invalide' });
-        }
-
-        // Créer le signalement d'absence
-        // const nouveauSignalement = new SignalementAbsence({
-        // role: role,
-        // userId: userId,
-        //     motif,
-        //     titre,
-        //     description,
-        //     date_debut_absence,
-        //     date_fin_absence,
-        // });
-        const date_absence_signaler = DateTime.now().toJSDate();
-        let enseignantId=undefined;
-        if(enseignant){
-            enseignantId=enseignant._id;
-        }
-        const nouvelleAbsenceSignaler = new SignalementAbsence({
+export const signalerAbsence = [
+    upload.array('files'),
+    async (req, res) => {
+        const {
+            user,
+            enseignant,
             role,
-            user:user._id,
-            enseignant:enseignantId,
+            motif,
             heure_debut_absence,
             heure_fin_absence,
             jour_absence,
-            date_absence_signaler,
+            niveau,
             semestre,
-            annee,
-            niveau
-        });
+            annee
+        } = req.body;
 
+        try {
+            console.log(enseignant)
+            // Vérifier si l'ID de l'utilisateur est valide
+            const parsedUser = JSON.parse(user);
+            const parsedEns = enseignant?JSON.parse(enseignant):undefined;
+            if (!mongoose.Types.ObjectId.isValid(parsedUser._id)) {
+                return res.status(400).json({
+                    success: false,
+                    message:message.identifiant_user_invalide,
+                });
+            }
 
-        // Enregistrer le signalement d'absence dans la base de données
-        const nouvelleAbsence = await nouvelleAbsenceSignaler.save();
+            // Vérifier si l'ID de l'enseignant est valide
+            if (parsedEns && !mongoose.Types.ObjectId.isValid(parsedEns._id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.identifiant_ens_invalide,
+                });
+            }
 
-        const dataReturn = {
-            // nom: user.nom,
-            // prenom: user.prenom,
-            // userId: nouvelleAbsenceSignaler.userId,
-            // role:role,
-            // niveau:niveau
+            if (!role || !['etudiant', 'enseignant'].includes(role)) {
+                return res.status(404).json({ success: false, message: message.invalid_role });
+            }
 
-            ...nouvelleAbsenceSignaler._doc
+            // Créer le signalement d'absence
+            const date_absence_signaler = DateTime.now().toJSDate();
+            const enseignantId = parsedEns ? parsedEns._id : undefined;
+
+            const file_paths = req.files.map(file => `/private/documents/pieces_jointes/${file.filename}`);
+
+            const nouvelleAbsenceSignaler = new SignalementAbsence({
+                role,
+                user: parsedUser._id,
+                motif,
+                file_paths,
+                enseignant: enseignantId,
+                heure_debut_absence,
+                heure_fin_absence,
+                jour_absence,
+                date_absence_signaler,
+                semestre,
+                annee,
+                niveau
+            });
+
+            // Enregistrer le signalement d'absence dans la base de données
+            const nouvelleAbsence = await nouvelleAbsenceSignaler.save();
+
+            const notification = new Notification({
+                type:appConfigs.typeNotifications.absence,
+                role,
+                user:parsedUser._id,
+                signalementAbsence:nouvelleAbsence._id,
+            });
+            const savedNotification = await notification.save();
+            const populateNotification = await Notification.populate(savedNotification, [
+                { path: 'user', select: '_id nom prenom' }, 
+                { path: 'signalementAbsence'}, 
+            ]);
+            // Émettre la notification via Socket.IO
+            const dataReturn = {
+                ...populateNotification._doc
+            };
+            io.emit('message', dataReturn);
+
+            // Répondre avec les informations de signalement d'absence
+            return res.status(201).json({
+                success: true,
+                message: { fr: 'Absence signalée avec succès', en: 'Absence successfully reported' },
+                data: dataReturn,
+            });
+        } catch (error) {
+            console.error("Erreur lors de la signalisation de l'absence :", error);
+            res.status(500).json({ success: false, message: message.erreurServeur });
         }
-
-        io.emit("message", { message: dataReturn });
-
-
-        // Répondre avec les informations de signalement d'absence
-        return res.status(201).json({
-            success: true,
-            message: message.absence_signale_success,
-            data: dataReturn,
-        });
-    } catch (error) {
-        console.error("Erreur lors de la signalisation de l'absence :", error);
-        res.status(500).json({ success: false, message: message.erreurServeur });
     }
-};
+];
+// export const signalerAbsence = async (req, res) => {
+//     const {
+//         user,
+//         enseignant,
+//         role,
+//         // motif,
+//         // titre, 
+//         // description,
+//         heure_debut_absence,
+//         heure_fin_absence,
+//         jour_absence,
+
+//         niveau,
+//         semestre,
+//         annee
+//     } = req.body;
+
+//     try {
+//         // Vérifier si l'ID de l'user est valide
+//         if (!mongoose.Types.ObjectId.isValid(user._id)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: message.identifiant_invalide,
+//             });
+//         }
+
+//         // Vérifier si l'ID de l'enseignant est valide
+//         if (enseignant && !mongoose.Types.ObjectId.isValid(enseignant._id)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: message.identifiant_invalide,
+//             });
+//         }
+
+//         // Rechercher l'user dans la base de données
+//         // const user = await User.findById(userId).select('_id nom prenom');
+//         // if (!user) {
+//         //     return res.status(404).json({ success: false, message: message.userNonTrouver });
+//         // }
+
+//         if (!role || !validRoles.includes(role)) {
+//             return res.status(404).json({ success: false, message: 'Rôle invalide' });
+//         }
+
+//         // Créer le signalement d'absence
+//         // const nouveauSignalement = new SignalementAbsence({
+//         // role: role,
+//         // userId: userId,
+//         //     motif,
+//         //     titre,
+//         //     description,
+//         //     date_debut_absence,
+//         //     date_fin_absence,
+//         // });
+//         const date_absence_signaler = DateTime.now().toJSDate();
+//         let enseignantId=undefined;
+//         if(enseignant){
+//             enseignantId=enseignant._id;
+//         }
+//         const nouvelleAbsenceSignaler = new SignalementAbsence({
+//             role,
+//             user:user._id,
+//             enseignant:enseignantId,
+//             heure_debut_absence,
+//             heure_fin_absence,
+//             jour_absence,
+//             date_absence_signaler,
+//             semestre,
+//             annee,
+//             niveau
+//         });
+
+
+//         // Enregistrer le signalement d'absence dans la base de données
+//         const nouvelleAbsence = await nouvelleAbsenceSignaler.save();
+
+//         const dataReturn = {
+//             // nom: user.nom,
+//             // prenom: user.prenom,
+//             // userId: nouvelleAbsenceSignaler.userId,
+//             // role:role,
+//             // niveau:niveau
+
+//             ...nouvelleAbsenceSignaler._doc
+//         }
+
+//         io.emit("message", { message: dataReturn });
+
+
+//         // Répondre avec les informations de signalement d'absence
+//         return res.status(201).json({
+//             success: true,
+//             message: message.absence_signale_success,
+//             data: dataReturn,
+//         });
+//     } catch (error) {
+//         console.error("Erreur lors de la signalisation de l'absence :", error);
+//         res.status(500).json({ success: false, message: message.erreurServeur });
+//     }
+// };
 
 export const getUserNotifications = async (req, res) => {
     const userId = req.params.userId;
@@ -116,6 +227,12 @@ export const getUserNotifications = async (req, res) => {
     
     try {
         let absences=[];
+        if(!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
         
         if(niveauxId && niveauxId.length>0){
             

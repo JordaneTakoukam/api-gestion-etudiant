@@ -14,6 +14,7 @@ const chapitreSchema = new mongoose.Schema({
     code: { type: String, required: false },
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
+    statut:{ type: Number, required: true, enum: [0, 1] },
     typesEnseignement: [{
         typeEnseignement: { type: mongoose.Schema.Types.ObjectId, ref: 'TypeEnseignement' },
         volumeHoraire: Number

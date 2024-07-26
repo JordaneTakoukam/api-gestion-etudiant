@@ -43,6 +43,7 @@ import anneeRoutes from "./routes/settings/annee.routes.js";
 import semestreRoutes from "./routes/settings/semestre.routes.js";
 import roleRoutes from "./routes/settings/role.routes.js";
 import abscenceRoutes from "./routes/absence.routes.js";
+import notificationRoutes from "./routes/notification.route.js";
 
 
 
@@ -74,7 +75,7 @@ app.use('/private/images_profile', express.static('./public/images/images_profil
 // Définir le chemin vers le répertoire des documents
 app.use('/private/documents', express.static('./public/documents/documents_upload'));
 // Définir le chemin vers les pièces jointes de justification absence
-// app.use('/private/documents', express.static('./public/documents/pieces_jointes'));
+app.use('/private/documents', express.static('./public/documents/pieces_jointes'));
 
 
 //
@@ -111,6 +112,7 @@ app.use("/api/v1/setting/role", roleRoutes);
 
 // new
 app.use("/api/v1/absence", abscenceRoutes);
+app.use("/api/v1/notification", notificationRoutes);
 app.use("/api/v1/alerte", abscenceRoutes);
 
 

@@ -131,6 +131,10 @@ const message = {
         fr: "Token invalide !",
         en: "Invalid token!"
     },
+    invalid_role: {
+        fr: "Rôle invalide !",
+        en: "Invalid role!"
+    },
     motDePasseChange: {
         fr: "Mot de passe modifié avec succès !",
         en: "Password changed successfully!"
@@ -146,6 +150,14 @@ const message = {
     identifiant_invalide: {
         fr: "L'identifiant est invalide",
         en: "Identifier is invalid"
+    },
+    identifiant_ens_invalide: {
+        fr: "L'identifiant de l'enseignant est invalide",
+        en: "Teacher ID is invalid"
+    },
+    identifiant_user_invalide: {
+        fr: "L'identifiant de l'utilisateur est invalide",
+        en: "User ID is invalid"
     },
     non_trouvee: {
         fr: "Non trouvé",
@@ -215,6 +227,10 @@ const message = {
     liste_event: {
         fr: "Liste des événements récupérée avec succès",
         en: "List of events retrieved successfully",
+    },
+    liste_doc: {
+        fr: "Liste des documents récupérée avec succès",
+        en: "List of documents retrieved successfully",
     },
     event_a_venir: {
         fr: "Evènement à venir",

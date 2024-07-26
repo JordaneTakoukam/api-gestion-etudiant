@@ -3,10 +3,13 @@ import Matiere from '../../../models/matiere.model.js'
 import { message } from '../../../configs/message.js';
 import mongoose from 'mongoose';
 import { extractRawText } from 'mammoth';
+import { io } from '../../../server.js';
+import Notification from '../../../models/notification.model.js';
+import { appConfigs } from '../../../configs/app_configs.js';
 
 // create
 export const createChapitre = async (req, res) => {
-    const {annee, semestre, code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
+    const {annee, semestre, code, libelleFr, libelleEn, typesEnseignement,statut, user, matiere, objectifs } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
@@ -17,8 +20,14 @@ export const createChapitre = async (req, res) => {
             });
         }
 
+        
+
         // Vérifier si les ObjectId pour les références existent
         if (!mongoose.Types.ObjectId.isValid(matiere)) {
+            return res.status(400).json({ success: false, message: message.identifiant_invalide });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(user)) {
             return res.status(400).json({ success: false, message: message.identifiant_invalide });
         }
 
@@ -65,12 +74,32 @@ export const createChapitre = async (req, res) => {
             libelleFr,
             libelleEn,
             typesEnseignement,
+            statut,
             matiere,
         });
 
         // Enregistrer le nouveau chapitre dans la base de données
         const saveChapitre = await nouveauChapitre.save();
         await Matiere.findByIdAndUpdate(matiere, { $push: { chapitres: saveChapitre._id } });
+        if(statut==0){
+            const notification = new Notification({
+                type:appConfigs.typeNotifications.approbation_chap,
+                role:appConfigs.role.enseignant,
+                user:user,
+                chapitre:saveChapitre._id,
+            });
+            const savedNotification = await notification.save();
+            const populateNotification = await Notification.populate(savedNotification, [
+                { path: 'user', select: '_id nom prenom' }, 
+                { path: 'chapitre', select: '_id libelleFr libelleEn matiere',  populate: {path: 'matiere',select: '_id libelleFr libelleEn' }, options: { strictPopulate: false }}, 
+            ]);
+            // Émettre la notification via Socket.IO
+            const dataReturn = {
+                ...populateNotification._doc
+            };
+            io.emit('message', dataReturn);
+            
+        }
 
         res.status(201).json({ success: true, message: message.ajouter_avec_success, data: saveChapitre });
     } catch (error) {
@@ -103,7 +132,7 @@ export const updateChapitre = async (req, res) => {
         }
 
         // Vérifier si les ObjectId pour les références existent
-        if (!mongoose.Types.ObjectId.isValid(matiere)) {
+        if (!mongoose.Types.ObjectId.isValid(matiere._id)) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide 
@@ -158,7 +187,7 @@ export const updateChapitre = async (req, res) => {
         existingChapitre.libelleFr = libelleFr;
         existingChapitre.libelleEn = libelleEn;
         existingChapitre.typesEnseignement = typesEnseignement;
-        existingChapitre.matiere = matiere;
+        existingChapitre.matiere = matiere._id;
         existingChapitre.objectifs = objectifs;
 
         // Enregistrer les modifications
@@ -174,6 +203,44 @@ export const updateChapitre = async (req, res) => {
         res.status(500).json({ success: false, message: message.erreurServeur });
     }
 }
+
+export const updateStatutChap = async (req, res) => {
+    const {chapitre} = req.params;
+    try {
+        if (!mongoose.Types.ObjectId.isValid(chapitre)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide 
+            });
+        }
+  
+        const updatedChapitre = await Chapitre.findByIdAndUpdate(
+            chapitre,
+            { $set: { statut: 1 } },
+            { new: true }
+        );
+
+        if (!updatedChapitre) {
+            return res.status(404).json({ 
+                success: false, 
+                message: message.chapitre_non_trouve 
+            });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: message.mis_a_jour, 
+            data: updatedChapitre 
+        });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour :', error);
+        return res.status(500).json({ 
+            success: true, 
+            message: message.erreurServeur, 
+        });
+      
+    }
+};
 
 
 // delete
@@ -374,11 +441,13 @@ export const getChapitres = async (req, res) => {
         let chapitres = [];
         if(langue === 'fr'){
             chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .populate('matiere', '_id libelleFr libelleEn')
                         .sort({libelleFr:1})
                         .skip(startIndex)
                         .limit(parseInt(pageSize));
         }else{
             chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .populate('matiere', '_id libelleFr libelleEn')
                         .sort({libelleEn:1})
                         .skip(startIndex)
                         .limit(parseInt(pageSize));
@@ -427,10 +496,12 @@ export const searchChapitre = async (req, res) => {
 
         if(langue ==='fr'){
             chapitres = await Chapitre.find(query)
+                .populate('matiere', '_id libelleFr libelleEn')
                 .sort({ libelleFr: 1 }) 
                 .limit(limit); // Limite à 5 résultats
         }else{
             chapitres = await Chapitre.find(query)
+                .populate('matiere', '_id libelleFr libelleEn')
                 .sort({libelleEn: 1 }) 
                 .limit(limit); // Limite à 5 résultats
         }
@@ -565,6 +636,32 @@ export const createManyChapitre = async (req, res) => {
         res.status(500).json({ success: false, message: "Erreur lors de l'ajout des chapitres", error: e.message });
     }
 }
+
+export const addStatut = async (req, res) => {
+    try {
+      // Mettre à jour tous les libelleFr et libelleEn en retirant les espaces en début et en fin
+      const chapitres = await Chapitre.find({});
+
+      // Parcourir chaque objectif pour mettre à jour les libelles
+      for (let chapitre of chapitres) {
+       
+  
+        await Chapitre.updateOne(
+          { _id: chapitre._id },
+          {
+            $set: {
+                statut:1,
+            },
+          }
+        );
+      }
+  
+      res.status(201).json({ success: true, message: "Modifié avec succès"});
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des libelles :', error);
+      
+    }
+  };
 
 
 

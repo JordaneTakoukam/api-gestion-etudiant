@@ -7,6 +7,7 @@ const objectifSchema = new mongoose.Schema({
     libelleFr: { type: String, required: true },
     libelleEn: { type: String, required: true },
     etat: { type: Number, required: true, enum: [0, 1] },
+    statut:{ type: Number, required: true, enum: [0, 1] },
     date_etat: {type:Date, required:false},
     matiere: { type: mongoose.Schema.Types.ObjectId, ref: 'Matiere', required: true },
 });

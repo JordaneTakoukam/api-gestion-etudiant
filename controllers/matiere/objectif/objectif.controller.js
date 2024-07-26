@@ -5,10 +5,14 @@ import { message } from '../../../configs/message.js';
 import mongoose from 'mongoose';
 import { DateTime } from 'luxon';
 import { extractRawText } from 'mammoth';
+import { appConfigs } from '../../../configs/app_configs.js';
+import { io } from "../../../server.js";
+import Notification from '../../../models/notification.model.js';
+import { stat } from 'fs';
 
 // create
 export const createObjectif = async (req, res) => {
-    const {annee, semestre, code, libelleFr, libelleEn, etat, matiere } = req.body;
+    const {annee, semestre, code, libelleFr, libelleEn, etat, statut, matiere, user} = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
@@ -21,6 +25,10 @@ export const createObjectif = async (req, res) => {
 
         // Vérifier si les ObjectId pour les références existent
         if (!mongoose.Types.ObjectId.isValid(matiere)) {
+            return res.status(400).json({ success: false, message: message.identifiant_invalide });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(user)) {
             return res.status(400).json({ success: false, message: message.identifiant_invalide });
         }
 
@@ -53,6 +61,7 @@ export const createObjectif = async (req, res) => {
             });
         }
         const date_etat=undefined;
+       
         // Créer une nouvelle instance d'Objectif
         const nouveauObjectif = new Objectif({
             annee,
@@ -61,6 +70,7 @@ export const createObjectif = async (req, res) => {
             libelleFr,
             libelleEn,
             etat,
+            statut,
             date_etat,
             matiere,
         });
@@ -68,6 +78,25 @@ export const createObjectif = async (req, res) => {
         // Enregistrer le nouveau objectif dans la base de données
         const saveObjectif = await nouveauObjectif.save();
         await Matiere.findByIdAndUpdate(matiere, { $push: { objectifs: saveObjectif._id } });
+        if(statut==0){
+            const notification = new Notification({
+                type:appConfigs.typeNotifications.approbation_obj,
+                role:appConfigs.role.enseignant,
+                user:user,
+                objectif:saveObjectif._id,
+            });
+            const savedNotification = await notification.save();
+            const populateNotification = await Notification.populate(savedNotification, [
+                { path: 'user', select: '_id nom prenom' }, 
+                { path: 'objectif', select: '_id libelleFr libelleEn matiere',  populate: {path: 'matiere',select: '_id libelleFr libelleEn' }, options: { strictPopulate: false }}, 
+            ]);
+            // Émettre la notification via Socket.IO
+            const dataReturn = {
+                ...populateNotification._doc
+            };
+            io.emit('message', dataReturn);
+            
+        }
 
         res.status(201).json({ success: true, message: message.ajouter_avec_success, data: saveObjectif });
     } catch (error) {
@@ -100,7 +129,7 @@ export const updateObjectif = async (req, res) => {
         }
 
         // Vérifier si les ObjectId pour les références existent
-        if (!mongoose.Types.ObjectId.isValid(matiere)) {
+        if (!mongoose.Types.ObjectId.isValid(matiere._id)) {
             return res.status(400).json({ 
                 success: false, 
                 message: message.identifiant_invalide 
@@ -150,7 +179,7 @@ export const updateObjectif = async (req, res) => {
         }
         
         existingObjectif.etat = etat;
-        existingObjectif.matiere = matiere;
+        existingObjectif.matiere = matiere._id;
         
 
         // Enregistrer les modifications
@@ -166,6 +195,46 @@ export const updateObjectif = async (req, res) => {
         res.status(500).json({ success: false, message: message.erreurServeur });
     }
 }
+
+export const updateStatut = async (req, res) => {
+    const {objectif} = req.params;
+    try {
+        if (!mongoose.Types.ObjectId.isValid(objectif)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: message.identifiant_invalide 
+            });
+        }
+  
+        const updatedObjectif = await Objectif.findByIdAndUpdate(
+            objectif,
+            { $set: { statut: 1 } },
+            { new: true }
+        );
+
+        if (!updatedObjectif) {
+            return res.status(404).json({ 
+                success: false, 
+                message: message.objectif_non_trouve 
+            });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: message.mis_a_jour, 
+            data: updatedObjectif 
+        });
+        
+        
+  
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour :', error);
+        return res.status(500).json({ 
+            success: true, 
+            message: message.erreurServeur, 
+        });
+    }
+};
 
 
 // delete
@@ -457,16 +526,18 @@ export const getObjectifs = async (req, res) => {
         let objectifs = [];
         if(langue === 'fr'){
             objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .populate('matiere', '_id libelleFr libelleEn')
                         .sort({libelleFr:1})
                         .skip(startIndex)
                         .limit(pageSize);
         }else{
             objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
+                        .populate('matiere', '_id libelleFr libelleEn')
                         .sort({libelleEn:1})
                         .skip(startIndex)
                         .limit(pageSize);
         }
-        console.log(objectifs);
+        // console.log(objectifs);
         // Comptage total des objectifs pour la pagination
         const totalObjectifs = await Objectif.countDocuments({matiere:matiereId, annee:annee, semestre:semestre});
         const totalPages = Math.ceil(totalObjectifs / pageSize);
@@ -511,10 +582,12 @@ export const searchObjectif = async (req, res) => {
 
         if(langue ==='fr'){
             objectifs = await Objectif.find(query)
+                .populate('matiere', '_id libelleFr libelleEn')
                 .sort({ libelleFr: 1 }) 
                 .limit(limit); // Limite à 5 résultats
         }else{
             objectifs = await Objectif.find(query)
+                .populate('matiere', '_id libelleFr libelleEn')
                 .sort({libelleEn: 1 }) 
                 .limit(limit); // Limite à 5 résultats
         }

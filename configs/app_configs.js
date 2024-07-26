@@ -1,4 +1,5 @@
 export const appConfigs = {
+    
     role: {
         superAdmin: 'super-admin',
         admin: 'admin',
@@ -6,10 +7,16 @@ export const appConfigs = {
         delegue: 'delegue',
         etudiant: 'etudiant',
     },
+    typeNotifications:{
+        absence:"absence", 
+        approbation_chap:"approbation_chap", 
+        approbation_obj:"approbation_obj"
+    },
     genre: {
         masculin: "M",
         feminin: "F",
     },
+
 
     defaultSuperUser: {
         nom: "Arturo",
