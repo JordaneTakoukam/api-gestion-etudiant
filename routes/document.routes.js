@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post("/upload", uploadDoc);
 router.get("/getDocuments", getDocuments);
-router.get("/download/:id/:lang", downloadDoc);
+router.get("/download/:id", downloadDoc);
 router.delete("/delete/:id", deleteDoc);
 router.get("/download-pieces-jointes", downloadPiecesJointes);
 
