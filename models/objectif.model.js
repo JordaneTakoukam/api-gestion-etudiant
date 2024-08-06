@@ -10,6 +10,7 @@ const objectifSchema = new mongoose.Schema({
     statut:{ type: Number, required: true, enum: [0, 1] },
     date_etat: {type:Date, required:false},
     matiere: { type: mongoose.Schema.Types.ObjectId, ref: 'Matiere', required: true },
+    chapitre: { type: mongoose.Schema.Types.ObjectId, ref: 'Chapitre', required: false },
 });
 
 

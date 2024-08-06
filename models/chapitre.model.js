@@ -20,6 +20,7 @@ const chapitreSchema = new mongoose.Schema({
         volumeHoraire: Number
     }],
     matiere: { type: mongoose.Schema.Types.ObjectId, ref: 'Matiere', required: true },
+    objectifs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Objectif', required: false }]
     // objectifs: [objectifSchema],
 });
 

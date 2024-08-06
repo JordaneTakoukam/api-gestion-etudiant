@@ -112,7 +112,7 @@ export const createChapitre = async (req, res) => {
 // update
 export const updateChapitre = async (req, res) => {
     const {chapitreId} = req.params;
-    const { annee, semestre, code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs } = req.body;
+    const { annee, semestre, code, libelleFr, libelleEn, typesEnseignement, matiere, objectifs, statut } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
@@ -189,6 +189,7 @@ export const updateChapitre = async (req, res) => {
         existingChapitre.typesEnseignement = typesEnseignement;
         existingChapitre.matiere = matiere._id;
         existingChapitre.objectifs = objectifs;
+        existingChapitre.statut=statut;
 
         // Enregistrer les modifications
         const updatedChapitre = await existingChapitre.save();

@@ -1,7 +1,7 @@
 import express from "express";
 import { createMatiere, readMatiere, readMatieres, updateMatiere, deleteMatiere, getMatieresByNiveau, getMatieresByNiveauWithPagination, getMatieresByEnseignantNiveau,generateProgressByNiveau, generateProgressByEnseignant, generateListMatByNiveau, generateListMatByEnseignantNiveau, searchMatiere, searchMatiereByEnseignant, createManyMatiere,updateMatiereTypeEns} from "../controllers/matiere/matiere.controller.js";
 import { createChapitre, deleteChapitre, readChapitre, readChapitres, searchChapitre, updateChapitre, updateObjectifEtat,getChapitres, getProgressionGlobalEnseignants, getProgressionGlobalEnseignantsNiveau, getProgressionGlobalEnseignant, createManyChapitre, addStatut, updateStatutChap } from "../controllers/matiere/chapitre/chapitre.controller.js";
-import { createObjectif, deleteObjectif, readObjectif, readObjectifs, searchObjectif, updateObjectif, updateObjectifEtatObj,getObjectifs,getProgressionMatiere, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj, createManyObjectif, updateLibelles, updateStatut} from "../controllers/matiere/objectif/objectif.controller.js";
+import { createObjectif, deleteObjectif, readObjectif, readObjectifs, searchObjectif, updateObjectif, updateObjectifEtatObj,getObjectifs,getProgressionMatiere, getProgressionGlobalEnseignantsObj, getProgressionGlobalEnseignantsNiveauObj, getProgressionGlobalEnseignantObj, createManyObjectif, updateLibelles, updateStatut, getObjectifsChap} from "../controllers/matiere/objectif/objectif.controller.js";
 
 // controllers
 
@@ -74,6 +74,7 @@ router.get("/objectif/getProgressionGlobalEnseignantsObj", getProgressionGlobalE
 router.get("/objectif/getProgressionGlobalEnseignantsNiveau/:niveauId", getProgressionGlobalEnseignantsNiveauObj);
 router.get("/objectif/getProgressionGlobalEnseignant/:enseignantId", getProgressionGlobalEnseignantObj);
 router.get("/objectif/getObjectifs/:matiereId", getObjectifs);
+router.get("/objectif/getObjectifsChap/:chapitreId", getObjectifsChap);
 
 
 

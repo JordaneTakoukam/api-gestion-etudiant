@@ -9,10 +9,11 @@ import { appConfigs } from '../../../configs/app_configs.js';
 import { io } from "../../../server.js";
 import Notification from '../../../models/notification.model.js';
 import { stat } from 'fs';
+import Chapitre from '../../../models/chapitre.model.js';
 
 // create
 export const createObjectif = async (req, res) => {
-    const {annee, semestre, code, libelleFr, libelleEn, etat, statut, matiere, user} = req.body;
+    const {annee, semestre, code, libelleFr, libelleEn, etat, statut, matiere, chapitre, user} = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
@@ -73,11 +74,13 @@ export const createObjectif = async (req, res) => {
             statut,
             date_etat,
             matiere,
+            chapitre
         });
 
         // Enregistrer le nouveau objectif dans la base de données
         const saveObjectif = await nouveauObjectif.save();
         await Matiere.findByIdAndUpdate(matiere, { $push: { objectifs: saveObjectif._id } });
+        await Chapitre.findByIdAndUpdate(chapitre, { $push: { objectifs: saveObjectif._id } });
         if(statut==0){
             const notification = new Notification({
                 type:appConfigs.typeNotifications.approbation_obj,
@@ -108,31 +111,39 @@ export const createObjectif = async (req, res) => {
 
 // update
 export const updateObjectif = async (req, res) => {
-    const {objectifId} = req.params;
-    const {annee, semestre, code, libelleFr, libelleEn, etat, date_etat, matiere } = req.body;
+    const { objectifId } = req.params;
+    const { annee, semestre, code, libelleFr, libelleEn, etat, date_etat, matiere, statut, chapitre } = req.body;
 
     try {
         // Vérifier que tous les champs obligatoires sont présents
         if (!annee || !semestre || !libelleFr || !libelleEn || !matiere) {
-            return res.status(400).json({ 
-                success: false, 
+            return res.status(400).json({
+                success: false,
                 message: message.champ_obligatoire
             });
         }
-        // Vérifier si le objectif existe
+
+        // Vérifier si l'objectif existe
         const existingObjectif = await Objectif.findById(objectifId);
         if (!existingObjectif) {
-            return res.status(404).json({ 
-                success: false, 
-                message: message.objectif_non_trouve 
+            return res.status(404).json({
+                success: false,
+                message: message.objectif_non_trouve
             });
         }
 
         // Vérifier si les ObjectId pour les références existent
         if (!mongoose.Types.ObjectId.isValid(matiere._id)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide 
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide
+            });
+        }
+
+        if (chapitre && !mongoose.Types.ObjectId.isValid(chapitre._id)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide
             });
         }
 
@@ -147,7 +158,7 @@ export const updateObjectif = async (req, res) => {
             }
         }
 
-        //vérifier si le libelle fr existe déjà
+        // vérifier si le libelle fr existe déjà
         if (existingObjectif.libelleFr !== libelleFr) {
             const existingLibelleFr = await Objectif.findOne({ libelleFr: libelleFr, matiere: matiere });
             if (existingLibelleFr) {
@@ -158,7 +169,7 @@ export const updateObjectif = async (req, res) => {
             }
         }
 
-        //vérifier si le libelle en  existe déjà
+        // vérifier si le libelle en existe déjà
         if (existingObjectif.libelleEn !== libelleEn) {
             const existingLibelleEn = await Objectif.findOne({ libelleEn: libelleEn, matiere: matiere });
             if (existingLibelleEn) {
@@ -168,33 +179,48 @@ export const updateObjectif = async (req, res) => {
                 });
             }
         }
-        // Mettre à jour les champs du objectif
+
+        // Vérifier et gérer le chapitre
+        if (chapitre) {
+            if (existingObjectif.chapitre && existingObjectif.chapitre.toString() !== chapitre._id.toString()) {
+                // Supprimer l'objectif de l'ancien chapitre
+                await Chapitre.findByIdAndUpdate(existingObjectif.chapitre, { $pull: { objectifs: existingObjectif._id } });
+            }
+            // Ajouter l'objectif au nouveau chapitre (s'il n'est pas déjà présent)
+            await Chapitre.findByIdAndUpdate(chapitre._id, { $addToSet: { objectifs: existingObjectif._id } });
+        } else if (existingObjectif.chapitre) {
+            // Si le nouvel objectif n'a pas de chapitre mais l'ancien en avait un, le supprimer de l'ancien chapitre
+            await Chapitre.findByIdAndUpdate(existingObjectif.chapitre, { $pull: { objectifs: existingObjectif._id } });
+        }
+
+        // Mettre à jour les champs de l'objectif
         existingObjectif.annee = annee;
         existingObjectif.semestre = semestre;
         existingObjectif.code = code;
         existingObjectif.libelleFr = libelleFr;
         existingObjectif.libelleEn = libelleEn;
-        if(existingObjectif.etat!=etat){
+        if (existingObjectif.etat != etat) {
             existingObjectif.date_etat = DateTime.now().toJSDate();
         }
-        
         existingObjectif.etat = etat;
         existingObjectif.matiere = matiere._id;
-        
+        existingObjectif.chapitre = chapitre ? chapitre._id : undefined;
+        existingObjectif.statut = statut;
 
         // Enregistrer les modifications
         const updatedObjectif = await existingObjectif.save();
 
-        res.status(200).json({ 
-            success: true, 
-            message: message.mis_a_jour, 
-            data: updatedObjectif 
+        res.status(200).json({
+            success: true,
+            message: message.mis_a_jour,
+            data: updatedObjectif
         });
     } catch (error) {
         console.error('Erreur lors de la mise à jour du objectif :', error);
         res.status(500).json({ success: false, message: message.erreurServeur });
     }
-}
+};
+
 
 export const updateStatut = async (req, res) => {
     const {objectif} = req.params;
@@ -253,6 +279,7 @@ export const deleteObjectif = async (req, res) => {
 
         // Supprimer le objectif de la liste des objectifs de sa matière associée
         await Matiere.findByIdAndUpdate(existingObjectif.matiere, { $pull: { objectifs: objectifId } });
+        await Chapitre.findByIdAndUpdate(existingObjectif.chapitre, { $pull: { objectifs: objectifId } });
 
         // Supprimer le objectif de la base de données
         await Objectif.findByIdAndDelete(objectifId);
@@ -510,6 +537,54 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
     }
 };
 
+export const getObjectifsChap = async (req, res) => {
+    const {chapitreId}=req.params;
+    let {page=1, pageSize=10, annee, semestre, langue}=req.query;
+    
+    try {
+        page=parseInt(page);
+        pageSize=parseInt(pageSize);
+        semestre = parseInt(semestre);
+        annee=parseInt(annee);
+         // Récupération des objectifs avec pagination
+         const startIndex = (page - 1) * pageSize;
+
+        // Récupérer la liste des objectifs d'une matière
+        let objectifs = [];
+        if(langue === 'fr'){
+            objectifs = await Objectif.find({chapitre:chapitreId, annee:annee, semestre:semestre})
+                        .populate({path:'chapitre', select:'_id libelleFr libelleEn', options:{strictPopulate:false}})
+                        .sort({libelleFr:1})
+                        .skip(startIndex)
+                        .limit(pageSize);
+        }else{
+            objectifs = await Objectif.find({chapitre:chapitreId, annee:annee, semestre:semestre})
+                        .populate({path:'chapitre', select:'_id libelleFr libelleEn', options:{strictPopulate:false}})
+                        .sort({libelleEn:1})
+                        .skip(startIndex)
+                        .limit(pageSize);
+        }
+        // console.log(objectifs);
+        // Comptage total des objectifs pour la pagination
+        const totalObjectifs = await Objectif.countDocuments({chapitre:chapitreId, annee:annee, semestre:semestre});
+        const totalPages = Math.ceil(totalObjectifs / pageSize);
+        
+        res.status(200).json({ 
+            success: true, 
+            data: {
+                objectifs ,
+                totalPages: totalPages,
+                currentPage: page,
+                totalItems: totalObjectifs,
+                pageSize:pageSize
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des objectif :', error);
+        res.status(500).json({ success: false, message: message.erreurServeur });
+    }
+};
+
 export const getObjectifs = async (req, res) => {
     const {matiereId}=req.params;
     let {page=1, pageSize=10, annee, semestre, langue}=req.query;
@@ -527,12 +602,14 @@ export const getObjectifs = async (req, res) => {
         if(langue === 'fr'){
             objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
                         .populate('matiere', '_id libelleFr libelleEn')
+                        .populate({path:'chapitre', select:'_id libelleFr libelleEn', options:{strictPopulate:false}})
                         .sort({libelleFr:1})
                         .skip(startIndex)
                         .limit(pageSize);
         }else{
             objectifs = await Objectif.find({matiere:matiereId, annee:annee, semestre:semestre})
                         .populate('matiere', '_id libelleFr libelleEn')
+                        .populate({path:'chapitre', select:'_id libelleFr libelleEn', options:{strictPopulate:false}})
                         .sort({libelleEn:1})
                         .skip(startIndex)
                         .limit(pageSize);
