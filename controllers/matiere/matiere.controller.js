@@ -4,9 +4,10 @@ import Chapitre from '../../models/chapitre.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 import Setting from '../../models/setting.model.js';
-import { calculateProgress, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import { calculateProgress, calculateProgressChapitre, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
 import { extractRawText } from 'mammoth';
+import ExcelJS from 'exceljs'
 
 // create
 export const createMatiere = async (req, res) => { 
@@ -415,79 +416,6 @@ export const generateListMatByNiveau = async (req, res)=>{
     // .populate('objectifs');
 }
 
-export const generateProgressByNiveau = async (req, res)=>{
-    const {annee, semestre}=req.params;
-    const { langue, departement, section, cycle, niveau } = req.query;
-    const filter = { 
-        niveau: niveau._id,
-    };
-
-    // Si une année est spécifiée dans la requête, l'utiliser
-    if (annee && !isNaN(annee)) {
-        filter.annee = parseInt(annee);
-        // let periodesCurrentYear = await Periode.findOne(filter).exec();
-        // if (!periodesCurrentYear) {
-        //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-        //     let found = false;
-        //     let previousYear = parseInt(annee) - 1;
-        //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-        //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-        //         if (periodesCurrentYear) {
-        //             filter.annee = previousYear;
-        //             found = true;
-        //         } else {
-        //             previousYear--;
-        //         }
-        //     }
-        // } 
-    }
-
-    // Si un semestre est spécifié dans la requête, l'utiliser
-    if (semestre && !isNaN(semestre)) {
-        filter.semestre = parseInt(semestre);
-    }
-
-    
-
-    // Rechercher les périodes en fonction du filtre
-    const periodes = await Periode.find(filter).select('matiere').exec();
-
-    // Extraire les identifiants uniques des matières
-    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
-
-    // Récupérer les détails de chaque matière à partir des identifiants uniques
-    let matieres = [];
-    if(langue==='fr'){
-        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('objectifs').exec();
-    }else{
-        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('objectifs').exec();
-    }
-    
-    let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_progression_matiere_en.html';
-    }
-    const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
-
-    
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
-
-    // const niveauId = req.params.niveauId; // Supposons que le niveauId soit passé en tant que paramètre d'URL
-
-    // // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-    // const matieres = await Matiere.find({niveau:niveauId}).populate({
-    //     path: 'typesEnseignement.enseignantPrincipal',
-    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
-    // }).populate({
-    //     path: 'typesEnseignement.enseignantSuppleant',
-    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
-    // }).populate('chapitres')
-    // .populate('objectifs');
-    // const htmlContent = await fillTemplate(matieres, './templates/template_progression_matiere_fr.html', 2024);
-
-}
-
 export const getMatieresByNiveauWithPagination = async (req, res) => {
     const niveauId = req.params.niveauId;
     const { page = 1, pageSize = 10, annee, semestre, langue } = req.query;
@@ -749,9 +677,153 @@ export const generateListMatByEnseignantNiveau = async (req, res)=>{
     generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
 }
 
+export const generateProgressByNiveau = async (req, res)=>{
+    const {annee, semestre}=req.params;
+    const { langue, departement, section, cycle, niveau, fileType } = req.query;
+    const filter = { 
+        niveau: niveau._id,
+    };
+
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee);
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+    
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter).select('matiere').exec();
+
+    // Extraire les identifiants uniques des matières
+    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+    // Récupérer les détails de chaque matière à partir des identifiants uniques
+    let matieres = [];
+    if(langue==='fr'){
+        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('objectifs').exec();
+    }else{
+        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('objectifs').exec();
+    }
+    
+    if(fileType.toLowerCase() === 'pdf'){
+        let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_progression_matiere_en.html';
+        }
+        const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+    
+    
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+    }else{
+         // Créer un nouveau classeur Excel
+         const workbook = new ExcelJS.Workbook();
+         const worksheet = workbook.addWorksheet('Sheet1');
+ 
+         // Ajouter les en-têtes de colonnes
+         if(langue==='fr'){
+             worksheet.addRow(['Matieres', 'Progression']);
+         }else{
+             worksheet.addRow(['Subjects', 'Progression']);
+         }
+ 
+         // Ajouter les données des matières
+         for (const matiere of matieres) {
+             const progress = calculateProgress(matiere, annee, semestre) ; // Remplacez cette logique par votre propre logique pour obtenir la progression
+             worksheet.addRow([matiere.libelleFr || matiere.libelleEn, `${progress}%`]);
+         }
+ 
+         // Définir le type de contenu pour le téléchargement du fichier
+         res.setHeader('Content-Disposition', `attachment;`);
+         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+ 
+         // Envoyer le fichier Excel en réponse
+         await workbook.xlsx.write(res);
+    }
+
+}
+
+export const generateProgressChapitreByNiveau = async (req, res)=>{
+    const {annee, semestre}=req.params;
+    const { langue, departement, section, cycle, niveau, fileType, filename } = req.query;
+    const filter = { 
+        niveau: niveau._id,
+    };
+
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee); 
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+    
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter).select('matiere').exec();
+
+    // Extraire les identifiants uniques des matières
+    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+    // Récupérer les détails de chaque matière à partir des identifiants uniques
+    let matieres = [];
+    if(langue==='fr'){
+        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').exec();
+    }else{
+        matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').exec();
+    }
+    
+    if(fileType==='PDF'){
+        let filePath='./templates/templates_fr/template_progression_chapitre_matiere_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_progression_chapitre_matiere_en.html';
+        }
+        const htmlContent = await fillTemplateChapitre(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+
+
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+    }else{
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Ajouter les en-têtes de colonnes
+        if(langue==='fr'){
+            worksheet.addRow(['Matieres', 'Progression']);
+        }else{
+            worksheet.addRow(['Subjects', 'Progression']);
+        }
+
+        // Ajouter les données des matières
+        for (const matiere of matieres) {
+            const progress = calculateProgressChapitre(matiere, annee, semestre) ; // Remplacez cette logique par votre propre logique pour obtenir la progression
+            worksheet.addRow([matiere.libelleFr || matiere.libelleEn, `${progress}%`]);
+        }
+
+        // Définir le type de contenu pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+    }
+
+
+}
+
+
 export const generateProgressByEnseignant = async (req, res)=>{
     const niveauId = req.params.niveauId;
-    const { enseignantId, annee, semestre, langue, departement, section, cycle, niveau } = req.query;
+    const { enseignantId, annee, semestre, langue, departement, section, cycle, niveau, fileType } = req.query;
 
     const filter = { 
         niveau: niveauId,
@@ -802,14 +874,130 @@ export const generateProgressByEnseignant = async (req, res)=>{
         matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
     }
     
-    let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_progression_matiere_en.html';
-    }
-    const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+    if(fileType.toLowerCase()==='pdf'){
+        let filePath='./templates/templates_fr/template_progression_matiere_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_progression_matiere_en.html';
+        }
+        const htmlContent = await fillTemplate(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+    }else{
+         // Créer un nouveau classeur Excel
+         const workbook = new ExcelJS.Workbook();
+         const worksheet = workbook.addWorksheet('Sheet1');
+ 
+         // Ajouter les en-têtes de colonnes
+         if(langue==='fr'){
+             worksheet.addRow(['Matieres', 'Progression']);
+         }else{
+             worksheet.addRow(['Subjects', 'Progression']);
+         }
+ 
+         // Ajouter les données des matières
+         for (const matiere of matieres) {
+             const progress = calculateProgress(matiere, annee, semestre) ; // Remplacez cette logique par votre propre logique pour obtenir la progression
+             worksheet.addRow([matiere.libelleFr || matiere.libelleEn, `${progress}%`]);
+         }
+ 
+         // Définir le type de contenu pour le téléchargement du fichier
+         res.setHeader('Content-Disposition', `attachment;`);
+         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+ 
+         // Envoyer le fichier Excel en réponse
+         await workbook.xlsx.write(res);
+    }
+}
+
+export const generateProgressChapitreByEnseignant = async (req, res)=>{
+    const niveauId = req.params.niveauId;
+    const { enseignantId, annee, semestre, langue, departement, section, cycle, niveau, fileType } = req.query;
+
+    const filter = { 
+        niveau: niveauId,
+        $or: [
+            { enseignantPrincipal: enseignantId },
+            { enseignantSuppleant: enseignantId }
+        ]
+    };
+
+    // Si une année est spécifiée dans la requête, l'utiliser
+    if (annee && !isNaN(annee)) {
+        filter.annee = parseInt(annee);
+        // let periodesCurrentYear = await Periode.findOne(filter).exec();
+        // if (!periodesCurrentYear) {
+        //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+        //     let found = false;
+        //     let previousYear = parseInt(annee) - 1;
+        //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+        //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+        //         if (periodesCurrentYear) {
+        //             filter.annee = previousYear;
+        //             found = true;
+        //         } else {
+        //             previousYear--;
+        //         }
+        //     }
+        // } 
+    }
+
+    // Si un semestre est spécifié dans la requête, l'utiliser
+    if (semestre && !isNaN(semestre)) {
+        filter.semestre = parseInt(semestre);
+    }
+
+    
+
+    // Rechercher les périodes en fonction du filtre
+    const periodes = await Periode.find(filter).select('matiere').exec();
+
+    // Extraire les identifiants uniques des matières
+    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+    // Récupérer les détails de chaque matière à partir des identifiants uniques
+    let matieres = [];
+    if(langue === 'fr'){
+        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('chapitres').exec();
+    }else{
+        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('chapitres').exec();
+    }
+    
+    if(fileType.toLowerCase()==='pdf'){
+    
+        let filePath='./templates/templates_fr/template_progression_chapitre_matiere_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_progression_chapitre_matiere_en.html';
+        }
+        const htmlContent = await fillTemplateChapitre(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+    }else{
+         // Créer un nouveau classeur Excel
+         const workbook = new ExcelJS.Workbook();
+         const worksheet = workbook.addWorksheet('Sheet1');
+ 
+         // Ajouter les en-têtes de colonnes
+         if(langue==='fr'){
+             worksheet.addRow(['Matieres', 'Progression']);
+         }else{
+             worksheet.addRow(['Subjects', 'Progression']);
+         }
+ 
+         // Ajouter les données des matières
+         for (const matiere of matieres) {
+             const progress = calculateProgressChapitre(matiere, annee, semestre) ; // Remplacez cette logique par votre propre logique pour obtenir la progression
+             worksheet.addRow([matiere.libelleFr || matiere.libelleEn, `${progress}%`]);
+         }
+ 
+         // Définir le type de contenu pour le téléchargement du fichier
+         res.setHeader('Content-Disposition', `attachment;`);
+         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+ 
+         // Envoyer le fichier Excel en réponse
+         await workbook.xlsx.write(res);
+    }
 }
 
 async function fillTemplateListMat (langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre) {
@@ -946,6 +1134,37 @@ async function fillTemplate (langue, departement, section, cycle, niveau, matier
             const clonedRow = rowTemplate.clone();
             clonedRow.find('#matiere').text(langue==='fr'?matiere.libelleFr:matiere.libelleEn);
             clonedRow.find('#progression').text(calculateProgress(matiere, annee, semestre)+" %");
+            userTable.append(clonedRow);
+        }
+        rowTemplate.first().remove();
+
+        return $.html(); // Récupérer le HTML mis à jour
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+};
+
+async function fillTemplateChapitre (langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        const body = $('body');
+        body.find('#division-fr').text(departement.libelleFr);
+        body.find('#division-en').text(departement.libelleEn);
+        body.find('#section-fr').text(section.libelleFr);
+        body.find('#section-en').text(section.libelleEn);
+        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        body.find('#annee').text(formatYear(parseInt(annee)));
+        body.find('#semestre').text(semestre);
+        
+        const userTable = $('#table-progression');
+        const rowTemplate = $('.row_template');
+        
+        for (const matiere of matieres) {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#matiere').text(langue==='fr'?matiere.libelleFr:matiere.libelleEn);
+            clonedRow.find('#progression').text(calculateProgressChapitre(matiere, annee, semestre)+" %");
             userTable.append(clonedRow);
         }
         rowTemplate.first().remove();

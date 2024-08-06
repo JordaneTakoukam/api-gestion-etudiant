@@ -332,6 +332,29 @@ export function calculateProgress (matiere, annee, semestre) {
     return parseFloat(progress.toFixed(2));
 }
 
+export function calculateProgressChapitre (matiere, annee, semestre) {
+    let totalChapitres = 0;
+    let chapitresAvecEtat1 = 0;
+    if(matiere && matiere.chapitres){
+        
+        matiere.chapitres.forEach((chapitre) => {
+            if(chapitre.annee==annee && chapitre.semestre==semestre){
+                totalChapitres += 1;
+                if (chapitre.etat == 1) {
+                    chapitresAvecEtat1++;
+                }
+            }
+            
+        });
+    }
+    
+
+    const progress = totalChapitres === 0 ? 0 : (chapitresAvecEtat1 / totalChapitres) * 100;
+    // console.log(chapitresAvecEtat1+"/"+totalChapitres)
+
+    return parseFloat(progress.toFixed(2));
+}
+
 export function formatNameSurname (value) {
     const values = value.split(" ");
     if(values.length>1){

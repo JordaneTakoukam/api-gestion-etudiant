@@ -193,13 +193,16 @@ export const updateObjectif = async (req, res) => {
             await Chapitre.findByIdAndUpdate(existingObjectif.chapitre, { $pull: { objectifs: existingObjectif._id } });
         }
 
+        // Vérifier si l'état de l'objectif a changé
+        const etatChanged = existingObjectif.etat !== etat;
+
         // Mettre à jour les champs de l'objectif
         existingObjectif.annee = annee;
         existingObjectif.semestre = semestre;
         existingObjectif.code = code;
         existingObjectif.libelleFr = libelleFr;
         existingObjectif.libelleEn = libelleEn;
-        if (existingObjectif.etat != etat) {
+        if (etatChanged) {
             existingObjectif.date_etat = DateTime.now().toJSDate();
         }
         existingObjectif.etat = etat;
@@ -209,6 +212,16 @@ export const updateObjectif = async (req, res) => {
 
         // Enregistrer les modifications
         const updatedObjectif = await existingObjectif.save();
+
+        // Si l'état de l'objectif a changé, vérifier l'état de tous les objectifs du chapitre
+        if (etatChanged && chapitre) {
+            const chapitreToUpdate = await Chapitre.findById(chapitre._id).populate('objectifs');
+            if (chapitreToUpdate) {
+                const allObjectifsCompleted = chapitreToUpdate.objectifs.every(obj => obj.etat === 1);
+                chapitreToUpdate.etat = allObjectifsCompleted ? 1 : 0;
+                await chapitreToUpdate.save();
+            }
+        }
 
         res.status(200).json({
             success: true,
@@ -295,9 +308,10 @@ export const deleteObjectif = async (req, res) => {
 }
 
 //update etat
-export const updateObjectifEtatObj = async (req, res) => {
-    const { objectifId }= req.params;
-    const {etat } = req.query;
+export const updateObjectifEtat = async (req, res) => {
+    const { objectifId, etat }= req.params;
+    // const {etat} = req.query;
+    // console.log(req.query)
 
     try {
         // Vérifier si les ObjectId sont valides
@@ -316,7 +330,7 @@ export const updateObjectifEtatObj = async (req, res) => {
                 message.objectif_non_trouve 
             });
         }
-
+        console.log(etat);
     
         // Mettre à jour l'état de l'objectif
         objectif.etat = etat;
@@ -326,10 +340,19 @@ export const updateObjectifEtatObj = async (req, res) => {
 
         // Sauvegarder les modifications du objectif
         await objectif.save();
+        if(objectif.chapitre){
+            const chapitreToUpdate = await Chapitre.findById(objectif.chapitre._id).populate('objectifs');
+            if (chapitreToUpdate) {
+                const allObjectifsCompleted = chapitreToUpdate.objectifs.every(obj => obj.etat === 1);
+                chapitreToUpdate.etat = allObjectifsCompleted ? 1 : 0;
+                await chapitreToUpdate.save();
+            }
+        }
 
-        res.status(200).json({ success: true, 
-            //message: message.objectif_modifie, 
-            data: objectif 
+        res.status(200).json({
+            success: true,
+            message: message.mis_a_jour,
+            data: objectif
         });
     } catch (error) {
         console.error('Erreur lors de la modification de l\'état de l\'objectif :', error);

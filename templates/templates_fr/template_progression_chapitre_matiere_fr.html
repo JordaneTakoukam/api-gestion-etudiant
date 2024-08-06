@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body{
+            font-family: Arial, sans-serif; 
+            font-size: 13px;
+            text-align: justify;
+        }
+        #table-progression{
+            border-collapse: collapse;
+            width: 700px;
+        }
+        td, th{
+            border: 1px solid black;
+        }
+        #table-header{
+            width: 700px;
+            text-align: center;
+            border: none;
+            font-size: 11px;
+        }
+
+    
+        #header-french, #header-english, #header-logo{
+            border: none;
+        }
+
+        #header-english{
+            width: 220px;
+        }
+
+        #header-french, #header-english{
+            width: 250px;
+        }
+
+        #header-logo{
+            width: 300px;
+        }
+
+        .devise{
+            font-style: italic;
+        }
+
+        #doc-header, .decide{
+            text-align: center;
+        }
+
+        .bold-underline{
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        sup, #directeur{
+            font-weight: bold;
+        }
+
+        #title-doc{
+            font-weight: bold;
+            text-align: center;
+        }
+       
+    </style>
+</head>
+    <body >
+        
+        <table id="table-header">
+            <tr>
+                <td id="header-french">
+                    REPUBLIQUE DU CAMEROUN<br>
+                    <span class="devise">Paix - Travail - Patrie</span><br>**********<br>
+                    ECOLE NATIONALE D'ADMINISTRATION ET DE MAGISTRATURE<br>**********<br>
+                    DIRECTION GENERALE<br>**********<br>
+                    DIVISION DES <span id="division-fr"></span><br>**********<br>
+                    SECTION <span id="section-fr"></span><br>**********
+                </td>
+                <td id="header-logo"><img src="https://upload.wikimedia.org/wikipedia/fr/2/29/Enam_Cameroun_blason.jpg" width="90" height="90"></td>
+                <td id="header-english">
+                    REPUBLIC OF CAMEROON<br>
+                    <span class="devise">Peace - Work - Fatherland</span><br>**********<br>
+                    NATIONAL SCHOOL OF ADMINISTRATION AND MAGISTRACY<br>**********<br>
+                    DIRECTORALE GENERAL<br>**********<br>
+                    DEPARTMENT OF <span id="division-en"></span><br>**********<br>
+                    <span id="section-en"></span> SECTION</span><br>**********
+                </td>
+            </tr>
+        </table>
+        
+        <p id="title-doc">
+            PROGRESSION PAR CHAPITRE DE LA MATIERE CYCLE <span id="cycle-niveau"></span><br>
+            ANNEE ACADEMIQUE <span id="annee"></span><br>
+            SEMESTRE <span id="semestre"></span><br>
+        </p>
+        
+        <table id="table-progression">
+            <thead>
+                <tr>
+                    <th class="header-progression" >Matière</th>
+                    <th class="header-progression" >Progression</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row_template">
+                    <td id="matiere" ></td>
+                    <td id="progression" ></td>
+                </tr>
+            </tbody>
+            
+        </table>    
+   </body>
+</html>

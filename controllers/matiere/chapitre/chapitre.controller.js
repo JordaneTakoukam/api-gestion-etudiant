@@ -6,6 +6,7 @@ import { extractRawText } from 'mammoth';
 import { io } from '../../../server.js';
 import Notification from '../../../models/notification.model.js';
 import { appConfigs } from '../../../configs/app_configs.js';
+import Objectif from '../../../models/objectif.model.js';
 
 // create
 export const createChapitre = async (req, res) => {
@@ -275,53 +276,74 @@ export const deleteChapitre = async (req, res) => {
 }
 
 //update etat
-export const updateObjectifEtat = async (req, res) => {
-    const { chapitreId }= req.params;
-    const {objectifId, etat } = req.query;
+export const updateChapitreEtat = async (req, res) => {
+    const { chapitreId } = req.params;
+    const { objectifs, etat } = req.body; // Liste des objectifs avec leur état
 
     try {
-        // Vérifier si les ObjectId sont valides
-        if (!mongoose.Types.ObjectId.isValid(chapitreId) || !mongoose.Types.ObjectId.isValid(objectifId)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide 
-            });
-        }
-
         // Vérifier si le chapitre existe
         const chapitre = await Chapitre.findById(chapitreId);
         if (!chapitre) {
-            return res.status(404).json({ 
-                success: false, message: 
-                message.chapitre_non_trouve 
+            return res.status(404).json({
+                success: false,
+                message: message.chapitre_non_trouve
             });
         }
-
-        // Trouver l'objectif dans le chapitre
-        const objectif = chapitre.objectifs.id(objectifId);
-        if (!objectif) {
-            return res.status(404).json({ 
-                success: false, message: 
-                message.objectif_non_trouve 
+        if(objectifs && objectifs.length>0){
+            // Mettre à jour l'état des objectifs fournis
+            const updateObjectifs = objectifs.map(async (objectifData) => {
+                const objectif = await Objectif.findById(objectifData._id);
+                if (objectif) {
+                    objectif.etat = objectifData.etat;
+                    await objectif.save();
+                }
             });
+
+            await Promise.all(updateObjectifs);
+
+            // Vérifier si tous les objectifs sont à l'état 1
+            const updatedObjectifs = await Objectif.find({ _id: { $in: objectifs.map(obj => obj._id) } });
+            const allObjectivesAreOne = updatedObjectifs.every(obj => obj.etat === 1);
+
+            // Mettre à jour l'état du chapitre
+            
+            chapitre.etat = allObjectivesAreOne ? 1 : 0; 
+        }else{
+            chapitre.etat = etat; 
         }
-
-        // Mettre à jour l'état de l'objectif
-        objectif.etat = etat;
-
-        // Sauvegarder les modifications du chapitre
+               
         await chapitre.save();
-
-        res.status(200).json({ success: true, 
-            //message: message.objectif_modifie, 
-            data: chapitre 
+        const chapitreUpdate = await Chapitre.findById(chapitre._id).populate({path:'objectifs', select:'_id libelleFr libelleEn etat', options:{strictPopulate:false}})
+        res.status(200).json({
+            success: true,
+            message: message.mis_a_jour,
+            data: chapitreUpdate
         });
     } catch (error) {
-        console.error('Erreur lors de la modification de l\'état de l\'objectif :', error);
-        res.status(500).json({ 
-            success: false, 
-            message: message.erreurServeur 
+        console.error('Erreur lors de la mise à jour du chapitre :', error);
+        res.status(500).json({ success: false, message: message.erreurServeur });
+    }
+};
+
+export const getProgressionMatiereChapitre = async (req, res) => {
+    const{matiereId}=req.params;
+    const {annee=2023, semestre=1}=req.query;
+    try {
+        // Compter le nombre total d'chapitres avec l'état 1
+        const totalChapitresAvecEtat1 = await Chapitre.countDocuments({ matiere:matiereId, etat: 1, annee:annee, semestre:semestre});
+
+        // Compter le nombre total d'chapitres
+        const totalChapitres = await Chapitre.countDocuments({matiere:matiereId, annee:annee, semestre:semestre});
+
+        // Calculer la progression globale
+        const progressionGlobale = totalChapitresAvecEtat1 / totalChapitres;
+        res.json({
+            success: true,
+            data: (progressionGlobale*100),
         });
+    } catch (error) {
+        console.error('Erreur lors du calcul de la progression globale des chapitres :', error);
+        res.status(500).json({ success: false, message: message.erreurServeur });
     }
 };
 
@@ -443,12 +465,14 @@ export const getChapitres = async (req, res) => {
         if(langue === 'fr'){
             chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
                         .populate('matiere', '_id libelleFr libelleEn')
+                        .populate({path:'objectifs', select:"_id libelleFr libelleEn etat", options: { strictPopulate: false }})
                         .sort({libelleFr:1})
                         .skip(startIndex)
                         .limit(parseInt(pageSize));
         }else{
             chapitres = await Chapitre.find({matiere:matiereId, annee:annee, semestre:semestre})
                         .populate('matiere', '_id libelleFr libelleEn')
+                        .populate({path:'objectifs', select:"_id libelleFr libelleEn etat", options: { strictPopulate: false }})
                         .sort({libelleEn:1})
                         .skip(startIndex)
                         .limit(parseInt(pageSize));
@@ -651,7 +675,7 @@ export const addStatut = async (req, res) => {
           { _id: chapitre._id },
           {
             $set: {
-                statut:1,
+                etat:0,
             },
           }
         );
