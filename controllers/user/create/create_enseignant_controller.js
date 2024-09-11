@@ -11,6 +11,7 @@ import Setting from '../../../models/setting.model.js';
 import { formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
 import { readFileSync } from 'fs';
+import ExcelJS from 'exceljs';
 
 export const createEnseignant = async (req, res) => {
     const {
@@ -656,7 +657,7 @@ export const getNiveauxByEnseignant = async (req, res) => {
 };
 
 export const generateListEnseignant = async (req, res)=>{
-    const {grade, categorie, service, fonction, langue, annee } = req.query;
+    const {grade, categorie, service, fonction, langue, annee, fileType } = req.query;
     const role = appConfigs.role.enseignant;
     const query = {
         roles: { $in: [role] } // Filtrer les utilisateurs avec le rôle enseignant
@@ -683,16 +684,86 @@ export const generateListEnseignant = async (req, res)=>{
         title=langue==='fr'?"PAR FONCTION":"PER FUNCTION";
     }
 
+    
     const enseignants = await User.find(query).sort({nom:1, prenom:1});
-    let filePath='./templates/templates_fr/template_liste_enseignant_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_liste_enseignant_en.html'
-    }
-    const htmlContent = await fillTemplate(title, langue, enseignants, filePath, annee);
+    if(fileType.toLowerCase() === 'pdf'){
+        let filePath='./templates/templates_fr/template_liste_enseignant_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_liste_enseignant_en.html'
+        }
+        const htmlContent = await fillTemplate(title, langue, enseignants, filePath, annee);
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    }else{
+        exportToExcel(enseignants, langue, res, grade, categorie, service, fonction)
+    }
 }
+
+const exportToExcel = async (enseignants, langue, res,grade, categorie, service, fonction ) => {
+    if (enseignants) {
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        // Ajouter une nouvelle feuille de calcul
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Définir les en-têtes en fonction de la langue
+        const headers = langue === 'fr' 
+            ? ['Matricule', 'Nom', 'Prénom', 'Genre', 'Email', 'Date de Naissance', 
+               'Lieu de Naissance', 'Grade', 'Catégorie', 'Service', 'Fonction']
+            : ['Regist.', 'Last Name', 'First Name', 'Gender', 'Email', 'Date of birth', 
+               'Place of birth', 'Grade', 'Category', 'Service', 'Function'];
+
+        // Ajouter les en-têtes à la feuille de calcul
+        worksheet.addRow(headers);
+        let settings = await Setting.find().select('grades categories fonctions services');
+        let setting = null;
+        if(settings.length>0){
+            setting=settings[0]
+        }
+
+        var gra = "";
+        var cat = "";
+        var ser = "";
+        var fon = "";
+        // Ajouter les données des enseignants
+        enseignants.forEach(enseignant => {
+            
+            if(enseignant.grade!=null && setting){
+                const grade=setting.grades.find((grade)=>grade._id.toString()===enseignant.grade.toString());
+                gra = langue==='fr'?grade?.libelleFr??"":grade?.libelleEn??"";
+            }
+            if(enseignant.categorie!=null && setting){
+                const categorie = setting.categories.find((categorie)=>categorie._id.toString()===enseignant.categorie.toString());
+                cat = langue==='fr'?categorie?.libelleFr??"":categorie?.libelleEn??"";
+            }
+            if(enseignant.service!=null && setting){
+                const service = setting.services.find((service)=>service._id.toString()===enseignant.service.toString());
+                ser = langue==='fr'?service?.libelleFr??"":service?.libelleEn??"";
+            }
+            if(enseignant.fonction!=null && setting){
+                const fonction = setting.fonctions.find((fonction)=>fonction._id.toString()===enseignant.fonction.toString());
+                fon = langue==='fr'?fonction?.libelleFr??"":fonction?.libelleEn??"";
+            }
+            worksheet.addRow([
+                enseignant.matricule, enseignant.nom, enseignant.prenom, enseignant.genre, enseignant.email,
+                enseignant.date_naiss ? enseignant.date_naiss.split("T")[0] : "", enseignant.lieu_naiss, 
+                gra?.code || "", cat?.code || "", ser?.code || "", fon?.code || ""
+            ]);
+        });
+
+        // Définir les en-têtes de réponse pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+    } else {
+        // Gérer le cas où `enseignantss` est indéfini
+        res.status(400).json({ success: false, message: message.pas_de_donnees });
+    }
+};
 
 async function fillTemplate (title, langue, enseignants, filePath, annee) {
     try {

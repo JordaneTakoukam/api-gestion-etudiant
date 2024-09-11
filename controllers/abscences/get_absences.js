@@ -5,6 +5,7 @@ import { appConfigs } from "../../configs/app_configs.js";
 import mongoose from 'mongoose';
 import cheerio from 'cheerio';
 import { nbTotalAbsences, formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML, nbTotalAbsencesJustifier, nbTotalAbsencesNonJustifier } from "../../fonctions/fonctions.js";
+import ExcelJS from 'exceljs'
 
 export const getAbsencesByUserAndFilter = async (req, res) => {
     const {userId}=req.params;
@@ -554,7 +555,7 @@ export const getAllAbsencesWithEnseignantsByFilter = async (req, res) => {
 };
 
 export const generateListAbsenceEnseignant = async (req, res)=>{
-    let { semestre = 1, annee = 2023, langue } = req.query; // Default values for semester, year, and pagination
+    let { semestre = 1, annee = 2023, langue, fileType } = req.query; // Default values for semester, year, and pagination
     
     // Convert semestre and annee to numbers
     semestre = parseInt(semestre);
@@ -608,20 +609,24 @@ export const generateListAbsenceEnseignant = async (req, res)=>{
             }
         }
     ]);
+    if(fileType.toLowerCase() === 'pdf'){
+        // Sort the enseignantsWithFilteredAbsences array in descending order by the length of absences array
+        enseignantsWithFilteredAbsences.forEach(enseignant => {
+            // Sorting the absences array by the dateAbsence field in ascending order
+            enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
+        });
+        let filePath='./templates/templates_fr/template_liste_absences_enseignant_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_liste_absences_enseignant_en.html'
+        }
+        const htmlContent = await fillTemplateE(langue, enseignantsWithFilteredAbsences, filePath, annee, semestre);
 
-    // Sort the enseignantsWithFilteredAbsences array in descending order by the length of absences array
-    enseignantsWithFilteredAbsences.forEach(enseignant => {
-        // Sorting the absences array by the dateAbsence field in ascending order
-        enseignant.absences.sort((a, b) => new Date(a.dateAbsence) - new Date(b.dateAbsence));
-    });
-    let filePath='./templates/templates_fr/template_liste_absences_enseignant_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_liste_absences_enseignant_en.html'
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    }else{
+        const users = enseignantsWithFilteredAbsences;
+        exportToExcel(users, langue, res);
     }
-    const htmlContent = await fillTemplateE(langue, enseignantsWithFilteredAbsences, filePath, annee, semestre);
-
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
 }
 
 async function fillTemplateE (langue, enseignants, filePath, annee, semestre) {
@@ -711,7 +716,7 @@ export const getAllAbsencesWithEtudiantsByFilter = async (req, res) => {
 
 export const generateListAbsenceEtudiant = async (req, res)=>{
     const { annee, semestre } = req.params;
-    const { departement, section, cycle, niveau, langue } = req.query;
+    const { departement, section, cycle, niveau, langue, fileType } = req.query;
 
     // Vérifier si l'ID du niveau est un ObjectId valide
     if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
@@ -734,20 +739,77 @@ export const generateListAbsenceEtudiant = async (req, res)=>{
 
     const etudiants = await User.find(query).populate('absences').sort({nom:1, prenom:1});
 
-    // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
-    etudiants.forEach((etudiant) => {
-        etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveau._id && niveau.annee === Number(annee));
-        etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
-    });
-    let filePath='./templates/templates_fr/template_liste_absences_etudiant_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_liste_absences_etudiant_en.html'
-    }
-    const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, etudiants, filePath, annee, semestre);
+    if(fileType.toLowerCase() === 'pdf'){
+        // Filtrer les niveaux qui ne correspondent pas au niveau et à l'année de recherche
+        etudiants.forEach((etudiant) => {
+            etudiant.niveaux = etudiant.niveaux.filter((niveau) => niveau.niveau.toString() === niveau._id && niveau.annee === Number(annee));
+            etudiant.absences = etudiant.absences.filter((absence) => absence.semestre === Number(semestre) && absence.annee === Number(annee));
+        });
+        let filePath='./templates/templates_fr/template_liste_absences_etudiant_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_liste_absences_etudiant_en.html'
+        }
+        const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, etudiants, filePath, annee, semestre);
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    }else{
+        const users = etudiants
+        exportToExcel(users, langue, res, section, cycle, niveau);
+    }
 }
+
+const exportToExcel = async (users, langue, res,section, cycle, niveau ) => {
+    if (users) {
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        // Ajouter une nouvelle feuille de calcul
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Définir les en-têtes en fonction de la langue
+        var headers=[];
+        if(section && cycle && niveau){
+            headers = langue === 'fr' 
+                ? ['Matricule', 'Nom', 'Prénom', 'Genre', 'Section', 'Cycle', 'Niveau', 'Absences(H)', 'Justifiées(H)', 'Non Justifiées(H)']
+                : ['Regist.', 'Last Name', 'First Name', 'Gender', 'Section', 'Cycle', 'Level', 'Absences(H)', 'Justified(H)', 'Not Justified(H)'];
+        }else{
+            headers = langue === 'fr' 
+            ? ['Matricule', 'Nom', 'Prénom', 'Genre', 'Absences(H)', 'Justifiées(H)', 'Non Justifiées(H)']
+            : ['Regist.', 'Last Name', 'First Name', 'Gender', 'Absences(H)', 'Justified(H)', 'Not Justified(H)'];
+        }
+
+        // Ajouter les en-têtes à la feuille de calcul
+        worksheet.addRow(headers);
+        
+        // Ajouter les données des étudiants
+        users.forEach(user => {
+            if(section && cycle && niveau){
+                const sect = langue === 'fr'?section.libelleFr:section.libelleEn;
+                worksheet.addRow([
+                    user.matricule, user.nom, user.prenom, user.genre, sect || "", cycle.code || "", niveau.code || "",
+                    nbTotalAbsences(user.absences), nbTotalAbsencesJustifier(user.absences), nbTotalAbsencesNonJustifier(user.absences)
+                ]);
+            }else{
+                worksheet.addRow([
+                    user.matricule, user.nom, user.prenom, user.genre,
+                    nbTotalAbsences(user.absences), nbTotalAbsencesJustifier(user.absences), nbTotalAbsencesNonJustifier(user.absences)
+
+                ]);
+            }
+        });
+
+        // Définir les en-têtes de réponse pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+    } else {
+        // Gérer le cas où `etudiants` est indéfini
+        res.status(400).json({ success: false, message: message.pas_de_donnees });
+    }
+};
 
 async function fillTemplate (departement, section, cycle, niveau, langue, etudiants, filePath, annee, semestre) {
     try {

@@ -10,6 +10,7 @@ import Setting from '../../../models/setting.model.js';
 import { formatDateFr, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
 import { readFileSync } from 'fs';
+import ExcelJS from 'exceljs';
 
 export const createEtudiant = async (req, res) => {
     const {
@@ -821,7 +822,7 @@ export const getNbAbsencesParSection = async (req, res) => {
 
 export const generateListEtudiant = async (req, res)=>{
     const { annee } = req.params;
-    const { departement, section, cycle, niveau, langue } = req.query;
+    const { departement, section, cycle, niveau, langue, fileType } = req.query;
     
     // Vérifier si l'ID du niveau est un ObjectId valide
     if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
@@ -840,16 +841,59 @@ export const generateListEtudiant = async (req, res)=>{
     };
 
     const etudiants = await User.find(query).sort({nom:1, prenom:1});
-    let filePath='./templates/templates_fr/template_liste_etudiant_fr.html';
-    
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_liste_etudiant_en.html'
-    }
-    const htmlContent = await fillTemplate( departement, section, cycle, niveau, etudiants, filePath, annee);
+    if(fileType.toLowerCase()==='pdf'){
+        let filePath='./templates/templates_fr/template_liste_etudiant_fr.html';
+        
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_liste_etudiant_en.html'
+        }
+        const htmlContent = await fillTemplate( departement, section, cycle, niveau, etudiants, filePath, annee);
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    }else{
+        exportToExcel(etudiants, langue, res, section, cycle, niveau);
+    }
 }
+
+const exportToExcel = async (etudiants, langue, res,section, cycle, niveau ) => {
+    if (etudiants) {
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        // Ajouter une nouvelle feuille de calcul
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Définir les en-têtes en fonction de la langue
+        const headers = langue === 'fr' 
+            ? ['Matricule', 'Nom', 'Prénom', 'Genre', 'Email', 'Date de Naissance', 
+               'Lieu de Naissance', 'Section', 'Cycle', 'Niveau']
+            : ['Regist.', 'Last Name', 'First Name', 'Gender', 'Email', 'Date of birth', 
+               'Place of birth', 'Section', 'Cycle', 'Level'];
+
+        // Ajouter les en-têtes à la feuille de calcul
+        worksheet.addRow(headers);
+        const sect = langue === 'fr'?section.libelleFr:section.libelleEn;
+        // Ajouter les données des étudiants
+        etudiants.forEach(etudiant => {
+            worksheet.addRow([
+                etudiant.matricule, etudiant.nom, etudiant.prenom, etudiant.genre, etudiant.email,
+                etudiant.date_naiss ? etudiant.date_naiss.split("T")[0] : "", etudiant.lieu_naiss, 
+                sect || "", cycle.code || "", niveau.code || ""
+            ]);
+        });
+
+        // Définir les en-têtes de réponse pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+    } else {
+        // Gérer le cas où `etudiants` est indéfini
+        res.status(400).json({ success: false, message: message.pas_de_donnees });
+    }
+};
 
 async function fillTemplate (departement, section, cycle, niveau, etudiants, filePath, annee) {
     try {

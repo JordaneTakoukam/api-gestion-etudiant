@@ -322,6 +322,11 @@ const message = {
         fr: "La page demandée n'existe pas.",
         en: "The requested page does not exist.",
     },
+
+    pas_de_donnees :{
+        fr:'Aucune donnée disponible pour l\'exportation', 
+        en:'No data available for export'
+    }
 };
 
 export { message };

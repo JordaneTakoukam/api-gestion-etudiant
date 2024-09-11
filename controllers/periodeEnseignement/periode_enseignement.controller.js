@@ -8,6 +8,7 @@ import moment from 'moment';
 import { formatDate } from '../../fonctions/fonctions.js';
 import { calculateProgress, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
+import ExcelJS from 'exceljs'
 // create
 
 export const createPeriodeEnseignement = async (req, res) => {
@@ -569,7 +570,7 @@ export const getPeriodesEnseignement = async (req, res) => {
 
 export const generateListPeriodeEnseignement = async (req, res)=>{
     const { annee, semestre } = req.params;
-    const {  departement, section, cycle, niveau, langue } = req.query;
+    const {  departement, section, cycle, niveau, langue, fileType } = req.query;
 
     if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
         return res.status(400).json({ 
@@ -610,16 +611,67 @@ export const generateListPeriodeEnseignement = async (req, res)=>{
             }, new Set()).size;
         }));
     }));
-    let filePath='./templates/templates_fr/template_periode_enseignement_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_periode_enseignement_en.html';
+
+    if(fileType.toLowerCase() === 'pdf'){
+        let filePath='./templates/templates_fr/template_periode_enseignement_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_periode_enseignement_en.html';
+        }
+
+        const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, periodes, filePath, annee, semestre);
+
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+    }else{
+        exportToExcel(periodes, langue, res);
     }
-
-    const htmlContent = await fillTemplate(departement, section, cycle, niveau, langue, periodes, filePath, annee, semestre);
-
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
 }
+
+const exportToExcel = async (periodes, langue, res) => {
+    if (periodes) {
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        // Ajouter une nouvelle feuille de calcul
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Parcourir chaque période et ajouter les données associées
+        periodes.forEach(periode => {
+            const rows = [];
+
+            // Ajouter le nom de la période
+            rows.push([langue === 'fr' ? periode.periodeFr : periode.periodeEn]);
+
+            // Ajouter les en-têtes pour les matières et le nombre de séances
+            rows.push([langue === 'fr' ? 'Matières' : 'Subjects', langue === 'fr' ? 'Nb de Séances' : 'Nb Sessions']);
+
+            // Vérifier si enseignement est défini
+            if (periode.enseignements) {
+                // Parcourir les enseignements
+                periode.enseignements.forEach(enseignement => {
+                    rows.push([
+                        langue === 'fr' ? enseignement.matiere.libelleFr : enseignement.matiere.libelleEn,
+                        enseignement.nombreSeance
+                    ]);
+                });
+            }
+
+            // Ajouter les lignes à la feuille de calcul
+            rows.forEach(row => worksheet.addRow(row));
+            worksheet.addRow([]); // Ajouter une ligne vide pour espacer entre les périodes
+        });
+
+        // Définir les en-têtes de réponse pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+    } else {
+        res.status(400).json({ success: false, message: message.pas_de_donnees });
+    }
+};
+
 
 async function fillTemplate (departement, section, cycle, niveau, langue, periodes, filePath, annee, semestre) {
     try {
@@ -663,7 +715,7 @@ async function fillTemplate (departement, section, cycle, niveau, langue, period
 
 export const generateProgressionPeriodeEnseignement = async (req, res)=>{
     const {periodeId}=req.params;
-    const {departement, section, cycle, niveau, langue, annee, semestre}=req.query;
+    const {departement, section, cycle, niveau, langue, annee, semestre, fileType}=req.query;
     try{
         if (!mongoose.Types.ObjectId.isValid(periodeId)) {
             return res.status(400).json({ 
@@ -699,18 +751,71 @@ export const generateProgressionPeriodeEnseignement = async (req, res)=>{
             }, new Set()).size;
         }));
 
-        let filePath='./templates/templates_fr/template_progression_periode_enseignement_fr.html'
-        if(langue==='en'){
-            filePath='./templates/templates_en/template_progression_periode_enseignement_en.html';
-        }
-        const htmlContent = await fillTemplateProg(departement, section, cycle, niveau, langue, periode, filePath, annee, semestre);
+        if(fileType.toLowerCase === 'pdf'){
+            let filePath='./templates/templates_fr/template_progression_periode_enseignement_fr.html'
+            if(langue==='en'){
+                filePath='./templates/templates_en/template_progression_periode_enseignement_en.html';
+            }
+            const htmlContent = await fillTemplateProg(departement, section, cycle, niveau, langue, periode, filePath, annee, semestre);
 
-        // Générer le PDF à partir du contenu HTML
-        generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+            // Générer le PDF à partir du contenu HTML
+            generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
+        }else{
+            exportToExcelProgression(periode, langue, res)
+        }
     }catch(e){
 
     }
 }
+
+
+const exportToExcelProgression = async (periode, langue, res) => {
+    if (periode) {
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        // Ajouter une nouvelle feuille de calcul
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Ajouter le libellé de la période en tant que première ligne
+        worksheet.addRow([langue === 'fr' ? periode.periodeFr : periode.periodeEn]);
+
+        // Parcourir chaque enseignement et ajouter les données associées
+        (periode.enseignements || []).forEach(enseignement => {
+            // Ajouter une ligne avec le code de la matière et son libellé
+            worksheet.addRow([`${langue === 'fr' ? enseignement.matiere.libelleFr : enseignement.matiere.libelleEn}`]);
+
+            // Ajouter les en-têtes de colonnes
+            worksheet.addRow([
+                langue === 'fr' ? 'Nb Séance de la Période' : 'Nb of Sessions for the Period',
+                langue === 'fr' ? 'Nb Séance Pratiquées' : 'Nb of Practical Sessions',
+                langue === 'fr' ? 'Écart' : 'Gap',
+                langue === 'fr' ? 'Taux de Présence relatif' : 'Relative attendance Rate'
+            ]);
+
+            // Ajouter les données de l'enseignement
+            worksheet.addRow([
+                enseignement.nombreSeance,
+                enseignement.nbSeancesPratiquees,
+                enseignement.nombreSeance - enseignement.nbSeancesPratiquees,
+                `${((enseignement.nbSeancesPratiquees / enseignement.nombreSeance) * 100).toFixed(2)}%`
+            ]);
+
+            // Ajouter une ligne vide pour espacer entre les enseignements
+            worksheet.addRow([]);
+        });
+
+        // Définir les en-têtes de réponse pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment; "`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+    } else {
+        res.status(400).json({ success: false, message: message.pas_de_donnees });
+    }
+};
+
 
 async function fillTemplateProg (departement, section, cycle, niveau, langue, periode, filePath, annee, semestre) {
     try {

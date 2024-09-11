@@ -591,6 +591,8 @@ async function lireDonneesFichierWord(matieres,fichier, fichierEn) {
                     code:"",
                     libelleFr: lines[index - 1],
                     libelleEn: linesEn[index - 1],
+                    etat:0,
+                    statut:1,
                     typesEnseignement: [{
                         typeEnseignement: "660238e437b0ee5bea8089ce",
                         volumeHoraire: 0
@@ -604,6 +606,7 @@ async function lireDonneesFichierWord(matieres,fichier, fichierEn) {
                         volumeHoraire: 0
                     }],
                     matiere: currentMatiere._id,
+                    objectifs:[]
                 };
                 donnees.push(currentChapitre);
             }

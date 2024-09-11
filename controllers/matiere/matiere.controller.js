@@ -330,7 +330,7 @@ export const getMatieresByNiveau = async (req, res) => {
 
 export const generateListMatByNiveau = async (req, res)=>{
     const {annee, semestre} = req.params; 
-    const { langue, departement, section, cycle, niveau}=req.query;
+    const { langue, departement, section, cycle, niveau, fileType}=req.query;
     let matieres=[];
     if(annee && semestre && niveau){
         const filter = { 
@@ -395,31 +395,111 @@ export const generateListMatByNiveau = async (req, res)=>{
         
     }
     
-    let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
-               
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_liste_matiere_en.html';
-    }
-    const htmlContent = await fillTemplateListMat(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+    if(fileType.toLowerCase() === 'pdf'){
+        let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
+                
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_liste_matiere_en.html';
+        }
+        const htmlContent = await fillTemplateListMat(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    }else{
+        exportToExcel(matieres, annee, semestre, langue, res, section, cycle, niveau);
+    }
     
-    // Récupérer la liste des matières du niveau spécifié avec tous leurs détails
-    // const matieres = await Matiere.find({niveau:niveauId}).populate({
-    //     path: 'typesEnseignement.enseignantPrincipal',
-    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant principal
-    // }).populate({
-    //     path: 'typesEnseignement.enseignantSuppleant',
-    //     select: '_id nom prenom' // Sélectionnez les champs à afficher pour l'enseignant suppléant
-    // }).populate('chapitres')
-    // .populate('objectifs');
+   
 }
+
+const exportToExcel = async (matieres, annee, semestre, langue, res, section, cycle, niveau) => {
+    if (matieres) {
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        // Ajouter une nouvelle feuille de calcul
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Ajouter les en-têtes à la feuille de calcul
+        if(section && cycle && niveau){
+            const sect = langue === 'fr'?section.libelleFr:section.libelleEn
+            worksheet.addRow([
+                sect+" "+cycle.code+niveau.code
+            ]);
+        }
+       
+        worksheet.addRow([
+            langue === 'fr' ? 'Matières' : 'Subjects', 'CM', 'TD', 'TP'
+        ]);
+
+        // Parcourir chaque matière et ajouter les données associées
+        matieres.forEach(matiere => {
+            const rows = [];
+
+            // Vérifier si matiere.chapitres est défini
+            if (matiere.chapitres) {
+                rows.push([langue === 'fr' ? matiere.libelleFr : matiere.libelleEn]);
+
+                // Parcourir les chapitres
+                matiere.chapitres.forEach(chapitre => {
+                    if (chapitre.annee == annee && chapitre.semestre == semestre) {
+                        rows.push([
+                            langue === 'fr' ? chapitre.libelleFr : chapitre.libelleEn,
+                            chapitre.typesEnseignement.length > 0 ? chapitre.typesEnseignement[0].volumeHoraire : "", // Volume horaire pour le premier type d'enseignement
+                            chapitre.typesEnseignement.length > 1 ? chapitre.typesEnseignement[1].volumeHoraire : "", // Volume horaire pour le deuxième type d'enseignement
+                            chapitre.typesEnseignement.length > 2 ? chapitre.typesEnseignement[2].volumeHoraire : ""  // Volume horaire pour le troisième type d'enseignement
+                        ]);
+                    }
+                });
+            }
+
+            // Ajouter l'approche pédagogique, les prérequis, l'évaluation des acquis, et les compétences acquises
+            rows.push([
+                (langue === 'fr' ? 'Approche pédagogique' : 'Pedagogical Approach') + ": " + (langue === 'fr' ? matiere.approchePedFr : matiere.approchePedEn)
+            ]);
+            rows.push([
+                (langue === 'fr' ? 'Prérequis' : 'Prerequisites') + ": " + (langue === 'fr' ? matiere.prerequisFr : matiere.prerequisEn)
+            ]);
+            rows.push([
+                (langue === 'fr' ? 'Évaluation des acquis' : 'Assessment of Acquired Skills') + ": " + (langue === 'fr' ? matiere.evaluationAcquisFr : matiere.evaluationAcquisEn)
+            ]);
+
+            // Ajouter les compétences acquises
+            let objectifs = "";
+            if (matiere.objectifs) {
+                matiere.objectifs.forEach(objectif => {
+                    if (objectif.annee == annee && objectif.semestre == semestre) {
+                        if (objectifs.length > 0) {
+                            objectifs += ";" + (langue === 'fr' ? objectif.libelleFr : objectif.libelleEn);
+                        } else {
+                            objectifs = (langue === 'fr' ? objectif.libelleFr : objectif.libelleEn);
+                        }
+                    }
+                });
+            }
+            rows.push([
+                (langue === 'fr' ? 'Compétences acquises' : 'Acquired Competences') + ": " + objectifs
+            ]);
+
+            // Ajouter les lignes à la feuille de calcul
+            rows.forEach(row => worksheet.addRow(row));
+            worksheet.addRow(Array(4).fill("")); // Espacement entre les matières
+        });
+
+        // Définir les en-têtes de réponse pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+    } else {
+        res.status(400).json({ success: false, message: message.pas_de_donnees });
+    }
+};
 
 export const getMatieresByNiveauWithPagination = async (req, res) => {
     const niveauId = req.params.niveauId;
     const { page = 1, pageSize = 10, annee, semestre, langue } = req.query;
-    
     try {
         const startIndex = (page - 1) * pageSize;
         if(niveauId && annee && semestre){ 
@@ -616,7 +696,7 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
 
 export const generateListMatByEnseignantNiveau = async (req, res)=>{
     const niveauId = req.params.niveauId;
-    const { enseignantId, annee, semestre,  langue, departement, section, cycle, niveau } = req.query;
+    const { enseignantId, annee, semestre,  langue, departement, section, cycle, niveau, fileType } = req.query;
 
     const filter = { 
         niveau: niveauId,
@@ -667,14 +747,18 @@ export const generateListMatByEnseignantNiveau = async (req, res)=>{
         matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
     }
 
-    let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_liste_matiere_en.html';
-    }
-    const htmlContent = await fillTemplateListMat( langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+    if(fileType.toLowerCase() === 'pdf'){
+        let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_liste_matiere_en.html';
+        }
+        const htmlContent = await fillTemplateListMat( langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    }else{
+        exportToExcel(matieres, annee, semestre, langue, res);
+    }
 }
 
 export const generateProgressByNiveau = async (req, res)=>{

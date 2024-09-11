@@ -746,12 +746,17 @@ async function lireDonneesFichierWord(matieres, fichier, fichierEn) {
                     annee:2023,
                     semestre:3,
                     code:"",
-                    libelleFr: competenceFr.trim(),
-                    libelleEn: competencesEn[ind].trim(),
-                    matiere: currentMatiere ? currentMatiere._id : '',
                     etat:0,
-                    date_etat:undefined
+                    date_etat:undefined,
+                    statut:1,
+                    libelleFr: capitalizeFirstLetter(competenceFr.trim()),
+                    libelleEn: capitalizeFirstLetter(competencesEn[ind].trim()),
+                    matiere: currentMatiere ? currentMatiere._id : '',
+                    chapitre:undefined
                 };
+                if(!currentObjectif.libelleEn){
+                    currentObjectif.libelleEn = " ";
+                }
                 donnees.push(currentObjectif);
             });
         }
@@ -764,32 +769,31 @@ export const createManyObjectif = async (req, res) => {
     try {
         const filePath = './maquette_fr.docx';
         const filePathEn = './maquette_en.docx';
-        // const matieres = await Matiere.find({}).select('_id libelleFr');
-        // const donnees = await lireDonneesFichierWord(matieres, filePath, filePathEn);
-
-        // // Insérer les objectifs dans la base de données
-        // const result = await Objectif.insertMany(donnees);
+        const matieres = await Matiere.find({}).select('_id libelleFr');
+        const donnees = await lireDonneesFichierWord(matieres, filePath, filePathEn);
+        // Insérer les objectifs dans la base de données
+        const result = await Objectif.insertMany(donnees);
 
         // // Mettre à jour chaque matière avec les ObjectIds des objectifs créés
-        // for (const objectif of result) {
-        //     await Matiere.findByIdAndUpdate(objectif.matiere, { $push: { objectifs: objectif._id } });
-        // }
-        const matiereId = "6659d2d721eb5da854409fa7";
-        const semestre = 2;
-        const objectifs = await Objectif.find({ matiere: matiereId, semestre: semestre });
+        for (const objectif of result) {
+            await Matiere.findByIdAndUpdate(objectif.matiere, { $push: { objectifs: objectif._id } });
+        }
+        // const matiereId = "6659d2d721eb5da854409fa7";
+        // const semestre = 2;
+        // const objectifs = await Objectif.find({ matiere: matiereId, semestre: semestre });
 
-        // Récupérer les IDs des objectifs trouvés
-        const objectifIds = objectifs.map(objectif => objectif._id);
+        // // Récupérer les IDs des objectifs trouvés
+        // const objectifIds = objectifs.map(objectif => objectif._id);
 
-        // Mettre à jour la matière pour supprimer les références des chapitres (objectifs)
-        const result = await Matiere.updateOne(
-            { _id: matiereId },
-            { $pull: { chapitres: { $in: objectifIds } } }
-        );
+        // // Mettre à jour la matière pour supprimer les références des chapitres (objectifs)
+        // const result = await Matiere.updateOne(
+        //     { _id: matiereId },
+        //     { $pull: { chapitres: { $in: objectifIds } } }
+        // );
 
         
 
-        res.status(201).json({ success: true, message: "Ajouté avec succès", data: objectifs });
+        res.status(201).json({ success: true, message: "Ajouté avec succès", data: result });
     } catch (e) {
         console.log(e);
         res.status(500).json({ success: false, message: "Erreur lors de l'ajout des objectifs", error: e.message });
