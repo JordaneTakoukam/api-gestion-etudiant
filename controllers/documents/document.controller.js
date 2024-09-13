@@ -7,14 +7,33 @@ import fs from 'fs';
 import { DateTime } from 'luxon';
 import { message } from '../../configs/message.js';
 
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, './public/documents/documents_upload/');
+//     },
+//     filename: function (req, file, cb) {
+//         const extension = path.extname(file.originalname);
+//         const timestamp = DateTime.now().toFormat('X');
+//         const fileName = `${timestamp}-${file.originalname}`;
+//         cb(null, fileName);
+//     }
+// });
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, './public/documents/documents_upload/');
+        const dir = './public/documents/documents_upload/';
+
+        // Créer le répertoire s'il n'existe pas
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+
+        cb(null, dir); // Utilisez le chemin correct
     },
     filename: function (req, file, cb) {
         const extension = path.extname(file.originalname);
-        const timestamp = DateTime.now().toFormat('X');
-        const fileName = `${timestamp}-${file.originalname}`;
+        const timestamp = DateTime.now().toFormat('X'); // Génère un timestamp unique
+        const fileName = `${timestamp}-${file.originalname}`; // Concatène timestamp et nom du fichier original
         cb(null, fileName);
     }
 });
