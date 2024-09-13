@@ -117,12 +117,22 @@ app.use("/api/v1/alerte", abscenceRoutes);
 
 
 const server = createServer(app);
+// Détecter l'environnement (local ou production)
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = isProduction
+  ? 'https://schoolapp-t57l.onrender.com' // Origine en production
+  : 'http://localhost:5173'; // Origine en local
+
+  const originsBack = isProduction
+  ? 'https://schoolapp-t57l.onrender.com' // Origine en production
+  : 'http://localhost'; // Origine en local
 
 // Initialise Socket.io après la connexion à MongoDB
 export const io = new Server(server,
     {
         cors: {
-            origin: "http://localhost:5173", // Autoriser les requêtes provenant de cette URL
+            // origin: "http://localhost:5173", // Autoriser les requêtes provenant de cette URL
+            origin: allowedOrigins, // Utiliser le domaine approprié
             methods: ["GET", "POST"] // Autoriser uniquement les méthodes GET et POST
         }
     });
@@ -144,7 +154,7 @@ connectMongoDB(process.env.MONGODB_URL)
         // Démarrage du serveur HTTP
         const port = process.env.PORT || 8085;
         server.listen(port, () => {
-            console.log(`🚀💥 Serveur en cours d'exécution sur http://localhost:${port}`);
+            console.log(`🚀💥 Serveur en cours d'exécution sur ${originsBack}:${port}`);
         });
     })
     .catch((error) => {
