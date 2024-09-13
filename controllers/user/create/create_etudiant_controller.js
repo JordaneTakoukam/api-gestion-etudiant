@@ -883,7 +883,7 @@ const exportToExcel = async (etudiants, langue, res,section, cycle, niveau ) => 
         });
 
         // Définir les en-têtes de réponse pour le téléchargement du fichier
-        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Disposition', `attachment; filename=liste_etudiants_${langue}.xlsx`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
         // Envoyer le fichier Excel en réponse

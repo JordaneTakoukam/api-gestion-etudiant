@@ -799,7 +799,7 @@ const exportToExcel = async (users, langue, res,section, cycle, niveau ) => {
         });
 
         // Définir les en-têtes de réponse pour le téléchargement du fichier
-        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Disposition', `attachment; filename=absences_${langue}.xlsx`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
         // Envoyer le fichier Excel en réponse

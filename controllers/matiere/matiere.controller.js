@@ -486,7 +486,7 @@ const exportToExcel = async (matieres, annee, semestre, langue, res, section, cy
         });
 
         // Définir les en-têtes de réponse pour le téléchargement du fichier
-        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Disposition', `attachment; filename=maquette_pedagogique_${langue}.xlsx`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
         // Envoyer le fichier Excel en réponse
@@ -823,7 +823,7 @@ export const generateProgressByNiveau = async (req, res)=>{
          }
  
          // Définir le type de contenu pour le téléchargement du fichier
-         res.setHeader('Content-Disposition', `attachment;`);
+         res.setHeader('Content-Disposition', `attachment; filename=progression_par_objectif_matiere_${langue}.xlsx`);
          res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
  
          // Envoyer le fichier Excel en réponse
@@ -894,7 +894,7 @@ export const generateProgressChapitreByNiveau = async (req, res)=>{
         }
 
         // Définir le type de contenu pour le téléchargement du fichier
-        res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+        res.setHeader('Content-Disposition', `attachment; filename=progression_par_chapitre_matiere_${langue}.xlsx`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
         // Envoyer le fichier Excel en réponse
@@ -986,7 +986,7 @@ export const generateProgressByEnseignant = async (req, res)=>{
          }
  
          // Définir le type de contenu pour le téléchargement du fichier
-         res.setHeader('Content-Disposition', `attachment;`);
+         res.setHeader('Content-Disposition', `attachment; filename=progression_par_objectif_matiere_enseignant_${langue}.xlsx`);
          res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
  
          // Envoyer le fichier Excel en réponse
@@ -1076,7 +1076,7 @@ export const generateProgressChapitreByEnseignant = async (req, res)=>{
          }
  
          // Définir le type de contenu pour le téléchargement du fichier
-         res.setHeader('Content-Disposition', `attachment;`);
+         res.setHeader('Content-Disposition', `attachment; filename=progression_par_chapitre_matiere_enseignant_${langue}.xlsx`);
          res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
  
          // Envoyer le fichier Excel en réponse

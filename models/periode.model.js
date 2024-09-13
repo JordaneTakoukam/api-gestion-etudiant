@@ -2,7 +2,7 @@ import { Timestamp } from 'mongodb';
 import mongoose, { Schema } from 'mongoose';
 
 const periodeSchema = new Schema({
-    jour: { type: String, required: true }, // Jour de la semaine (ex: Lundi, Mardi, etc.)
+    jour: { type: Number, required: true }, // Jour de la semaine (ex: 1=Lundi, 2=Mardi, etc.)
     semestre: { type: Number, required: true }, // Semestre (ex: Semestre 1, Semestre 2)
     annee: { type: Number, required: true }, // Année académique
     pause:{type:Boolean, required:true}, //Pause

@@ -534,119 +534,97 @@ export const generateListEvent = async (req, res)=>{
         // Générer le PDF à partir du contenu HTML
         generatePDFAndSendToBrowser(htmlContent, res, 'portrait');
     }else{
-        exportToExcel(evenements, langue, res)
+        exportToExcel(res, evenements, langue)
     }
 }
 
-async function exportToExcel (evenements, langue, res) {
-
+const exportToExcel = async (res, evenements, langue) => {
     try {
-        // Filtrer les entêtes se terminant par "Fr" et ceux qui ne se terminent ni par "Fr" ni par "En"
-        let headers = Object.keys(evenements[0]).filter(
-            header => !['_id', '__v', 'date_creation', 'code'].includes(header) &&
-                (header.endsWith("Fr") || (!header.endsWith("Fr") && !header.endsWith("En")))
-        );
-        if (langue !== 'fr') {
-            headers = Object.keys(evenements[0]).filter(
-                header => !['_id', '__v', 'date_creation', 'code'].includes(header) &&
-                    (header.endsWith("En") || (!header.endsWith("En") && !header.endsWith("Fr")))
-            );
-        }
-
-        // Filtrer les données pour ne récupérer que les propriétés correspondantes aux entêtes sélectionnés
-        const filteredDataForExport = evenements.map(item => {
-            const filteredItem = {};
-
-            headers.forEach(header => {
-                if (item && Object.prototype.hasOwnProperty.call(item, header)) {
-                    if (header === 'etat') {
-                        // const etat = etats.find(etat => etat._id === item[header]);
-                        // filteredItem[header] = etat ? (langue === 'fr' ? etat.libelleFr : etat.libelleEn) : item[header];
-                    } else if (header === 'promotion') {
-                        // const promotion = promotions.find(promotion => promotion._id === item[header]);
-                        // filteredItem[header] = promotion ? (langue === 'fr' ? promotion.libelleFr : promotion.libelleEn) : item[header];
-                    } else if (header === 'dateDebut' || header === 'dateFin') {
-                        const datePart = item[header].split('T')[0];
-                        filteredItem[header] = datePart;
-                    } else {
-                        filteredItem[header] = item[header]?.toString();
-                    }
-                }
-            });
-
-            return filteredItem;
-        });
-
-        // Renommer les entêtes du tableau d'objets
-        const renamedDataForExport = filteredDataForExport.map(item => {
-            const renamedItem = {};
-
-            Object.keys(item).forEach(key => {
-                switch (key) {
-                    case 'libelleFr':
-                    case 'libelleEn':
-                        renamedItem[langue === 'fr' ? 'Libellé' : 'Label'] = item[key];
-                        break;
-                    case 'dateDebut':
-                        renamedItem[langue === 'fr' ? 'Date de début' : 'Start date'] = item[key];
-                        break;
-                    case 'dateFin':
-                        renamedItem[langue === 'fr' ? 'Date de fin' : 'End date'] = item[key];
-                        break;
-                    case 'periodeFr':
-                    case 'periodeEn':
-                        renamedItem[langue === 'fr' ? 'Période' : 'Period'] = item[key];
-                        break;
-                    case 'personnelFr':
-                    case 'personnelEn':
-                        renamedItem[langue === 'fr' ? 'Personnel' : 'Personnel'] = item[key];
-                        break;
-                    case 'descriptionObservationFr':
-                    case 'descriptionObservationEn':
-                        renamedItem['Description/Observation'] = item[key];
-                        break;
-                    case 'etat':
-                        renamedItem[langue === 'fr' ? 'État' : 'Status'] = item[key];
-                        break;
-                    case 'promotion':
-                        renamedItem['Promotion'] = item[key];
-                        break;
-                    case 'annee':
-                        renamedItem[langue === 'fr' ? 'Année' : 'Year'] = item[key];
-                        break;
-                    default:
-                        renamedItem[key] = item[key];
-                        break;
-                }
-            });
-
-            return renamedItem;
-        });
-
-        // Créer un nouveau classeur Excel
         const workbook = new ExcelJS.Workbook();
-        // Ajouter une nouvelle feuille de calcul
         const worksheet = workbook.addWorksheet('Sheet1');
 
-        // Ajouter les entêtes
-        worksheet.columns = Object.keys(renamedDataForExport[0]).map(key => ({ header: key, key }));
+        // Récupérer les états d'événements dans les paramètres
+        let settings = await Setting.find().select('etatsEvenement');
+        let setting = null;
+        if (settings.length > 0) {
+            setting = settings[0];
+        }
 
-        // Ajouter les données
-        // renamedDataForExport.forEach(item => {
-        //     worksheet.addRow(item);
-        // });
+        const etats = setting.etatsEvenement;
+
+        // Définir les colonnes en fonction de la langue
+        if (langue === 'fr') {
+            worksheet.columns = [
+                { header: 'Libellé', key: 'libelleFr', width: 30 },
+                { header: 'Date Début', key: 'dateDebut', width: 20 },
+                { header: 'Date Fin', key: 'dateFin', width: 20 },
+                { header: 'Période', key: 'periodeFr', width: 30 },
+                { header: 'Description/Observation', key: 'descriptionObservationFr', width: 30 },
+                { header: 'Personnel', key: 'personnelFr', width: 30 },
+                { header: 'État', key: 'etat', width: 20 },
+                { header: 'Année', key: 'annee', width: 10 }
+            ];
+        } else {
+            worksheet.columns = [
+                { header: 'Label', key: 'libelleEn', width: 30 },
+                { header: 'Start Date', key: 'dateDebut', width: 20 },
+                { header: 'End Date', key: 'dateFin', width: 20 },
+                { header: 'Period', key: 'periodeEn', width: 30 },
+                { header: 'Description/Observation', key: 'descriptionObservationEn', width: 30 },
+                { header: 'Personnel', key: 'personnelEn', width: 30 },
+                { header: 'State', key: 'etat', width: 20 },
+                { header: 'Year', key: 'annee', width: 10 }
+            ];
+        }
+
+        // Ajouter les données (chaque événement comme une nouvelle ligne)
+        evenements.forEach(event => {
+            // Trouver l'état correspondant en fonction de l'_id de l'état
+            const etatCorrespondant = etats.find(e => e._id.toString() === event.etat.toString());
+            var etat="";
+            if (etatCorrespondant) {
+                // Remplacer l'_id par le libellé en fonction de la langue
+                if (langue === 'fr') {
+                    etat = etatCorrespondant.libelleFr;
+                } else {
+                    etat = etatCorrespondant.libelleEn;
+                }
+            }
+
+            // Ajouter la ligne avec les données modifiées
+             // Ajouter la ligne avec les données modifiées
+             worksheet.addRow({
+                libelleFr: event.libelleFr,
+                libelleEn: event.libelleEn,
+                dateDebut: event.dateDebut,
+                dateFin: event.dateFin,
+                periodeFr: event.periodeFr,
+                periodeEn: event.periodeEn,
+                descriptionObservationFr: event.descriptionObservationFr,
+                descriptionObservationEn: event.descriptionObservationEn,
+                personnelFr: event.personnelFr,
+                personnelEn: event.personnelEn,
+                etat: etat, // libellé de l'état (en FR ou EN selon la langue)
+                annee: formatYear(event.annee)
+            });
+        });
 
         // Définir les en-têtes de réponse pour le téléchargement du fichier
-        res.setHeader('Content-Disposition', `attachment;`);
+        res.setHeader('Content-Disposition', `attachment; filename=calendrier_academique_${langue}.xlsx`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
         // Envoyer le fichier Excel en réponse
         await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+
     } catch (error) {
-        console.error('Erreur lors de la génération du fichier Excel:', error);
-        res.status(500).json({ success: false, message: 'Erreur lors de la génération du fichier Excel' });
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Erreur lors de l\'exportation du fichier Excel.' });
     }
 };
+
+
+
 
 async function fillTemplate (langue, evenements, filePath, annee) {
     try {

@@ -6,9 +6,21 @@ import moment from 'moment';
 import Setting from '../../models/setting.model.js';
 import { formatDateFr, formatNameSurname, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
+import ExcelJS from 'exceljs';
 
 // Définir la locale française pour moment
 moment.locale('fr');
+
+//jours de la semaine
+const jours = [
+    { libelleFr: 'Lundi', libelleEn: 'Monday' },
+    { libelleFr: 'Mardi', libelleEn: 'Tuesday' },
+    { libelleFr: 'Mercredi', libelleEn: 'Wednesday' },
+    { libelleFr: 'Jeudi', libelleEn: 'Thursday' },
+    { libelleFr: 'Vendredi', libelleEn: 'Friday' },
+    { libelleFr: 'Samedi', libelleEn: 'Saturday' },
+    { libelleFr: 'Dimanche', libelleEn: 'Sunday' },
+];
 
 // create
 export const createPeriode = async (req, res) => {
@@ -974,7 +986,7 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
 
 export const generateEmploisDuTemps = async (req, res) => {
     const {  annee, semestre } = req.params;
-    const {section, cycle, niveau, langue} = req.query;
+    const {section, cycle, niveau, langue, fileType} = req.query;
 
     // Vérifier si l'ID du niveau est valide
     if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
@@ -1028,17 +1040,99 @@ export const generateEmploisDuTemps = async (req, res) => {
             select: 'nom prenom'
         })
         .exec();
-    let filePath= './templates/templates_fr/template_emplois_temps_fr.html';
-    if(langue==='en'){
-        filePath='./templates/templates_en/template_emplois_temps_en.html'
-    }
-    // Remplir le template avec les données récupérées
-    const htmlContent = await fillTemplateEmplois(langue, section, cycle, niveau, periodes, filePath, annee, semestre);
+    if(fileType.toLowerCase() === 'pdf'){
+        let filePath= './templates/templates_fr/template_emplois_temps_fr.html';
+        if(langue==='en'){
+            filePath='./templates/templates_en/template_emplois_temps_en.html'
+        }
+        // Remplir le template avec les données récupérées
+        const htmlContent = await fillTemplateEmplois(langue, section, cycle, niveau, periodes, filePath, annee, semestre);
 
-    // Générer le PDF à partir du contenu HTML
-    generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        // Générer le PDF à partir du contenu HTML
+        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+    }else{
+        exportToExcel(res, periodes, langue);
+    }
 }
 
+
+const exportToExcel = async (res, periodes, langue) => {
+    
+    if (periodes) {
+        let settings = await Setting.find().select('sallesDeCours');
+        let setting = null;
+        if(settings.length>0){
+            setting=settings[0]
+        }
+
+        // Créer un nouveau classeur Excel
+        const workbook = new ExcelJS.Workbook();
+        // Ajouter une nouvelle feuille de calcul
+        const worksheet = workbook.addWorksheet('Sheet1');
+
+        // Déterminer le libellé de l'entête "Horaire" en fonction de la langue
+        const headerTimeLabel = langue === 'fr' ? 'Horaire' : 'Time';
+
+        // Ajouter l'entête (Horaire/Time et les jours de la semaine)
+        worksheet.addRow([headerTimeLabel, ...jours.map(jour => langue === 'fr' ? jour.libelleFr : jour.libelleEn)]);
+
+        // Créer un dictionnaire pour organiser les cours par jour et heure
+        const coursParJourEtHeure = {};
+        periodes.forEach(periode => {
+            const jourLabel = jours[periode.jour - 1];  // Convertir l'index du jour en libellé
+            const heure = `${periode.heureDebut} - ${periode.heureFin}`;
+            
+            // Créer une clé unique pour chaque horaire
+            if (!coursParJourEtHeure[heure]) {
+                coursParJourEtHeure[heure] = {};
+            }
+
+           // Déterminer le libellé du jour en fonction de la langue
+            const jourKey = langue === 'fr' ? jourLabel.libelleFr : jourLabel.libelleEn;
+
+            // Déterminer le libellé de la matière en fonction de la langue
+            const matiereLibelle = langue === 'fr' ? periode.matiere.libelleFr : periode.matiere.libelleEn;
+
+            // Construire les informations à afficher : matière, enseignants et salle de cours, avec des sauts de ligne
+            const enseignants = `${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal?.prenom || ""}` + 
+                                (periode.enseignantSuppleant ? `\\${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant?.prenom || ""}` : '');
+
+            const salleDeCours = setting?setting.sallesDeCours.find(sal=>sal._id.toString()===periode.salleCours.toString()):"";
+
+            // Ajouter le cours à l'horaire correspondant, avec des informations sur des lignes séparées
+            coursParJourEtHeure[heure][jourKey] = `${matiereLibelle} - (${enseignants}) - ${langue==='fr'?salleDeCours?.libelleFr || "":salleDeCours?.libelleEn || ""}`;
+        });
+
+        // Trier les heures par ordre croissant
+        const horairesTries = Object.keys(coursParJourEtHeure).sort((a, b) => {
+            // Transformer les heures de début en objets Date pour une comparaison facile
+            const [startA] = a.split(' - ');
+            const [startB] = b.split(' - ');
+            return new Date(`1970-01-01T${startA}:00`) - new Date(`1970-01-01T${startB}:00`);
+        });
+
+        // Ajouter les périodes de cours au tableau
+        horairesTries.forEach(horaire => {
+            const coursParJour = coursParJourEtHeure[horaire];
+            const row = [horaire]; // Ajouter l'horaire à la première colonne
+            jours.forEach(jour => {
+                const jourLabel = langue === 'fr' ? jour.libelleFr : jour.libelleEn;
+                row.push(coursParJour[jourLabel] || ''); // Ajouter la matière ou une cellule vide si aucun cours
+            });
+            worksheet.addRow(row);
+        });
+
+        // Définir les en-têtes de réponse pour le téléchargement du fichier
+        res.setHeader('Content-Disposition', `attachment; filename=emploi_du_temps_ ${langue}.xlsx`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // Envoyer le fichier Excel en réponse
+        await workbook.xlsx.write(res);
+        res.end(); // Terminer la réponse après l'écriture du fichier
+    } else {
+        res.status(400).json({ success: false, message: message.pas_de_donnees });
+    }
+};
 
 
 function getUniqueTimeSlots(periodes) {
