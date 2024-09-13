@@ -13,14 +13,33 @@ import fs from 'fs';
 import Notification from "../../models/notification.model.js";
 
 // Configuration de multer pour gérer plusieurs fichiers
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, './public/documents/pieces_jointes/');
+//     },
+//     filename: function (req, file, cb) {
+//         const extension = path.extname(file.originalname);
+//         const timestamp = DateTime.now().toFormat('X');
+//         const fileName = `${timestamp}-${file.originalname}`;
+//         cb(null, fileName);
+//     }
+// });
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, './public/documents/pieces_jointes/');
+        const dir = './public/documents/pieces_jointes/';
+
+        // Créer le répertoire s'il n'existe pas
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+
+        cb(null, dir); // Utilisez le chemin correct
     },
     filename: function (req, file, cb) {
         const extension = path.extname(file.originalname);
-        const timestamp = DateTime.now().toFormat('X');
-        const fileName = `${timestamp}-${file.originalname}`;
+        const timestamp = DateTime.now().toFormat('X'); // Génère un timestamp unique
+        const fileName = `${timestamp}-${file.originalname}`; // Concatène timestamp et nom du fichier original
         cb(null, fileName);
     }
 });
