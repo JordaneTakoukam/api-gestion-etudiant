@@ -21,6 +21,7 @@ import periodeEnseignementRoutes from "./routes/periode_enseigenement.routes.js"
 import matiereRoutes from "./routes/matiere.routes.js"; // matieres
 import documentRoutes from "./routes/document.routes.js";
 import qrCodeRoutes from "./routes/qr_code.routes.js";
+import presenceRoutes from "./routes/presence.routes.js";
 
 // routes de settings
 import settingRoute from "./routes/settings/_setting.routes.js";
@@ -90,6 +91,7 @@ app.use("/api/v1/evenement/", evenementRoutes);
 app.use("/api/v1/periode/", periodeRoutes);
 app.use("/api/v1/periode-enseignement/", periodeEnseignementRoutes);
 app.use("/api/v1/qr-code/", qrCodeRoutes);
+app.use("/api/v1/presence/", presenceRoutes);
 
 app.use("/api/v1/settings", settingRoute);
 app.use("/api/v1/setting/service", serviceRoutes);
