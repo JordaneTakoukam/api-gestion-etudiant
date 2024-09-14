@@ -3,6 +3,8 @@ const message = {
         fr: "Erreur interne du serveur !",
         en: "Internal server error!"
     },
+
+    
     emailExiste: {
        fr: "Cette adresse e-mail est déjà enregistrée !",
        en: "This email address is already registered!"
