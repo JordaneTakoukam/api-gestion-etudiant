@@ -1,5 +1,5 @@
 import express from "express";
-import { createPresence, deletePresence, getPresencesWithTotalHoraire, updatePresence } from "../controllers/presences/presence.controller.js";
+import { createPresence, deletePresence, generateListPresenceByNiveau, getPresencesWithTotalHoraire, searchEnseignantPresence, updatePresence } from "../controllers/presences/presence.controller.js";
 
 // controllers
 
@@ -13,6 +13,8 @@ router.post("/create", createPresence);
 
 //  read
 router.get("/getPresencesWithTotalHoraire/:niveauId", getPresencesWithTotalHoraire);
+router.get("/generateListPresenceByNiveau/:niveauId", generateListPresenceByNiveau);
+router.get("/searchEnseignantPresence",searchEnseignantPresence);
 
 
 // update

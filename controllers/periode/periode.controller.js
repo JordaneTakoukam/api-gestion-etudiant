@@ -118,6 +118,7 @@ export const createPeriode = async (req, res) => {
                 { heureFin: { $gte: heureDebut, $lte: heureFin } }
             ]
         });
+        
         if (existingPeriodeCours) {
             return res.status(400).json({ 
                 success: false, 
