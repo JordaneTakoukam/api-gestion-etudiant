@@ -43,6 +43,7 @@ import typeEnseignementRoutes from "./routes/settings/type_enseignement.routes.j
 import etatEvenementRoutes from "./routes/settings/etat_evenement.routes.js";
 import anneeRoutes from "./routes/settings/annee.routes.js";
 import semestreRoutes from "./routes/settings/semestre.routes.js";
+import tauxHoraireRoutes from "./routes/settings/taux_horaire.routes.js";
 import roleRoutes from "./routes/settings/role.routes.js";
 import abscenceRoutes from "./routes/absence.routes.js";
 import notificationRoutes from "./routes/notification.route.js";
@@ -112,6 +113,7 @@ app.use("/api/v1/setting/type-enseignement", typeEnseignementRoutes);
 app.use("/api/v1/setting/etat-evenement", etatEvenementRoutes);
 app.use("/api/v1/setting/annee", anneeRoutes);
 app.use("/api/v1/setting/semestre", semestreRoutes);
+app.use("/api/v1/setting/taux-horaire", tauxHoraireRoutes);
 app.use("/api/v1/setting/role", roleRoutes);
 
 // new

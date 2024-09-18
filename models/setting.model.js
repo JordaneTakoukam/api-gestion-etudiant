@@ -6,6 +6,7 @@ const settingSchema = new Schema({
     anneeCourante:{type:Number},
     premiereAnnee:{type:Number},
     semestreCourant:{type:Number},
+    tauxHoraire:{type:Number},
     services: [codeLibelleSchema],
     specialites: [codeLibelleSchema],
     fonctions: [codeLibelleSchema],

@@ -105,6 +105,18 @@ export function formatYear(year) {
     return `${year}-${year + 1}`;
 }
 
+export function calculGrossBonus(totalHoraire, tauxHoraire) {
+    return (totalHoraire * tauxHoraire);
+}
+
+export function calculIRNC(montantBrut) {
+    return ((montantBrut * 11)/100);
+}
+
+export function calculNetBonus(montantBrut, irnc) {
+    return (montantBrut - irnc);
+}
+
 export function loadHTML(filePath) {
     return new Promise((resolve, reject) => {
         readFile(filePath, 'utf8', (err, data) => {

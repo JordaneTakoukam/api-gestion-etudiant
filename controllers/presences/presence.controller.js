@@ -5,7 +5,8 @@ import cheerio from 'cheerio';
 import { extractRawText } from 'mammoth';
 import ExcelJS from 'exceljs'
 import Periode from '../../models/periode.model.js';
-import {generatePDFAndSendToBrowser, formatYear, loadHTML} from '../../fonctions/fonctions.js';
+import {generatePDFAndSendToBrowser, formatYear, loadHTML, calculGrossBonus, calculIRNC, calculNetBonus} from '../../fonctions/fonctions.js';
+import Setting from '../../models/setting.model.js'
 
 
 export const createPresence = async (req, res) => {
@@ -427,9 +428,6 @@ export const searchEnseignantPresence = async (req, res) => {
 };
 
 
-
-
-
 export const generateListPresenceByNiveau = async (req, res)=>{
     const { niveauId } = req.params;
     const { annee, semestre, langue, departement, section, cycle, niveau, fileType } = req.query;
@@ -557,22 +555,27 @@ export const generateListPresenceByNiveau = async (req, res)=>{
         }
     });
 
-
+    let settings = await Setting.find().select('tauxHoraire');
+    let setting = null;
+    if(settings.length>0){
+        setting=settings[0]
+    }
+    const tauxHoraire = setting?.tauxHoraire || 0;
     if(fileType.toLowerCase() === 'pdf'){
         let filePath='./templates/templates_fr/template_presence_fr.html';
         if(langue==='en'){
             filePath='./templates/templates_en/template_presence_en.html';
         }
-        const htmlContent = await fillTemplate( langue, departement, section, cycle, niveau, enseignantsPresences, filePath, annee, semestre);
+        const htmlContent = await fillTemplate( langue, departement, section, cycle, niveau, enseignantsPresences, filePath, annee, semestre, tauxHoraire);
 
         // Générer le PDF à partir du contenu HTML
         generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
     }else{
-        exportToExcel(enseignantsPresences, langue, res);
+        exportToExcel(enseignantsPresences, langue, res, tauxHoraire);
     }
 }
 
-const exportToExcel = async (enseignantsPresences, langue, res ) => {
+const exportToExcel = async (enseignantsPresences, langue, res, tauxHoraire ) => {
     if (enseignantsPresences) {
         // Créer un nouveau classeur Excel
         const workbook = new ExcelJS.Workbook();
@@ -582,7 +585,7 @@ const exportToExcel = async (enseignantsPresences, langue, res ) => {
         // Définir les en-têtes en fonction de la langue
         
         const headers = langue === 'fr' 
-                ? ['Matricule', 'Nom', 'Prénom', 'Taux horaire', 'Nombre d\'heure', 'Gratification brut', 'IRNC', 'Gratification net']
+                ? ['Matricule', 'Nom', 'Prénom', 'Taux horaire', 'Nombre d\'heure', 'Gratification brute', 'IRNC', 'Gratification nette']
                 : ['Regist.', 'Last Name', 'First Name', 'Hourly rate', 'Number of hours', 'Gross bonus', 'IRNC', 'Net bonus'];
         
 
@@ -591,10 +594,12 @@ const exportToExcel = async (enseignantsPresences, langue, res ) => {
         
         // Ajouter les données des étudiants
         enseignantsPresences.forEach(enseignantsPresence => {
-            
+            const montantBrut = calculGrossBonus(enseignantsPresence?.totalHoraire || 0, tauxHoraire);
+            const irnc = calculIRNC(montantBrut);
+            const montantNet = calculNetBonus(montantBrut, irnc);
             worksheet.addRow([
-                enseignantsPresence.enseignant?.matricule || "", enseignantsPresence.enseignant?.nom || "", enseignantsPresence.enseignant?.prenom || "", "",
-                enseignantsPresence.totalHoraire, "", "", ""
+                enseignantsPresence.enseignant?.matricule || "", enseignantsPresence.enseignant?.nom || "", enseignantsPresence.enseignant?.prenom || "", tauxHoraire,
+                enseignantsPresence.totalHoraire, montantBrut, irnc, montantNet
 
             ]);
             
@@ -613,7 +618,7 @@ const exportToExcel = async (enseignantsPresences, langue, res ) => {
     }
 };
 
-async function fillTemplate (departement, section, cycle, niveau, langue, enseignantsPresences, filePath, annee, semestre) {
+async function fillTemplate (departement, section, cycle, niveau, langue, enseignantsPresences, filePath, annee, semestre, tauxHoraire) {
     try {
         const htmlString = await loadHTML(filePath);
         const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
@@ -630,15 +635,18 @@ async function fillTemplate (departement, section, cycle, niveau, langue, enseig
         let i = 1;
         for (const enseignantsPresence of enseignantsPresences) {
             const clonedRow = rowTemplate.clone();
+            const montantBrut = calculGrossBonus(enseignantsPresence?.totalHoraire || 0, tauxHoraire);
+            const irnc = calculIRNC(montantBrut);
+            const montantNet = calculNetBonus(montantBrut, irnc);
             clonedRow.find('#num').text(i);
             clonedRow.find('#matricule').text(enseignantsPresence.enseignant?.matricule || "");
             clonedRow.find('#nom').text(enseignantsPresence.enseignant?.nom || "");
             clonedRow.find('#prenom').text(enseignantsPresence.enseignant?.prenom || "");
-            clonedRow.find('#taux_horaire').text("");
+            clonedRow.find('#taux_horaire').text(tauxHoraire);
             clonedRow.find('#nb_heure').text(enseignantsPresence?.totalHoraire || 0);
-            clonedRow.find('#montant_brut').text("");
-            clonedRow.find('#irnc').text("");
-            clonedRow.find('#montant_net').text("");
+            clonedRow.find('#montant_brut').text(montantBrut);
+            clonedRow.find('#irnc').text(irnc);
+            clonedRow.find('#montant_net').text(montantNet);
             userTable.append(clonedRow);
             i++;
         }
