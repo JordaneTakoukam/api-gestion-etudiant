@@ -149,6 +149,26 @@ const message = {
         fr: "Ajouter avec succès",
         en: "Added successfully"
     },
+    jour_non_correspondant:{
+        fr:"Le jour envoyé ne correspond pas au jour actuel.",
+        en:"The submitted day does not match the current day."
+    },
+    presence_debut_enreg:{
+        fr:"Présence enregistrée pour le début du cours.",
+        en:"Attendance recorded for the start of the class."
+    },
+    presence_fin_enreg:{
+        fr:"Présence enregistrée pour la fin du cours.",
+        en:"Attendance recorded for the end of the class."
+    },
+    presence_confirm:{
+        fr:"Présence déjà confirmée pour ce cours.",
+        en:"Attendance already confirmed for this class."
+    },
+    horaire_non_conforme:{
+        fr:"Vous ne pouvez marquer votre présence qu'entre 5 minutes avant et 5 minutes après l'horaire du cours.",
+        en:"You can only mark your attendance between 5 minutes before and 5 minutes after the scheduled class time."
+    },
     identifiant_invalide: {
         fr: "L'identifiant est invalide",
         en: "Identifier is invalid"
@@ -328,6 +348,27 @@ const message = {
     pas_de_donnees :{
         fr:'Aucune donnée disponible pour l\'exportation', 
         en:'No data available for export'
+    },
+
+    absence_inexistante: {
+        fr:"L'absence n'existe pas pour cet utilisateur",
+        en:"Absence does not exist for this user"
+    },
+    erreur_ajout_absence: {
+        fr:"Erreur serveur lors de l'ajout de l'absence à l'utilisateur",
+        en:"Server error while adding absence to user"
+    },
+    erreur_retrait_absence: {
+        fr:"Erreur serveur lors du retrait de l'absence de l'utilisateur",
+        en:"Server error while removing absence from user"
+    },
+    absence_ajoutee_succes: {
+        fr:"Absence ajoutée à l'utilisateur avec succès",
+        en:"Absence added to user successfully"
+    },
+    absence_retiree_succes: {
+        fr:"Absence retirée de l'utilisateur avec succès",
+        en:"Absence removed from user successfully"
     }
 };
 

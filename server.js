@@ -1,4 +1,5 @@
 import express from "express";
+import './utils/cron_tasks.js'; // Importez votre fichier cron ici
 import dotenv from "dotenv";
 import cors from "cors";
 import session from "express-session";

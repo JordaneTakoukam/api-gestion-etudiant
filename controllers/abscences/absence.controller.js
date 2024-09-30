@@ -1,25 +1,10 @@
 import { message } from "../../configs/message.js";
 import Absence from "../../models/absences/absence.model.js";
+import Presence from "../../models/presence.model.js";
 import User from "../../models/user.model.js";
 import mongoose from "mongoose";
+import moment from 'moment-timezone';
 
-// Messages en français
-const messagesFr = {
-    absence_inexistante: "L'absence n'existe pas pour cet utilisateur",
-    erreur_ajout_absence: "Erreur serveur lors de l'ajout de l'absence à l'utilisateur",
-    erreur_retrait_absence: "Erreur serveur lors du retrait de l'absence de l'utilisateur",
-    absence_ajoutee_succes: "Absence ajoutée à l'utilisateur avec succès",
-    absence_retiree_succes: "Absence retirée de l'utilisateur avec succès"
-};
-
-// Messages en anglais
-const messagesEn = {
-    absence_inexistante: "Absence does not exist for this user",
-    erreur_ajout_absence: "Server error while adding absence to user",
-    erreur_retrait_absence: "Server error while removing absence from user",
-    absence_ajoutee_succes: "Absence added to user successfully",
-    absence_retiree_succes: "Absence removed from user successfully"
-};
 
 // Contrôleur pour ajouter une absence à un utilisateur
 export const ajouterAbsence = async (req, res) => {
@@ -61,14 +46,12 @@ export const ajouterAbsence = async (req, res) => {
         // Enregistrer les modifications de l'utilisateur
         await utilisateur.save();
 
-        res.status(201).json({ success: true, message: { fr: messagesFr.absence_ajoutee_succes, en: messagesEn.absence_ajoutee_succes }, data: absenceEnregistree });
+        res.status(201).json({ success: true, message: message.absence_ajoutee_succes});
     } catch (error) {
         console.error("Erreur lors de l'ajout de l'absence à l'utilisateur :", error);
-        res.status(500).json({ success: false, message: { fr: messagesFr.erreur_ajout_absence, en: messagesEn.erreur_ajout_absence } });
+        res.status(500).json({ success: false, message: message.erreur_ajout_absence });
     }
 };
-
-
 
 // Contrôleur pour retirer une absence à un utilisateur
 export const retirerAbsence = async (req, res) => {
@@ -98,7 +81,7 @@ export const retirerAbsence = async (req, res) => {
 
         // Vérifier si l'absence existe dans la liste des absences de l'utilisateur
         if (!utilisateur.absences.includes(absenceId)) {
-            return res.status(404).json({ success: false, message: { fr: messagesFr.absence_inexistante, en: messagesEn.absence_inexistante } });
+            return res.status(404).json({ success: false, message: message.absence_inexistante });
         }
 
         // Retirer l'ID de l'absence de la liste des absences de l'utilisateur
@@ -110,10 +93,10 @@ export const retirerAbsence = async (req, res) => {
         // Supprimer l'absence de la base de données
         await Absence.findByIdAndDelete(absenceId);
 
-        res.status(200).json({ success: true, message: { fr: messagesFr.absence_retiree_succes, en: messagesEn.absence_retiree_succes } });
+        res.status(200).json({ success: true, message: message.absence_retiree_succes });
     } catch (error) {
         console.error("Erreur lors du retrait de l'absence de l'utilisateur :", error);
-        res.status(500).json({ success: false, message: { fr: messagesFr.erreur_retrait_absence, en: messagesEn.erreur_retrait_absence } });
+        res.status(500).json({ success: false, message: message.erreur_retrait_absence });
     }
 };
 
@@ -147,7 +130,65 @@ export const justifierAbsence = async (req, res) => {
         });
     } catch (error) {
         console.error("Erreur lors du retrait de l'absence de l'utilisateur :", error);
-        res.status(500).json({ success: false, message: { fr: messagesFr.erreur_retrait_absence, en: messagesEn.erreur_retrait_absence } });
+        res.status(500).json({ success: false, message: message.erreur_retrait_absence });
+    }
+};
+
+export const enregistrerAbsencesApresCours = async (niveauId, matiereId, annee, semestre, jour, heureDebut, heureFin) => {
+    try {
+        
+        const query = {
+            'niveaux': {
+                $elemMatch: {
+                    niveau: niveauId,
+                    annee: Number(annee),
+                },
+            },
+        };
+        // Récupérer tous les étudiants inscrits dans le niveau concerné
+        const etudiants = await User.find(query);
+
+        // Parcourir la liste des étudiants
+        for (const etudiant of etudiants) {
+            // Vérifier si l'étudiant a déjà enregistré sa présence pour ce cours
+            const presenceExistante = await Presence.findOne({
+                utilisateur: etudiant._id,
+                matiere: matiereId,
+                niveau: niveauId,
+                annee,
+                semestre,
+                jour,
+                debutCours:true,
+                finCours:true
+            });
+
+            // Si pas de présence enregistrée, marquer une absence
+            if (!presenceExistante) {
+                const nouvelleAbsence = new Absence({
+                    user: etudiant._id,
+                    semestre,
+                    annee,
+                    dateAbsence: new Date(),
+                    heureDebut,
+                    heureFin,
+                    etat: 0, // Statut indiquant l'absence
+                    motif: '',
+                });
+
+                // Sauvegarder l'absence
+                await nouvelleAbsence.save();
+
+                // Ajouter cette absence dans le champ `absences` de l'étudiant
+                etudiant.absences.push(nouvelleAbsence._id);
+                await etudiant.save();
+            }
+        }
+
+        return { success: true, message: "Absences enregistrées avec succès." };
+
+    } catch (error) {
+        console.error("Erreur lors de l'enregistrement des absences :", error);
+        return { success: false, message: "Erreur lors de l'enregistrement des absences." };
     }
 };
 

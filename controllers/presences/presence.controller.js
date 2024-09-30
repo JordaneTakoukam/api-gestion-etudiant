@@ -7,53 +7,127 @@ import ExcelJS from 'exceljs'
 import Periode from '../../models/periode.model.js';
 import {generatePDFAndSendToBrowser, formatYear, loadHTML, calculGrossBonus, calculIRNC, calculNetBonus} from '../../fonctions/fonctions.js';
 import Setting from '../../models/setting.model.js'
-
+import moment from 'moment-timezone';
 
 export const createPresence = async (req, res) => {
-    const { enseignant, matiere,niveau, annee, semestre, jour, heureDebut, heureFin } = req.body;
+    const { utilisateur, matiere, niveau, annee, semestre, jour, heureDebut, heureFin } = req.body;
 
     try {
         // Vérification des champs obligatoires
-        if (!enseignant || !matiere || !niveau || !jour || !heureDebut || !heureFin || !annee || !semestre) {
+        if (!utilisateur || !matiere || !niveau || !jour || !heureDebut || !heureFin || !annee || !semestre) {
             return res.status(400).json({
                 success: false,
-                message: message.champ_obligatoire
+                message: message.champ_obligatoire,
             });
         }
 
         // Vérification de la validité des ObjectIds
-        if (!mongoose.Types.ObjectId.isValid(enseignant._id) || !mongoose.Types.ObjectId.isValid(matiere._id) || !mongoose.Types.ObjectId.isValid(niveau)) {
+        if (!mongoose.Types.ObjectId.isValid(utilisateur._id) || !mongoose.Types.ObjectId.isValid(matiere._id) || !mongoose.Types.ObjectId.isValid(niveau)) {
             return res.status(400).json({
                 success: false,
-                message: message.identifiant_invalide
+                message: message.identifiant_invalide,
             });
         }
 
-        // Création d'une nouvelle présence
-        const nouvellePresence = new Presence({
-            enseignant:enseignant._id,
-            matiere:matiere._id,
+        // Vérification si le jour envoyé correspond au jour actuel
+        const currentDay = new Date().getDay(); // 0=Dimanche, 1=Lundi, ..., 6=Samedi
+        if (jour !== currentDay) {
+            return res.status(400).json({
+                success: false,
+                message: message.jour_non_correspondant,
+            });
+        }
+
+        // Obtenir l'heure actuelle à Yaoundé, Cameroun
+        const currentTime = moment().tz("Africa/Douala");
+        const startCourseTime = moment.tz(heureDebut, "HH:mm", "Africa/Douala");
+        const endCourseTime = moment.tz(heureFin, "HH:mm", "Africa/Douala");
+
+        // Vérification si la présence est déjà marquée
+        // Obtenir la date actuelle (au format "YYYY-MM-DD") en tenant compte de l'heure à Yaoundé, Cameroun
+        const currentDate = moment().tz("Africa/Douala").startOf('day'); // Commencer à minuit de la journée actuelle
+
+        // Définir la plage de dates (du début à la fin de la journée actuelle)
+        const startOfDay = currentDate.toDate(); // Convertir en objet Date pour MongoDB
+        const endOfDay = currentDate.endOf('day').toDate(); // Fin de la journée (23:59:59)
+
+        // Rechercher une présence existante pour cet utilisateur, matière, niveau, année, semestre, jour, dans la plage de la journée actuelle
+        const presenceExistante = await Presence.findOne({
+            utilisateur: utilisateur._id,
+            matiere: matiere._id,
             niveau,
-            jour,
-            heureDebut,
-            heureFin,
             annee,
-            semestre
+            semestre,
+            jour,
+            dateEnregistrement: { $gte: startOfDay, $lte: endOfDay }, // Filtrer entre le début et la fin de la journée
         });
 
-        // Enregistrement de la nouvelle présence dans la base de données
-        const savePresence = await nouvellePresence.save();
 
-        res.status(200).json({
-            success: true,
-            message: message.ajouter_avec_success,
-            data: savePresence,
-        });
+
+        if (!presenceExistante) {
+            // Marquer la présence au début du cours : 5 minutes avant et jusqu'à 15 minutes après le début du cours
+            const startBuffer = startCourseTime.clone().subtract(5, 'minutes');
+            const endBuffer = startCourseTime.clone().add(15, 'minutes');
+
+            if (!currentTime.isBetween(startBuffer, endBuffer, null, '[]')) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.horaire_non_conforme,
+                });
+            }
+
+            // Si pas de présence, marquer la présence au début du cours
+            const nouvellePresence = new Presence({
+                utilisateur: utilisateur._id,
+                matiere: matiere._id,
+                niveau,
+                jour,
+                heureDebut,
+                heureFin,
+                annee,
+                semestre,
+                debutCours: true, // Marquer présence au début du cours
+            });
+
+            const savePresence = await nouvellePresence.save();
+
+            return res.status(200).json({
+                success: true,
+                message: message.presence_debut_enreg,
+                data: savePresence,
+            });
+        } else if (presenceExistante && !presenceExistante.finCours) {
+            // Marquer la fin du cours : 5 minutes avant et jusqu'à 5 minutes après la fin du cours
+            const startEndBuffer = endCourseTime.clone().subtract(5, 'minutes');
+            const endEndBuffer = endCourseTime.clone().add(5, 'minutes');
+
+            if (!currentTime.isBetween(startEndBuffer, endEndBuffer, null, '[]')) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.horaire_non_conforme,
+                });
+            }
+
+            // Si la présence au début du cours est déjà marquée, marquer la fin du cours
+            presenceExistante.finCours = true;
+            await presenceExistante.save();
+
+            return res.status(200).json({
+                success: true,
+                message: message.presence_fin_enreg,
+                data: presenceExistante,
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: message.presence_confirm,
+            });
+        }
     } catch (error) {
-        // console.error('Erreur lors de l\'enregistrement de la présence :', error);
+        console.error('Erreur lors de l\'enregistrement de la présence :', error);
         res.status(500).json({
             success: false,
-            message: 'Erreur serveur.',
+            message: message.erreurServeur,
         });
     }
 };
