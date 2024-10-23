@@ -259,13 +259,12 @@ export const deleteMatiere = async (req, res) => {
 }
 
 export const getMatieresByNiveau = async (req, res) => {
-    const {niveauId} = req.params; // Supposons que le niveauId soit passé en tant que paramètre d'URL
-    const {annee, semestre, langue}=req.query;
+    const { niveauId } = req.params; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+    const { annee, semestre, langue } = req.query;
 
     try {
-
-        if(niveauId && annee && semestre){
-            const filter = { 
+        if (niveauId && annee && semestre) {
+            const filter = {
                 niveau: niveauId
             };
 
@@ -280,81 +279,220 @@ export const getMatieresByNiveau = async (req, res) => {
             }
 
             // Rechercher les périodes en fonction du filtre
-            const periodes = await Periode.find(filter).select('matiere').exec();
+            const periodes = await Periode.find(filter).select('matieres').exec();
 
-            // Extraire les identifiants uniques des matières
-            const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+            // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+            const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
             // Récupérer les détails de chaque matière à partir des identifiants uniques
             let matieres = [];
-            if(langue==='fr'){
-                matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs');
-            }else{
-                matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs');
+            if (langue === 'fr') {
+                matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                    .sort({ libelleFr: 1 })
+                    .populate('chapitres')
+                    .populate('objectifs');
+            } else {
+                matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                    .sort({ libelleEn: 1 })
+                    .populate('chapitres')
+                    .populate('objectifs');
             }
-            res.status(200).json({ 
-                success: true, 
+
+            res.status(200).json({
+                success: true,
                 data: {
-                    matieres ,
+                    matieres,
                     totalPages: 0,
                     currentPage: 0,
                     totalItems: 0,
-                    pageSize:0
+                    pageSize: 0
                 }
             });
-        }else{
-            
-            // Récupérer la liste des matières avec tous leurs détails
+        } else {
+            // Récupérer la liste des matières avec tous leurs détails si aucun filtre n'est appliqué
             let matieres = [];
-            if(langue==='fr'){
-                matieres = await Matiere.find({}).sort({libelleFr:1}).populate('chapitres').populate('objectifs');
-            }else{
-                matieres = await Matiere.find({}).sort({libelleEn:1}).populate('chapitres').populate('objectifs');
+            if (langue === 'fr') {
+                matieres = await Matiere.find({})
+                    .sort({ libelleFr: 1 })
+                    .populate('chapitres')
+                    .populate('objectifs');
+            } else {
+                matieres = await Matiere.find({})
+                    .sort({ libelleEn: 1 })
+                    .populate('chapitres')
+                    .populate('objectifs');
             }
-            res.status(200).json({ 
-                success: true, 
+
+            res.status(200).json({
+                success: true,
                 data: {
-                    matieres ,
+                    matieres,
                     totalPages: 0,
                     currentPage: 0,
                     totalItems: 0,
-                    pageSize:0
+                    pageSize: 0
                 }
             });
         }
     } catch (error) {
         console.error('Erreur lors de la récupération des matières par niveau :', error);
-        res.status(500).json({ success: false, message: message.erreurServeur });
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières par niveau.' });
     }
 };
 
-export const generateListMatByNiveau = async (req, res)=>{
-    const {annee, semestre} = req.params; 
-    const { langue, departement, section, cycle, niveau, fileType}=req.query;
-    let matieres=[];
-    if(annee && semestre && niveau){
-        const filter = { 
+
+// export const getMatieresByNiveau = async (req, res) => {
+//     const {niveauId} = req.params; // Supposons que le niveauId soit passé en tant que paramètre d'URL
+//     const {annee, semestre, langue}=req.query;
+
+//     try {
+
+//         if(niveauId && annee && semestre){
+//             const filter = { 
+//                 niveau: niveauId
+//             };
+
+//             // Si une année est spécifiée dans la requête, l'utiliser
+//             if (annee && !isNaN(annee)) {
+//                 filter.annee = parseInt(annee);
+//             }
+
+//             // Si un semestre est spécifié dans la requête, l'utiliser
+//             if (semestre && !isNaN(semestre)) {
+//                 filter.semestre = parseInt(semestre);
+//             }
+
+//             // Rechercher les périodes en fonction du filtre
+//             const periodes = await Periode.find(filter).select('matiere').exec();
+
+//             // Extraire les identifiants uniques des matières
+//             const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+//             // Récupérer les détails de chaque matière à partir des identifiants uniques
+//             let matieres = [];
+//             if(langue==='fr'){
+//                 matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs');
+//             }else{
+//                 matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs');
+//             }
+//             res.status(200).json({ 
+//                 success: true, 
+//                 data: {
+//                     matieres ,
+//                     totalPages: 0,
+//                     currentPage: 0,
+//                     totalItems: 0,
+//                     pageSize:0
+//                 }
+//             });
+//         }else{
+            
+//             // Récupérer la liste des matières avec tous leurs détails
+//             let matieres = [];
+//             if(langue==='fr'){
+//                 matieres = await Matiere.find({}).sort({libelleFr:1}).populate('chapitres').populate('objectifs');
+//             }else{
+//                 matieres = await Matiere.find({}).sort({libelleEn:1}).populate('chapitres').populate('objectifs');
+//             }
+//             res.status(200).json({ 
+//                 success: true, 
+//                 data: {
+//                     matieres ,
+//                     totalPages: 0,
+//                     currentPage: 0,
+//                     totalItems: 0,
+//                     pageSize:0
+//                 }
+//             });
+//         }
+//     } catch (error) {
+//         console.error('Erreur lors de la récupération des matières par niveau :', error);
+//         res.status(500).json({ success: false, message: message.erreurServeur });
+//     }
+// };
+
+// export const generateListMatByNiveau = async (req, res)=>{
+//     const {annee, semestre} = req.params; 
+//     const { langue, departement, section, cycle, niveau, fileType}=req.query;
+//     let matieres=[];
+//     if(annee && semestre && niveau){
+//         const filter = { 
+//             niveau: niveau._id
+//         };
+
+//         // Si une année est spécifiée dans la requête, l'utiliser
+//         if (annee && !isNaN(annee)) {
+//             filter.annee = parseInt(annee); 
+//         }
+
+//         // Si un semestre est spécifié dans la requête, l'utiliser
+//         if (semestre && !isNaN(semestre)) {
+//             filter.semestre = parseInt(semestre);
+//         }
+
+//         // Rechercher les périodes en fonction du filtre
+//         const periodes = await Periode.find(filter).select('matiere').exec();
+
+//         // Extraire les identifiants uniques des matières
+//         const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+//         // Récupérer les détails de chaque matière à partir des identifiants uniques
+//         if(langue==='fr'){
+//             matieres = await Matiere.find({ _id: { $in: matiereIds } })
+//                         .sort({libelleFr:1})
+//                         .populate('chapitres')
+//                         .populate('objectifs');
+//         }else{
+//             matieres = await Matiere.find({ _id: { $in: matiereIds } })
+//                         .sort({libelleEn:1})
+//                         .populate('chapitres')
+//                         .populate('objectifs');
+//         }
+//     }else{
+//         if(langue==='fr'){
+//             matieres = await Matiere.find({})
+//                     .sort({libelleFr:1})
+//                     .populate('chapitres')
+//                     .populate('objectifs');
+//         }else{
+//             matieres = await Matiere.find({})
+//                     .sort({libelleEn:1})
+//                     .populate('chapitres')
+//                     .populate('objectifs');
+//         }
+        
+//     }
+    
+//     if(fileType.toLowerCase() === 'pdf'){
+//         let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
+                
+//         if(langue==='en'){
+//             filePath='./templates/templates_en/template_liste_matiere_en.html';
+//         }
+//         const htmlContent = await fillTemplateListMat(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+
+//         // Générer le PDF à partir du contenu HTML
+//         generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+//     }else{
+//         exportToExcel(matieres, annee, semestre, langue, res, section, cycle, niveau);
+//     }
+    
+   
+// }
+
+export const generateListMatByNiveau = async (req, res) => {
+    const { annee, semestre } = req.params;
+    const { langue, departement, section, cycle, niveau, fileType } = req.query;
+    let matieres = [];
+
+    if (annee && semestre && niveau) {
+        const filter = {
             niveau: niveau._id
         };
 
         // Si une année est spécifiée dans la requête, l'utiliser
         if (annee && !isNaN(annee)) {
             filter.annee = parseInt(annee);
-            // let periodesCurrentYear = await Periode.findOne(filter).exec();
-            // if (!periodesCurrentYear) {
-            //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-            //     let found = false;
-            //     let previousYear = parseInt(annee) - 1;
-            //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-            //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-            //         if (periodesCurrentYear) {
-            //             filter.annee = previousYear;
-            //             found = true;
-            //         } else {
-            //             previousYear--;
-            //         }
-            //     }
-            // } 
         }
 
         // Si un semestre est spécifié dans la requête, l'utiliser
@@ -363,54 +501,56 @@ export const generateListMatByNiveau = async (req, res)=>{
         }
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matiere').exec();
+        const periodes = await Periode.find(filter).select('matieres').exec();
 
-        // Extraire les identifiants uniques des matières
-        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+        // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
-        if(langue==='fr'){
+        if (langue === 'fr') {
             matieres = await Matiere.find({ _id: { $in: matiereIds } })
-                        .sort({libelleFr:1})
-                        .populate('chapitres')
-                        .populate('objectifs');
-        }else{
+                .sort({ libelleFr: 1 })
+                .populate('chapitres')
+                .populate('objectifs');
+        } else {
             matieres = await Matiere.find({ _id: { $in: matiereIds } })
-                        .sort({libelleEn:1})
-                        .populate('chapitres')
-                        .populate('objectifs');
+                .sort({ libelleEn: 1 })
+                .populate('chapitres')
+                .populate('objectifs');
         }
-    }else{
-        if(langue==='fr'){
+    } else {
+        // Si aucun filtre n'est fourni, récupérer toutes les matières disponibles
+        if (langue === 'fr') {
             matieres = await Matiere.find({})
-                    .sort({libelleFr:1})
-                    .populate('chapitres')
-                    .populate('objectifs');
-        }else{
+                .sort({ libelleFr: 1 })
+                .populate('chapitres')
+                .populate('objectifs');
+        } else {
             matieres = await Matiere.find({})
-                    .sort({libelleEn:1})
-                    .populate('chapitres')
-                    .populate('objectifs');
+                .sort({ libelleEn: 1 })
+                .populate('chapitres')
+                .populate('objectifs');
         }
-        
     }
-    
-    if(fileType.toLowerCase() === 'pdf'){
-        let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
-                
-        if(langue==='en'){
-            filePath='./templates/templates_en/template_liste_matiere_en.html';
+
+    // Génération du fichier selon le type demandé (PDF ou Excel)
+    if (fileType.toLowerCase() === 'pdf') {
+        let filePath = './templates/templates_fr/template_liste_matiere_fr.html';
+        if (langue === 'en') {
+            filePath = './templates/templates_en/template_liste_matiere_en.html';
         }
+
+        // Remplir le template HTML pour la génération du PDF
         const htmlContent = await fillTemplateListMat(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
-        // Générer le PDF à partir du contenu HTML
+        // Générer le PDF à partir du contenu HTML et l'envoyer au navigateur
         generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
-    }else{
+    } else {
+        // Exporter la liste des matières au format Excel
         exportToExcel(matieres, annee, semestre, langue, res, section, cycle, niveau);
     }
-    
-   
-}
+};
+
 
 const exportToExcel = async (matieres, annee, semestre, langue, res, section, cycle, niveau) => {
     if (matieres) {
@@ -500,123 +640,100 @@ const exportToExcel = async (matieres, annee, semestre, langue, res, section, cy
 export const getMatieresByNiveauWithPagination = async (req, res) => {
     const niveauId = req.params.niveauId;
     const { page = 1, pageSize = 10, annee, semestre, langue } = req.query;
+
     try {
         const startIndex = (page - 1) * pageSize;
-        if(niveauId && annee && semestre){ 
+        if (niveauId && annee && semestre) {
             // Récupération des matières avec pagination
             const filter = { 
-                niveau: niveauId
+                niveau: niveauId,
+                annee: parseInt(annee),
+                semestre: parseInt(semestre)
             };
 
-            // Si une année est spécifiée dans la requête, l'utiliser
-            if (annee && !isNaN(annee)) {
-                filter.annee = parseInt(annee);
-                // let periodesCurrentYear = await Periode.findOne(filter).exec();
-                // if (!periodesCurrentYear) {
-                //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-                //     let found = false;
-                //     let previousYear = parseInt(annee) - 1;
-                //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-                //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-                //         if (periodesCurrentYear) {
-                //             filter.annee = previousYear;
-                //             found = true;
-                //         } else {
-                //             previousYear--;
-                //         }
-                //     }
-                // } 
-            }
-
-            // Si un semestre est spécifié dans la requête, l'utiliser
-            if (semestre && !isNaN(semestre)) {
-                filter.semestre = parseInt(semestre);
-            }
-
             // Rechercher les périodes en fonction du filtre
-            const periodes = await Periode.find(filter).select('matiere').exec();
+            const periodes = await Periode.find(filter).select('matieres').exec();
 
-            // Extraire les identifiants uniques des matières
-            const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+            // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+            const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
             // Récupérer les détails de chaque matière à partir des identifiants uniques
             let matieres = [];
-            if(langue==='fr'){
-                
+            if (langue === 'fr') {
                 matieres = await Matiere.find({ _id: { $in: matiereIds } })
-                            .sort({libelleFr:1})
-                            .populate({
-                                path: 'chapitres',
-                                select: '_id typesEnseignement annee semestre'
-                            })
-                            .skip(startIndex)
-                            .limit(parseInt(pageSize))
-            }else{
+                    .sort({ libelleFr: 1 })
+                    .populate({
+                        path: 'chapitres',
+                        select: '_id typesEnseignement annee semestre'
+                    })
+                    .skip(startIndex)
+                    .limit(parseInt(pageSize));
+            } else {
                 matieres = await Matiere.find({ _id: { $in: matiereIds } })
-                            .sort({libelleEn:1})
-                            .populate({
-                                path: 'chapitres',
-                                select: '_id typesEnseignement annee semestre'
-                            })
-                            .skip(startIndex)
-                            .limit(parseInt(pageSize))
+                    .sort({ libelleEn: 1 })
+                    .populate({
+                        path: 'chapitres',
+                        select: '_id typesEnseignement annee semestre'
+                    })
+                    .skip(startIndex)
+                    .limit(parseInt(pageSize));
             }
+
             // Comptage total des matières pour la pagination
             const totalMatiere = await Matiere.countDocuments({ _id: { $in: matiereIds } });
             const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
 
             res.status(200).json({ 
                 success: true, 
-                data:{
+                data: {
                     matieres,
-                    totalPages: totalPages,
+                    totalPages,
                     currentPage: page,
                     totalItems: totalMatiere,
-                    pageSize:pageSize
+                    pageSize: pageSize
                 } 
-                
             });
-        }else{
-            
+        } else {
+            // Si le filtre par niveau, année et semestre n'est pas fourni, récupérer toutes les matières
             let matieres = [];
-            if(langue === 'fr'){
-                matieres = await Matiere.find({}).populate({
-                    path: 'chapitres',
-                    select: '_id typesEnseignement annee semestre'
-                })
-                .sort({libelleFr:1})
-                .skip(startIndex)
-                .limit(parseInt(pageSize));
-            }else{
-                matieres = await Matiere.find({}).populate({
-                    path: 'chapitres',
-                    select: '_id typesEnseignement annee semestre'
-                })
-                .sort({libelleEn:1})
-                .skip(startIndex)
-                .limit(parseInt(pageSize));
+            if (langue === 'fr') {
+                matieres = await Matiere.find({})
+                    .populate({
+                        path: 'chapitres',
+                        select: '_id typesEnseignement annee semestre'
+                    })
+                    .sort({ libelleFr: 1 })
+                    .skip(startIndex)
+                    .limit(parseInt(pageSize));
+            } else {
+                matieres = await Matiere.find({})
+                    .populate({
+                        path: 'chapitres',
+                        select: '_id typesEnseignement annee semestre'
+                    })
+                    .sort({ libelleEn: 1 })
+                    .skip(startIndex)
+                    .limit(parseInt(pageSize));
             }
-            
+
             // Comptage total des matières pour la pagination
             const totalMatiere = await Matiere.countDocuments();
             const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
+
             res.status(200).json({ 
                 success: true, 
-                data:{
+                data: {
                     matieres,
-                    totalPages: totalPages,
+                    totalPages,
                     currentPage: page,
                     totalItems: totalMatiere,
-                    pageSize:pageSize
+                    pageSize: pageSize
                 } 
-                
             });
-        }   
-
-
+        }
     } catch (error) {
         console.error('Erreur lors de la récupération des matières par niveau :', error);
-        res.status(500).json({ success: false, message: message.erreurServeur });
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières.' });
     }
 };
 
@@ -625,35 +742,18 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
     const { enseignantId, annee, semestre, langue } = req.query;
 
     try {
-        // Récupération des matières avec pagination
-        
-
+        // Création du filtre basé sur le niveau et l'enseignant
         const filter = { 
             niveau: niveauId,
             $or: [
-                { enseignantPrincipal: enseignantId },
-                { enseignantSuppleant: enseignantId }
+                { enseignantsPrincipaux: enseignantId },
+                { enseignantsSuppleants: enseignantId }
             ]
         };
 
         // Si une année est spécifiée dans la requête, l'utiliser
         if (annee && !isNaN(annee)) {
             filter.annee = parseInt(annee);
-            // let periodesCurrentYear = await Periode.findOne(filter).exec();
-            // if (!periodesCurrentYear) {
-            //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-            //     let found = false;
-            //     let previousYear = parseInt(annee) - 1;
-            //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-            //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-            //         if (periodesCurrentYear) {
-            //             filter.annee = previousYear;
-            //             found = true;
-            //         } else {
-            //             previousYear--;
-            //         }
-            //     }
-            // } 
         }
 
         // Si un semestre est spécifié dans la requête, l'utiliser
@@ -661,32 +761,37 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
             filter.semestre = parseInt(semestre);
         }
 
-        
-
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matiere').exec();
+        const periodes = await Periode.find(filter).select('matieres').exec();
 
-        // Extraire les identifiants uniques des matières
-        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+        // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];
-        if(langue==='fr'){
-            matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs').exec();
-        }else{
-            matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
+        if (langue === 'fr') {
+            matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                .sort({ libelleFr: 1 })
+                .populate('chapitres')
+                .populate('objectifs')
+                .exec();
+        } else {
+            matieres = await Matiere.find({ _id: { $in: matiereIds } })
+                .sort({ libelleEn: 1 })
+                .populate('chapitres')
+                .populate('objectifs')
+                .exec();
         }
-            
 
-        res.status(200).json({ 
-            success: true, 
-            data:{
+        res.status(200).json({
+            success: true,
+            data: {
                 matieres,
                 totalPages: 0,
                 currentPage: 0,
                 totalItems: 0,
-                pageSize: 0,
-            } 
+                pageSize: 0
+            }
         });
     } catch (error) {
         console.error('Erreur lors de la récupération des matières par niveau :', error);
@@ -694,36 +799,21 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
     }
 };
 
-export const generateListMatByEnseignantNiveau = async (req, res)=>{
+export const generateListMatByEnseignantNiveau = async (req, res) => {
     const niveauId = req.params.niveauId;
-    const { enseignantId, annee, semestre,  langue, departement, section, cycle, niveau, fileType } = req.query;
+    const { enseignantId, annee, semestre, langue, departement, section, cycle, niveau, fileType } = req.query;
 
-    const filter = { 
+    const filter = {
         niveau: niveauId,
         $or: [
-            { enseignantPrincipal: enseignantId },
-            { enseignantSuppleant: enseignantId }
+            { enseignantsPrincipaux: enseignantId }, // Correction du champ pour enseignants principaux
+            { enseignantsSuppleants: enseignantId }  // Correction du champ pour enseignants suppléants
         ]
     };
 
     // Si une année est spécifiée dans la requête, l'utiliser
     if (annee && !isNaN(annee)) {
         filter.annee = parseInt(annee);
-        // let periodesCurrentYear = await Periode.findOne(filter).exec();
-        // if (!periodesCurrentYear) {
-        //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-        //     let found = false;
-        //     let previousYear = parseInt(annee) - 1;
-        //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-        //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-        //         if (periodesCurrentYear) {
-        //             filter.annee = previousYear;
-        //             found = true;
-        //         } else {
-        //             previousYear--;
-        //         }
-        //     }
-        // } 
     }
 
     // Si un semestre est spécifié dans la requête, l'utiliser
@@ -731,41 +821,287 @@ export const generateListMatByEnseignantNiveau = async (req, res)=>{
         filter.semestre = parseInt(semestre);
     }
 
-    
-
     // Rechercher les périodes en fonction du filtre
-    const periodes = await Periode.find(filter).select('matiere').exec();
+    const periodes = await Periode.find(filter).select('matieres').exec();
 
-    // Extraire les identifiants uniques des matières
-    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+    // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+    const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     let matieres = [];
-    if(langue === 'fr'){
-        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs').exec();
-    }else{
-        matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
+    if (langue === 'fr') {
+        matieres = await Matiere.find({ _id: { $in: matiereIds } })
+            .sort({ libelleFr: 1 })
+            .populate('chapitres')
+            .populate('objectifs')
+            .exec();
+    } else {
+        matieres = await Matiere.find({ _id: { $in: matiereIds } })
+            .sort({ libelleEn: 1 })
+            .populate('chapitres')
+            .populate('objectifs')
+            .exec();
     }
 
-    if(fileType.toLowerCase() === 'pdf'){
-        let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
-        if(langue==='en'){
-            filePath='./templates/templates_en/template_liste_matiere_en.html';
+    // Génération du fichier selon le type demandé (PDF ou Excel)
+    if (fileType.toLowerCase() === 'pdf') {
+        let filePath = './templates/templates_fr/template_liste_matiere_fr.html';
+        if (langue === 'en') {
+            filePath = './templates/templates_en/template_liste_matiere_en.html';
         }
-        const htmlContent = await fillTemplateListMat( langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
 
-        // Générer le PDF à partir du contenu HTML
+        // Remplir le template HTML pour la génération du PDF
+        const htmlContent = await fillTemplateListMat(langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+
+        // Générer le PDF à partir du contenu HTML et l'envoyer au navigateur
         generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
-    }else{
+    } else {
+        // Exporter la liste des matières au format Excel
         exportToExcel(matieres, annee, semestre, langue, res);
     }
-}
+};
+
+
+
+// export const getMatieresByNiveauWithPagination = async (req, res) => {
+//     const niveauId = req.params.niveauId;
+//     const { page = 1, pageSize = 10, annee, semestre, langue } = req.query;
+//     try {
+//         const startIndex = (page - 1) * pageSize;
+//         if(niveauId && annee && semestre){ 
+//             // Récupération des matières avec pagination
+//             const filter = { 
+//                 niveau: niveauId
+//             };
+
+//             // Si une année est spécifiée dans la requête, l'utiliser
+//             if (annee && !isNaN(annee)) {
+//                 filter.annee = parseInt(annee);
+//             }
+
+//             // Si un semestre est spécifié dans la requête, l'utiliser
+//             if (semestre && !isNaN(semestre)) {
+//                 filter.semestre = parseInt(semestre);
+//             }
+
+//             // Rechercher les périodes en fonction du filtre
+//             const periodes = await Periode.find(filter).select('matiere').exec();
+
+//             // Extraire les identifiants uniques des matières
+//             const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+//             // Récupérer les détails de chaque matière à partir des identifiants uniques
+//             let matieres = [];
+//             if(langue==='fr'){
+                
+//                 matieres = await Matiere.find({ _id: { $in: matiereIds } })
+//                             .sort({libelleFr:1})
+//                             .populate({
+//                                 path: 'chapitres',
+//                                 select: '_id typesEnseignement annee semestre'
+//                             })
+//                             .skip(startIndex)
+//                             .limit(parseInt(pageSize))
+//             }else{
+//                 matieres = await Matiere.find({ _id: { $in: matiereIds } })
+//                             .sort({libelleEn:1})
+//                             .populate({
+//                                 path: 'chapitres',
+//                                 select: '_id typesEnseignement annee semestre'
+//                             })
+//                             .skip(startIndex)
+//                             .limit(parseInt(pageSize))
+//             }
+//             // Comptage total des matières pour la pagination
+//             const totalMatiere = await Matiere.countDocuments({ _id: { $in: matiereIds } });
+//             const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
+
+//             res.status(200).json({ 
+//                 success: true, 
+//                 data:{
+//                     matieres,
+//                     totalPages: totalPages,
+//                     currentPage: page,
+//                     totalItems: totalMatiere,
+//                     pageSize:pageSize
+//                 } 
+                
+//             });
+//         }else{
+            
+//             let matieres = [];
+//             if(langue === 'fr'){
+//                 matieres = await Matiere.find({}).populate({
+//                     path: 'chapitres',
+//                     select: '_id typesEnseignement annee semestre'
+//                 })
+//                 .sort({libelleFr:1})
+//                 .skip(startIndex)
+//                 .limit(parseInt(pageSize));
+//             }else{
+//                 matieres = await Matiere.find({}).populate({
+//                     path: 'chapitres',
+//                     select: '_id typesEnseignement annee semestre'
+//                 })
+//                 .sort({libelleEn:1})
+//                 .skip(startIndex)
+//                 .limit(parseInt(pageSize));
+//             }
+            
+//             // Comptage total des matières pour la pagination
+//             const totalMatiere = await Matiere.countDocuments();
+//             const totalPages = Math.ceil(totalMatiere / parseInt(pageSize));
+//             res.status(200).json({ 
+//                 success: true, 
+//                 data:{
+//                     matieres,
+//                     totalPages: totalPages,
+//                     currentPage: page,
+//                     totalItems: totalMatiere,
+//                     pageSize:pageSize
+//                 } 
+                
+//             });
+//         }   
+
+
+//     } catch (error) {
+//         console.error('Erreur lors de la récupération des matières par niveau :', error);
+//         res.status(500).json({ success: false, message: message.erreurServeur });
+//     }
+// };
+
+// export const getMatieresByEnseignantNiveau = async (req, res) => {
+//     const niveauId = req.params.niveauId;
+//     const { enseignantId, annee, semestre, langue } = req.query;
+
+//     try {
+//         // Récupération des matières avec pagination
+        
+
+//         const filter = { 
+//             niveau: niveauId,
+//             $or: [
+//                 { enseignantPrincipal: enseignantId },
+//                 { enseignantSuppleant: enseignantId }
+//             ]
+//         };
+
+//         // Si une année est spécifiée dans la requête, l'utiliser
+//         if (annee && !isNaN(annee)) {
+//             filter.annee = parseInt(annee);
+//             // let periodesCurrentYear = await Periode.findOne(filter).exec();
+//             // if (!periodesCurrentYear) {
+//             //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
+//             //     let found = false;
+//             //     let previousYear = parseInt(annee) - 1;
+//             //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
+//             //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
+//             //         if (periodesCurrentYear) {
+//             //             filter.annee = previousYear;
+//             //             found = true;
+//             //         } else {
+//             //             previousYear--;
+//             //         }
+//             //     }
+//             // } 
+//         }
+
+//         // Si un semestre est spécifié dans la requête, l'utiliser
+//         if (semestre && !isNaN(semestre)) {
+//             filter.semestre = parseInt(semestre);
+//         }
+
+        
+
+//         // Rechercher les périodes en fonction du filtre
+//         const periodes = await Periode.find(filter).select('matiere').exec();
+
+//         // Extraire les identifiants uniques des matières
+//         const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+//         // Récupérer les détails de chaque matière à partir des identifiants uniques
+//         let matieres = [];
+//         if(langue==='fr'){
+//             matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs').exec();
+//         }else{
+//             matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
+//         }
+            
+
+//         res.status(200).json({ 
+//             success: true, 
+//             data:{
+//                 matieres,
+//                 totalPages: 0,
+//                 currentPage: 0,
+//                 totalItems: 0,
+//                 pageSize: 0,
+//             } 
+//         });
+//     } catch (error) {
+//         console.error('Erreur lors de la récupération des matières par niveau :', error);
+//         res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières par niveau.' });
+//     }
+// };
+
+// export const generateListMatByEnseignantNiveau = async (req, res)=>{
+//     const niveauId = req.params.niveauId;
+//     const { enseignantId, annee, semestre,  langue, departement, section, cycle, niveau, fileType } = req.query;
+
+//     const filter = { 
+//         niveau: niveauId,
+//         $or: [
+//             { enseignantPrincipal: enseignantId },
+//             { enseignantSuppleant: enseignantId }
+//         ]
+//     };
+
+//     // Si une année est spécifiée dans la requête, l'utiliser
+//     if (annee && !isNaN(annee)) {
+//         filter.annee = parseInt(annee);
+//     }
+
+//     // Si un semestre est spécifié dans la requête, l'utiliser
+//     if (semestre && !isNaN(semestre)) {
+//         filter.semestre = parseInt(semestre);
+//     }
+
+    
+
+//     // Rechercher les périodes en fonction du filtre
+//     const periodes = await Periode.find(filter).select('matiere').exec();
+
+//     // Extraire les identifiants uniques des matières
+//     const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+
+//     // Récupérer les détails de chaque matière à partir des identifiants uniques
+//     let matieres = [];
+//     if(langue === 'fr'){
+//         matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleFr:1}).populate('chapitres').populate('objectifs').exec();
+//     }else{
+//         matieres = await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').populate('objectifs').exec();
+//     }
+
+//     if(fileType.toLowerCase() === 'pdf'){
+//         let filePath='./templates/templates_fr/template_liste_matiere_fr.html';
+//         if(langue==='en'){
+//             filePath='./templates/templates_en/template_liste_matiere_en.html';
+//         }
+//         const htmlContent = await fillTemplateListMat( langue, departement, section, cycle, niveau, matieres, filePath, annee, semestre);
+
+//         // Générer le PDF à partir du contenu HTML
+//         generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+//     }else{
+//         exportToExcel(matieres, annee, semestre, langue, res);
+//     }
+// }
 
 export const generateProgressByNiveau = async (req, res)=>{
     const {annee, semestre}=req.params;
     const { langue, departement, section, cycle, niveau, fileType } = req.query;
-    const filter = { 
-        niveau: niveau._id,
+    const filter = {
+        niveau: niveau._id
     };
 
     // Si une année est spécifiée dans la requête, l'utiliser
@@ -778,13 +1114,11 @@ export const generateProgressByNiveau = async (req, res)=>{
         filter.semestre = parseInt(semestre);
     }
 
-    
-
     // Rechercher les périodes en fonction du filtre
-    const periodes = await Periode.find(filter).select('matiere').exec();
+    const periodes = await Periode.find(filter).select('matieres').exec();
 
-    // Extraire les identifiants uniques des matières
-    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+    // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+    const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     let matieres = [];
@@ -835,13 +1169,13 @@ export const generateProgressByNiveau = async (req, res)=>{
 export const generateProgressChapitreByNiveau = async (req, res)=>{
     const {annee, semestre}=req.params;
     const { langue, departement, section, cycle, niveau, fileType, filename } = req.query;
-    const filter = { 
-        niveau: niveau._id,
+    const filter = {
+        niveau: niveau._id
     };
 
     // Si une année est spécifiée dans la requête, l'utiliser
     if (annee && !isNaN(annee)) {
-        filter.annee = parseInt(annee); 
+        filter.annee = parseInt(annee);
     }
 
     // Si un semestre est spécifié dans la requête, l'utiliser
@@ -849,13 +1183,11 @@ export const generateProgressChapitreByNiveau = async (req, res)=>{
         filter.semestre = parseInt(semestre);
     }
 
-    
-
     // Rechercher les périodes en fonction du filtre
-    const periodes = await Periode.find(filter).select('matiere').exec();
+    const periodes = await Periode.find(filter).select('matieres').exec();
 
-    // Extraire les identifiants uniques des matières
-    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+    // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+    const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     let matieres = [];
@@ -865,7 +1197,7 @@ export const generateProgressChapitreByNiveau = async (req, res)=>{
         matieres =await Matiere.find({ _id: { $in: matiereIds } }).sort({libelleEn:1}).populate('chapitres').exec();
     }
     
-    if(fileType==='PDF'){
+    if(fileType.toLowerCase()==='pdf'){
         let filePath='./templates/templates_fr/template_progression_chapitre_matiere_fr.html';
         if(langue==='en'){
             filePath='./templates/templates_en/template_progression_chapitre_matiere_en.html';
@@ -909,32 +1241,17 @@ export const generateProgressByEnseignant = async (req, res)=>{
     const niveauId = req.params.niveauId;
     const { enseignantId, annee, semestre, langue, departement, section, cycle, niveau, fileType } = req.query;
 
-    const filter = { 
+    const filter = {
         niveau: niveauId,
         $or: [
-            { enseignantPrincipal: enseignantId },
-            { enseignantSuppleant: enseignantId }
+            { enseignantsPrincipaux: enseignantId }, // Correction du champ pour enseignants principaux
+            { enseignantsSuppleants: enseignantId }  // Correction du champ pour enseignants suppléants
         ]
     };
 
     // Si une année est spécifiée dans la requête, l'utiliser
     if (annee && !isNaN(annee)) {
         filter.annee = parseInt(annee);
-        // let periodesCurrentYear = await Periode.findOne(filter).exec();
-        // if (!periodesCurrentYear) {
-        //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-        //     let found = false;
-        //     let previousYear = parseInt(annee) - 1;
-        //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-        //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-        //         if (periodesCurrentYear) {
-        //             filter.annee = previousYear;
-        //             found = true;
-        //         } else {
-        //             previousYear--;
-        //         }
-        //     }
-        // } 
     }
 
     // Si un semestre est spécifié dans la requête, l'utiliser
@@ -942,13 +1259,12 @@ export const generateProgressByEnseignant = async (req, res)=>{
         filter.semestre = parseInt(semestre);
     }
 
-    
-
     // Rechercher les périodes en fonction du filtre
-    const periodes = await Periode.find(filter).select('matiere').exec();
+    const periodes = await Periode.find(filter).select('matieres').exec();
 
-    // Extraire les identifiants uniques des matières
-    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+    // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+    const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     let matieres = [];
@@ -998,32 +1314,17 @@ export const generateProgressChapitreByEnseignant = async (req, res)=>{
     const niveauId = req.params.niveauId;
     const { enseignantId, annee, semestre, langue, departement, section, cycle, niveau, fileType } = req.query;
 
-    const filter = { 
+    const filter = {
         niveau: niveauId,
         $or: [
-            { enseignantPrincipal: enseignantId },
-            { enseignantSuppleant: enseignantId }
+            { enseignantsPrincipaux: enseignantId }, // Correction du champ pour enseignants principaux
+            { enseignantsSuppleants: enseignantId }  // Correction du champ pour enseignants suppléants
         ]
     };
 
     // Si une année est spécifiée dans la requête, l'utiliser
     if (annee && !isNaN(annee)) {
         filter.annee = parseInt(annee);
-        // let periodesCurrentYear = await Periode.findOne(filter).exec();
-        // if (!periodesCurrentYear) {
-        //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-        //     let found = false;
-        //     let previousYear = parseInt(annee) - 1;
-        //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-        //         periodesCurrentYear = await Periode.findOne({ annee: previousYear, ...filter }).exec();
-        //         if (periodesCurrentYear) {
-        //             filter.annee = previousYear;
-        //             found = true;
-        //         } else {
-        //             previousYear--;
-        //         }
-        //     }
-        // } 
     }
 
     // Si un semestre est spécifié dans la requête, l'utiliser
@@ -1031,13 +1332,11 @@ export const generateProgressChapitreByEnseignant = async (req, res)=>{
         filter.semestre = parseInt(semestre);
     }
 
-    
-
     // Rechercher les périodes en fonction du filtre
-    const periodes = await Periode.find(filter).select('matiere').exec();
+    const periodes = await Periode.find(filter).select('matieres').exec();
 
-    // Extraire les identifiants uniques des matières
-    const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+    // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+    const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
     // Récupérer les détails de chaque matière à partir des identifiants uniques
     let matieres = [];
@@ -1252,7 +1551,7 @@ async function fillTemplateChapitre (langue, departement, section, cycle, niveau
             userTable.append(clonedRow);
         }
         rowTemplate.first().remove();
-
+        
         return $.html(); // Récupérer le HTML mis à jour
     } catch (error) {
         console.error('Erreur lors du remplissage du template :', error);
@@ -1329,10 +1628,10 @@ export const searchMatiereByEnseignant = async (req, res) => {
         // Récupération des matières avec pagination
         
 
-        const filter = { 
+       const filter = {
             $or: [
-                { enseignantPrincipal: enseignantId },
-                { enseignantSuppleant: enseignantId }
+                { enseignantsPrincipaux: enseignantId }, // Correction du champ pour enseignants principaux
+                { enseignantsSuppleants: enseignantId }  // Correction du champ pour enseignants suppléants
             ]
         };
 
@@ -1341,11 +1640,13 @@ export const searchMatiereByEnseignant = async (req, res) => {
             filter.annee = parseInt(annee);
         }
 
-        // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matiere').exec();
 
-        // Extraire les identifiants uniques des matières
-        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+        // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('matieres').exec();
+
+        // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];

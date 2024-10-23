@@ -448,7 +448,7 @@ export const getPeriodesEnseignement = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(niveauId)) {
             return res.status(400).json({ 
                 success: false, 
-                message: 'Identifiant du niveau invalide.'
+                message: message.identifiant_invalide
             });
         }
 
@@ -751,7 +751,7 @@ export const generateProgressionPeriodeEnseignement = async (req, res)=>{
             }, new Set()).size;
         }));
 
-        if(fileType.toLowerCase === 'pdf'){
+        if(fileType.toLowerCase() === 'pdf'){
             let filePath='./templates/templates_fr/template_progression_periode_enseignement_fr.html'
             if(langue==='en'){
                 filePath='./templates/templates_en/template_progression_periode_enseignement_en.html';

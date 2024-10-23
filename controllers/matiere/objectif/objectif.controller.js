@@ -432,10 +432,10 @@ export const getProgressionGlobalEnseignantsNiveauObj = async (req, res) => {
         }
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matiere').exec();
+        const periodes = await Periode.find(filter).select('matieres').exec();
 
         // Extraire les identifiants uniques des matières
-        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         const matieres = await Matiere.find({ _id: { $in: matiereIds } })
@@ -492,8 +492,8 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
         // Création du filtre initial pour les périodes
         const filter = { 
             $or: [
-                { enseignantPrincipal: enseignantId },
-                { enseignantSuppleant: enseignantId }
+                { enseignantsPrincipaux: enseignantId },
+                { enseignantsSuppleans: enseignantId }
             ]
         };
 
@@ -508,10 +508,10 @@ export const getProgressionGlobalEnseignantObj = async (req, res) => {
         }
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matiere').exec();
+        const periodes = await Periode.find(filter).select('matieres').exec();
 
         // Extraire les identifiants uniques des matières
-        const matiereIds = [...new Set(periodes.map(periode => periode.matiere))];
+        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('objectifs').exec();

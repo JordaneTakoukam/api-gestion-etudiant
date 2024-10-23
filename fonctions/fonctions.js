@@ -53,6 +53,17 @@ export function encrypt(value, secretKey) {
     return ciphertextWithIV;
 }
 
+export function premierElement(value) {
+    // Diviser la chaîne en fonction des espaces
+    if (value) {
+      const elements = value.split(" ");
+      // Récupérer le premier élément
+      const premier = elements[0];
+      return premier;
+    }
+    return undefined;
+  }
+
 export function verifierEntier(value, res) {
     const isInteger = Number.isInteger(value);
     if (!isInteger) {

@@ -4,7 +4,7 @@ import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 import moment from 'moment';
 import Setting from '../../models/setting.model.js';
-import { formatDateFr, formatNameSurname, formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import { formatDateFr, formatNameSurname, formatYear, generatePDFAndSendToBrowser, loadHTML, premierElement } from '../../fonctions/fonctions.js';
 import cheerio from 'cheerio';
 import ExcelJS from 'exceljs';
 
@@ -29,298 +29,213 @@ export const createPeriode = async (req, res) => {
         semestre,
         annee,
         niveau,
-        matiere,
-        typeEnseignement,
-        enseignantPrincipal, 
-        enseignantSuppleant,
+        matieres,
+        typesEnseignements,
+        enseignantsPrincipaux,
+        enseignantsSuppleants,
         heureDebut,
         heureFin,
-        salleCours,
+        sallesCours,
         pause
     } = req.body;
-
+    console.log(matieres)
     try {
-        // Vérifier que tous les champs obligatoires sont renseignés
-        if(pause){
+        // Validation des champs
+        if (pause) {
             if (!jour || !semestre || !annee || !niveau || !heureDebut || !heureFin) {
-                return res.status(400).json({ 
-                    success: false, 
+                return res.status(400).json({
+                    success: false,
                     message: message.champ_obligatoire,
                 });
             }
-        }else{
-            if (!jour || !semestre || !annee || !niveau || !matiere || !typeEnseignement || !enseignantPrincipal || !heureDebut || !heureFin || !salleCours) {
-                return res.status(400).json({ 
-                    success: false, 
+        } else {
+            if (!jour || !semestre || !annee || !niveau || !matieres || !typesEnseignements || !enseignantsPrincipaux || !heureDebut || !heureFin || !sallesCours) {
+                return res.status(400).json({
+                    success: false,
                     message: message.champ_obligatoire,
                 });
             }
         }
-        
-        
 
-        // Vérifier si les ObjectID pour les références existent et sont valides
+        // Validation des ObjectIDs
         if (!mongoose.Types.ObjectId.isValid(niveau)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(matiere._id)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(enseignantPrincipal._id)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && enseignantSuppleant && !mongoose.Types.ObjectId.isValid(enseignantSuppleant._id)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(typeEnseignement)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(salleCours)) {
-            return res.status(400).json({ 
-                success: false, 
+            return res.status(400).json({
+                success: false,
                 message: message.identifiant_invalide,
             });
         }
 
-        // Vérifier si les heures de début et de fin sont valides
-        const heureRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/; // Expression régulière pour valider le format HH:MM
+        const validateArrayIdsObj = (array, messageKey) => {
+            for (const item of array) {
+                if (!mongoose.Types.ObjectId.isValid(item._id)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message[messageKey],
+                    });
+                }
+            }
+        };
+        const validateArrayIds = (array, messageKey) => {
+            for (const item of array) {
+                if (!mongoose.Types.ObjectId.isValid(item)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message[messageKey],
+                    });
+                }
+            }
+        };
+
+        if (!pause) {
+            validateArrayIdsObj(matieres, 'identifiant_invalide');
+            validateArrayIds(typesEnseignements, 'identifiant_invalide');
+            validateArrayIdsObj(enseignantsPrincipaux, 'identifiant_invalide');
+            if (enseignantsSuppleants) validateArrayIdsObj(enseignantsSuppleants, 'identifiant_invalide');
+            validateArrayIds(sallesCours, 'identifiant_invalide');
+        }
+
+        // Validation des heures
+        const heureRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
         if (!heureRegex.test(heureDebut) || !heureRegex.test(heureFin)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.heure_invalide, 
+            return res.status(400).json({
+                success: false,
+                message: message.heure_invalide,
             });
         }
 
-        // Vérifier si une période de cours existe déjà avec les mêmes paramètres
-        const existingPeriodeCours = await Periode.findOne({
-            jour,
-            semestre,
-            annee,
-            niveau,
-            $or: [
-                { heureDebut: { $lt: heureFin }, heureFin: { $gt: heureDebut } }, // Vérification d'heures qui se chevauchent
-                { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                { heureFin: { $gte: heureDebut, $lte: heureFin } }
-            ]
-        });
-        
-        if (existingPeriodeCours) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.existe_periode_cours
+        // Vérifier les conflits d'horaires
+        const findTimeConflict  = async (filters) => {
+            return await Periode.findOne({
+                jour,
+                semestre,
+                annee,
+                ...filters,
+                $or: [
+                    { heureDebut: { $lt: heureFin }, heureFin: { $gt: heureDebut } }, // Chevauchements
+                    { heureDebut: { $gt: heureDebut, $lt: heureFin } }, // Se termine avant qu'un autre commence
+                ]
             });
-        }
+        };
 
-        
-
-        // Trouver le type d'enseignement correspondant à l'identifiant 
-        
-        // let typeEnseignementFind = undefined;
-        // if(matiere && typeEnseignement){
-        //     typeEnseignementFind = matiere.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
+        // Vérifier les salles de cours
+        // for (const salle of sallesCours) {
+        //     const existingSalleCoursCours = await findTimeConflict ({ sallesCours: salle });
+        //     if (existingSalleCoursCours) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_salle_cours_programme,
+        //         });
+        //     }
         // }
-        
 
-        // if (!pause && !typeEnseignementFind) {
-        //     return res.status(404).json({ 
-        //         success: false, 
-        //         message: message.type_ens_non_trouve
+        // Vérifier les enseignants principaux et suppléants
+        // const allEnseignants = [...enseignantsPrincipaux, ...(enseignantsSuppleants || [])];
+        // for (const enseignant of allEnseignants) {
+        //     const existingEnseignantCours = await findTimeConflict ({
+        //         $or: [
+        //             { 'enseignantsPrincipaux': enseignant },
+        //             { 'enseignantsSuppleants': enseignant }
+        //         ]
         //     });
+        //     if (existingEnseignantCours) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_enseignant_cours,
+        //         });
+        //     }
         // }
-        // let enseignantPrincipal = undefined;
-        // let enseignantSuppleant = undefined;
-        // if(typeEnseignementFind){
-            // Extraire l'enseignant principal et l'enseignant suppléant
-            // enseignantPrincipal = typeEnseignementFind.enseignantPrincipal;
-            // enseignantSuppleant = typeEnseignementFind.enseignantSuppleant;
-            // Vérifier si un enseignant principal a déjà un cours programmé au même moment
-            const existingEnseignantPrincipalCours = await Periode.findOne({
-                jour,
-                annee,
-                semestre,
-                $or: [
-                    { 
-                        heureDebut: { $lt: heureFin }, 
-                        heureFin: { $gt: heureDebut },
-                        $or: [
-                            { 'enseignantPrincipal': enseignantPrincipal },
-                            { 'enseignantSuppleant': enseignantPrincipal }
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantPrincipal },
-                                { 'enseignantSuppleant': enseignantPrincipal }
-                            ]}
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureFin: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantPrincipal },
-                                { 'enseignantSuppleant': enseignantPrincipal }
-                            ]}
-                        ]
-                    }
-                ]
-            });
-            if(existingEnseignantPrincipalCours){
-                return res.status(400).json({ 
-                    success: false, 
-                    message: message.existe_enseignant_p_cours,
-                });
-            }
 
-            // Vérifier si un enseignant suppleant a déjà un cours programmé au même moment
-            const existingEnseignantSuppleantCours = await Periode.findOne({
-                jour,
-                annee,
-                semestre,
-                $or: [
-                    { 
-                        heureDebut: { $lt: heureFin }, 
-                        heureFin: { $gt: heureDebut },
-                        $or: [
-                            { 'enseignantPrincipal': enseignantSuppleant },
-                            { 'enseignantSuppleant': enseignantSuppleant }
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantSuppleant },
-                                { 'enseignantSuppleant': enseignantSuppleant }
-                            ]}
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureFin: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantSuppleant },
-                                { 'enseignantSuppleant': enseignantSuppleant }
-                            ]}
-                        ]
-                    }
-                ]
-            });
-            if(existingEnseignantSuppleantCours){
-                return res.status(400).json({ 
-                    success: false, 
-                    message: message.existe_enseignant_s_cours,
-                });
-            }
-
-        // }
-        
-        if(salleCours){
-            // Vérifier si une salle de cours a déjà un cours programmé au même moment
-            const existingSalleCoursCours = await Periode.findOne({
-                jour,
-                annee,
-                semestre,
-                $or: [
-                    { 
-                        heureDebut: { $lt: heureFin }, 
-                        heureFin: { $gt: heureDebut },
-                        salleCours: salleCours
-                    },
-                    { 
-                        $and: [
-                            { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                            { salleCours: salleCours }
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureFin: { $gte: heureDebut, $lte: heureFin } },
-                            { salleCours: salleCours }
-                        ]
-                    }
-                ]
-            });
-            if (existingSalleCoursCours) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: message.existe_salle_cours_programme,
-                });
-            }
-
-        }
-        
-        // Créer une nouvelle période de cours
-        let matiereId=undefined;
-        if(matiere){
-            matiereId=matiere._id
-        }
-
-        let enseignantPrincipalId=undefined;
-        if(enseignantPrincipal){
-            enseignantPrincipalId=enseignantPrincipal._id;
-        }
-
-        let enseignantSuppleantId=undefined;
-        if(enseignantSuppleant){
-            enseignantSuppleantId=enseignantSuppleant._id;
-        }
-
-        const newPeriodeCours = new Periode({
-            jour,
-            semestre,
+        // Chercher la période existante pour l'année, le semestre et le niveau
+        let existingPeriode = await Periode.findOne({
             annee,
-            pause,
+            semestre,
             niveau,
-            matiere:matiereId,
-            typeEnseignement,
+            jour,
             heureDebut,
-            heureFin,
-            salleCours,
-            enseignantPrincipal:enseignantPrincipalId,
-            enseignantSuppleant:enseignantSuppleantId
+            heureFin
         });
+        console.log(existingPeriode)
+        if (existingPeriode) {
+            // Si une période existe, ajouter les informations sans doublons
+            matieres.forEach(matiere => {
+                const matiereExistante = existingPeriode.matieres.find(m => m._id.toString() === matiere._id.toString());
+                if (!matiereExistante) {
+                    existingPeriode.matieres.push(matiere);
+                }
+            });
+            
+            enseignantsPrincipaux.forEach(enseignant => {
+                const enseignantExistant = existingPeriode.enseignantsPrincipaux.find(e => e._id.toString() === enseignant._id.toString());
+                if (!enseignantExistant) {
+                    existingPeriode.enseignantsPrincipaux.push(enseignant);
+                }
+            });
 
-        // Enregistrer la période de cours dans la base de données
-        const savedPeriodeCours = await newPeriodeCours.save();
-        const populatedPeriodeCours = await Periode.populate(savedPeriodeCours, [
-            { path: 'matiere', select: '_id code libelleFr libelleEn typesEnseignement' }, // Peupler avec l'_id et le code de la matière
-            { path: 'enseignantPrincipal', select: '_id nom prenom' }, // Peupler avec l'_id, le nom et le prénom de l'enseignant principal
-            { path: 'enseignantSuppleant', select: '_id nom prenom' } // Peupler avec l'_id, le nom et le prénom de l'enseignant suppléant
-        ]);
+            if (enseignantsSuppleants) {
+                enseignantsSuppleants.forEach(suppleant => {
+                    const suppleantExistant = existingPeriode.enseignantsSuppleants.find(es => es._id.toString() === suppleant._id.toString());
+                    if (!suppleantExistant) {
+                        existingPeriode.enseignantsSuppleants.push(suppleant);
+                    }
+                });
+            }
+            existingPeriode.typesEnseignements = [...new Set([...existingPeriode.typesEnseignements, ...typesEnseignements])];
+            existingPeriode.sallesCours = [...new Set([...existingPeriode.sallesCours, ...sallesCours])];
+            existingPeriode.heureDebut = heureDebut;
+            existingPeriode.heureFin = heureFin;
+            existingPeriode.pause = pause;
 
-        res.status(201).json({ 
-            success: true,
-            message: message.ajouter_avec_success,
-            data: populatedPeriodeCours 
-        });
+            // Mise à jour de la période
+            const updatedPeriode = await existingPeriode.save();
+            const populatedPeriode = await Periode.populate(updatedPeriode, [
+                { path: 'matieres', select: '_id code libelleFr libelleEn' },
+                { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
+                { path: 'enseignantsSuppleants', select: '_id nom prenom' }
+            ]);
+
+            return res.status(200).json({
+                success: true,
+                message: message.ajouter_avec_success,
+                data: populatedPeriode
+            });
+        } else {
+            // Si aucune période n'existe, créer une nouvelle période
+            const newPeriodeCours = new Periode({
+                jour,
+                semestre,
+                annee,
+                pause,
+                niveau,
+                matieres,
+                typesEnseignements,
+                heureDebut,
+                heureFin,
+                sallesCours,
+                enseignantsPrincipaux,
+                enseignantsSuppleants
+            });
+
+            const savedPeriode = await newPeriodeCours.save();
+            const populatedPeriode = await Periode.populate(savedPeriode, [
+                { path: 'matieres', select: '_id code libelleFr libelleEn' },
+                { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
+                { path: 'enseignantsSuppleants', select: '_id nom prenom' }
+            ]);
+
+            return res.status(201).json({
+                success: true,
+                message: message.ajouter_avec_success,
+                data: populatedPeriode
+            });
+        }
     } catch (error) {
         console.error('Erreur lors de l\'enregistrement de la période de cours :', error);
-        res.status(500).json({ 
-            success: false, 
-            message: message.erreurServeur 
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
         });
     }
-}
-
-
+};
 
 // update
 export const updatePeriode = async (req, res) => {
@@ -330,329 +245,250 @@ export const updatePeriode = async (req, res) => {
         semestre,
         annee,
         niveau,
-        matiere,
-        typeEnseignement,
-        enseignantPrincipal, 
-        enseignantSuppleant,
+        matieres,
+        typesEnseignements,
+        enseignantsPrincipaux,
+        enseignantsSuppleants,
         heureDebut,
         heureFin,
-        salleCours,
-        pause,
+        sallesCours,
+        pause
     } = req.body;
 
     try {
-        // Vérifier que tous les champs obligatoires sont renseignés
-        if(pause){
+        // Validation des champs
+        if (!periodeId) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
+
+        if (pause) {
             if (!jour || !semestre || !annee || !niveau || !heureDebut || !heureFin) {
-                return res.status(400).json({ 
-                    success: false, 
+                return res.status(400).json({
+                    success: false,
                     message: message.champ_obligatoire,
                 });
             }
-        }else{
-            if (!jour || !semestre || !annee || !niveau || !matiere || !enseignantPrincipal || !typeEnseignement || !heureDebut || !heureFin || !salleCours) {
-                return res.status(400).json({ 
-                    success: false, 
+        } else {
+            if (!jour || !semestre || !annee || !niveau || !matieres || !typesEnseignements || !enseignantsPrincipaux || !heureDebut || !heureFin || !sallesCours) {
+                return res.status(400).json({
+                    success: false,
                     message: message.champ_obligatoire,
                 });
             }
         }
 
-        // Vérifier si les ObjectID pour les références existent et sont valides
-        if (!mongoose.Types.ObjectId.isValid(niveau)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(matiere._id)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(typeEnseignement)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(enseignantPrincipal._id)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && enseignantSuppleant && !mongoose.Types.ObjectId.isValid(enseignantSuppleant._id)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.identifiant_invalide,
-            });
-        }
-        if (!pause && !mongoose.Types.ObjectId.isValid(salleCours)) {
-            return res.status(400).json({ 
-                success: false, 
+        // Validation des ObjectIDs
+        if (!mongoose.Types.ObjectId.isValid(periodeId) || !mongoose.Types.ObjectId.isValid(niveau)) {
+            return res.status(400).json({
+                success: false,
                 message: message.identifiant_invalide,
             });
         }
 
-        // Vérifier si les heures de début et de fin sont valides
-        const heureRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/; // Expression régulière pour valider le format HH:MM
+        const validateArrayIdsObj = (array, messageKey) => {
+            for (const item of array) {
+                if (!mongoose.Types.ObjectId.isValid(item._id)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message[messageKey],
+                    });
+                }
+            }
+        };
+
+        const validateArrayIds = (array, messageKey) => {
+            for (const item of array) {
+                if (!mongoose.Types.ObjectId.isValid(item)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: message[messageKey],
+                    });
+                }
+            }
+        };
+
+        if (!pause) {
+            validateArrayIdsObj(matieres, 'identifiant_invalide');
+            validateArrayIds(typesEnseignements, 'identifiant_invalide');
+            validateArrayIdsObj(enseignantsPrincipaux, 'identifiant_invalide');
+            if (enseignantsSuppleants) validateArrayIdsObj(enseignantsSuppleants, 'identifiant_invalide');
+            validateArrayIds(sallesCours, 'identifiant_invalide');
+        }
+
+        // Validation des heures
+        const heureRegex = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
         if (!heureRegex.test(heureDebut) || !heureRegex.test(heureFin)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.heure_invalide, 
+            return res.status(400).json({
+                success: false,
+                message: message.heure_invalide,
             });
         }
 
-        // Vérifier si une période de cours existe déjà avec les mêmes paramètres, à l'exception de la période en cours de modification
-        const existingPeriodeCours = await Periode.findOne({
-            _id: { $ne: periodeId },
-            jour,
-            semestre,
-            annee,
-            niveau,
-            $or: [
-                { heureDebut: { $lt: heureFin }, heureFin: { $gt: heureDebut } }, // Vérification d'heures qui se chevauchent
-                { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                { heureFin: { $gte: heureDebut, $lte: heureFin } }
-            ]
-        });
-        if (existingPeriodeCours) {
-            return res.status(400).json({ 
-                success: false, 
-                message: message.existe_periode_cours
+        // Vérification des conflits d'horaires
+        const findTimeConflict  = async (filters) => {
+            return await Periode.findOne({
+                jour,
+                semestre,
+                annee,
+                _id: { $ne: periodeId }, // Ne pas inclure la période actuelle dans les vérifications
+                ...filters,
+                $or: [
+                    { heureDebut: { $lt: heureFin }, heureFin: { $gt: heureDebut } }, // Chevauchements
+                    { heureDebut: { $gt: heureDebut, $lt: heureFin } }, // Se termine avant qu'un autre commence
+                ]
             });
-        }
-        // // Récupérer la matière correspondante
-        // let matiereFind = undefined;
-        // if(matiere){
-        //     matiereFind = await Matiere.findById(matiere);
+        };
+
+        // Vérification des salles de cours
+        // for (const salle of sallesCours) {
+        //     const existingSalleCours = await findTimeConflict({ sallesCours: salle });
+        //     if (existingSalleCours) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_salle_cours_programme,
+        //         });
+        //     }
         // }
 
-        // if (!pause && !matiereFind) {
-        //     return res.status(404).json({ 
-        //         success: false, 
-        //         message: message.matiere_non_trouvee,
+        // Vérification des enseignants principaux et suppléants
+        // const allEnseignants = [...enseignantsPrincipaux, ...(enseignantsSuppleants || [])];
+        // for (const enseignant of allEnseignants) {
+        //     const existingEnseignantCours = await findTimeConflict({
+        //         $or: [
+        //             { 'enseignantsPrincipaux': enseignant },
+        //             { 'enseignantsSuppleants': enseignant }
+        //         ]
         //     });
+        //     if (existingEnseignantCours) {
+        //         return res.status(400).json({
+        //             success: false,
+        //             message: message.existe_enseignant_cours,
+        //         });
+        //     }
         // }
-        
-        // if(matiereFind){
-            // Trouver le type d'enseignement correspondant à l'identifiant fourni
-            // let typeEnseignementFind = undefined;
-            // if(typeEnseignement){
-            //     typeEnseignementFind = matiereFind.typesEnseignement.find(type => type.typeEnseignement.toString() === typeEnseignement.toString());
-            // }
 
-            // if (!typeEnseignementFind) {
-            //     return res.status(404).json({ 
-            //         success: false, 
-            //         message: message.type_ens_non_trouve
-            //     });
-            // }
-            // Extraire l'enseignant principal et l'enseignant suppléant
-            // enseignantPrincipal = typeEnseignementFind.enseignantPrincipal;
-            // enseignantSuppleant = typeEnseignementFind.enseignantSuppleant;
-            // Vérifier si un enseignant principal a déjà un cours programmé au même moment
-            const existingEnseignantPrincipalCours = await Periode.findOne({
-                _id: { $ne: periodeId },
-                jour,
-                annee,
-                semestre,
-                $or: [
-                    { 
-                        heureDebut: { $lt: heureFin }, 
-                        heureFin: { $gt: heureDebut },
-                        $or: [
-                            { 'enseignantPrincipal': enseignantPrincipal },
-                            { 'enseignantSuppleant': enseignantPrincipal }
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantPrincipal },
-                                { 'enseignantSuppleant': enseignantPrincipal }
-                            ]}
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureFin: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantPrincipal },
-                                { 'enseignantSuppleant': enseignantPrincipal }
-                            ]}
-                        ]
-                    }
-                ]
+        // Mise à jour de la période existante
+        let existingPeriode = await Periode.findById(periodeId);
+        if (!existingPeriode) {
+            return res.status(404).json({
+                success: false,
+                message: message.periode_non_trouve,
             });
-            if(existingEnseignantPrincipalCours){
-                return res.status(400).json({ 
-                    success: false, 
-                    message: message.existe_enseignant_p_cours,
-                });
-            }
-
-            // Vérifier si un enseignant suppleant a déjà un cours programmé au même moment
-            const existingEnseignantSuppleantCours = await Periode.findOne({
-                _id: { $ne: periodeId },
-                jour,
-                annee,
-                semestre,
-                $or: [
-                    { 
-                        heureDebut: { $lt: heureFin }, 
-                        heureFin: { $gt: heureDebut },
-                        $or: [
-                            { 'enseignantPrincipal': enseignantSuppleant },
-                            { 'enseignantSuppleant': enseignantSuppleant }
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantSuppleant },
-                                { 'enseignantSuppleant': enseignantSuppleant }
-                            ]}
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureFin: { $gte: heureDebut, $lte: heureFin } },
-                            { $or: [
-                                { 'enseignantPrincipal': enseignantSuppleant },
-                                { 'enseignantSuppleant': enseignantSuppleant }
-                            ]}
-                        ]
-                    }
-                ]
-            });
-            if(existingEnseignantSuppleantCours){
-                return res.status(400).json({ 
-                    success: false, 
-                    message: message.existe_enseignant_s_cours,
-                });
-            }
-        // }
-        if(salleCours){
-            // Vérifier si une salle de cours a déjà un cours programmé au même moment
-            const existingSalleCoursCours = await Periode.findOne({
-                _id: { $ne: periodeId },
-                jour,
-                annee,
-                semestre,
-                $or: [
-                    { 
-                        heureDebut: { $lt: heureFin }, 
-                        heureFin: { $gt: heureDebut },
-                        salleCours: salleCours
-                    },
-                    { 
-                        $and: [
-                            { heureDebut: { $gte: heureDebut, $lte: heureFin } },
-                            { salleCours: salleCours }
-                        ]
-                    },
-                    { 
-                        $and: [
-                            { heureFin: { $gte: heureDebut, $lte: heureFin } },
-                            { salleCours: salleCours }
-                        ]
-                    }
-                ]
-            });
-            if (existingSalleCoursCours) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: message.existe_salle_cours_programme,
-                });
-            }
-
-        }
-        
-
-        // Mettre à jour la période de cours
-        let matiereId=undefined;
-        if(matiere){
-            matiereId=matiere._id;
         }
 
-        let enseignantPrincipalId=undefined;
-        if(enseignantPrincipal){
-            enseignantPrincipalId=enseignantPrincipal._id;
-        }
+        existingPeriode.jour = jour;
+        existingPeriode.semestre = semestre;
+        existingPeriode.annee = annee;
+        existingPeriode.niveau = niveau;
+        existingPeriode.matieres = matieres;
+        existingPeriode.typesEnseignements = typesEnseignements;
+        existingPeriode.enseignantsPrincipaux = enseignantsPrincipaux;
+        existingPeriode.enseignantsSuppleants = enseignantsSuppleants || [];
+        existingPeriode.sallesCours = sallesCours;
+        existingPeriode.heureDebut = heureDebut;
+        existingPeriode.heureFin = heureFin;
+        existingPeriode.pause = pause;
 
-        let enseignantSuppleantId=undefined;
-        if(enseignantSuppleant){
-            enseignantSuppleantId=enseignantSuppleant._id;
-        }
-
-        const updatedPeriodeCours = await Periode.findByIdAndUpdate(periodeId, {
-            jour,
-            semestre,
-            annee,
-            pause,
-            niveau,
-            matiere: matiereId,
-            typeEnseignement,
-            heureDebut,
-            heureFin,
-            salleCours,
-            enseignantPrincipal:enseignantPrincipalId,
-            enseignantSuppleant:enseignantSuppleantId
-        }, { new: true });
-        const populatedPeriodeCours = await Periode.populate(updatedPeriodeCours, [
-            { path: 'matiere', select: '_id code libelleFr libelleEn' }, // Peupler avec l'_id et le code de la matière
-            { path: 'enseignantPrincipal', select: '_id nom prenom' }, // Peupler avec l'_id, le nom et le prénom de l'enseignant principal
-            { path: 'enseignantSuppleant', select: '_id nom prenom' } // Peupler avec l'_id, le nom et le prénom de l'enseignant suppléant
+        // Sauvegarde des modifications
+        const updatedPeriode = await existingPeriode.save();
+        const populatedPeriode = await Periode.populate(updatedPeriode, [
+            { path: 'matieres', select: '_id code libelleFr libelleEn' },
+            { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
+            { path: 'enseignantsSuppleants', select: '_id nom prenom' }
         ]);
 
-        res.status(200).json({ 
+        return res.status(200).json({
             success: true,
             message: message.mis_a_jour,
-            data: populatedPeriodeCours 
+            data: populatedPeriode
         });
     } catch (error) {
-        console.error('Erreur lors de la modification de la période de cours :', error);
-        res.status(500).json({ 
-            success: false, 
-            message: message.erreurServeur 
+        console.error('Erreur lors de la mise à jour de la période de cours :', error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
         });
     }
 };
 
-// delete
+
 export const deletePeriode = async (req, res) => {
-    const {periodeId} = req.params; // Supposons que l'identifiant de la période soit passé en tant que paramètre d'URL
+    const { periodeId } = req.params;
+    const { matiereIndex } = req.query; // On reçoit l'index de la matière à supprimer
 
     try {
         // Vérifier si la période existe
-        const existingPeriode = await Periode.findById(periodeId);
-        if (!existingPeriode) {
-            return res.status(404).json({ 
-                success: false, 
-                message: message.periode_non_trouve, 
+        const periode = await Periode.findById(periodeId);
+        if (!periode) {
+            return res.status(404).json({
+                success: false,
+                message: message.periode_non_trouve,
             });
         }
 
-        // Supprimer la période de cours de la base de données
-        await Periode.findByIdAndDelete(periodeId);
+        // Si la période est une pause ou si elle ne contient qu'une seule matière, supprimer la période
+        if (periode.pause || periode.matieres.length === 1) {
+            await Periode.findByIdAndDelete(periodeId);
+            return res.status(200).json({
+                success: true,
+                message: message.supprimer_avec_success,
+            });
+        }
 
-        res.status(200).json({ 
-            success: true, 
-            message: message.supprimer_avec_success
+        // Vérifier que l'index de la matière est valide
+        if (matiereIndex < 0 || matiereIndex >= periode.matieres.length) {
+            return res.status(400).json({
+                success: false,
+                message: message.matiere_non_trouvee,
+            });
+        }
+
+        // Supprimer la matière en fonction de l'index
+        periode.matieres.splice(matiereIndex, 1);
+
+        // Supprimer les entités associées à cette matière en utilisant le même index
+        if (periode.typesEnseignements.length > matiereIndex) {
+            periode.typesEnseignements.splice(matiereIndex, 1);
+        }
+        
+        if (periode.sallesCours.length > matiereIndex) {
+            periode.sallesCours.splice(matiereIndex, 1);
+        }
+        
+        if (periode.enseignantsPrincipaux.length > matiereIndex) {
+            periode.enseignantsPrincipaux.splice(matiereIndex, 1);
+        }
+
+        if (periode.enseignantsSuppleants && periode.enseignantsSuppleants.length > matiereIndex) {
+            periode.enseignantsSuppleants.splice(matiereIndex, 1);
+        }
+
+        // Sauvegarder la période mise à jour
+        const updatedPeriode = await periode.save();
+        const populatedPeriode = await Periode.populate(updatedPeriode, [
+            { path: 'matieres', select: '_id code libelleFr libelleEn' },
+            { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
+            { path: 'enseignantsSuppleants', select: '_id nom prenom' }
+        ]);
+        return res.status(200).json({
+            success: true,
+            message: message.supprimer_avec_success,
+            data: populatedPeriode,
         });
+
     } catch (error) {
-        console.error('Erreur lors de la suppression de la période de cours :', error);
-        res.status(500).json({ 
-            success: false, 
+        console.error('Erreur lors de la suppression de la matière :', error);
+        return res.status(500).json({
+            success: false,
             message: message.erreurServeur,
         });
     }
 };
+
+
 
 export const getPeriodesByNiveau = async (req, res) => {
     const { niveauId } = req.params;
@@ -699,15 +535,15 @@ export const getPeriodesByNiveau = async (req, res) => {
         // Rechercher les périodes en fonction du filtre
         const periodes = await Periode.find(filter)
             .populate({
-                path: 'matiere',
+                path: 'matieres',
                 select: '_id code libelleFr libelleEn typesEnseignement'
             })
             .populate({
-                path: 'enseignantPrincipal',
+                path: 'enseignantsPrincipaux',
                 select: '_id nom prenom'
             })
             .populate({
-                path: 'enseignantSuppleant',
+                path: 'enseignantsSuppleants',
                 select: '_id nom prenom'
             })
             .exec();
@@ -771,15 +607,15 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
        // Rechercher les périodes en fonction du filtre
        const periodes = await Periode.find(filter)
            .populate({
-               path: 'matiere',
+               path: 'matieres',
                select: 'code libelleFr libelleEn'
            })
            .populate({
-               path: 'enseignantPrincipal',
+               path: 'enseignantsPrincipaux',
                select: 'nom prenom'
            })
            .populate({
-               path: 'enseignantSuppleant',
+               path: 'enseignantsSuppleants',
                select: 'nom prenom'
            })
            .exec();
@@ -863,114 +699,220 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
     }
 }
 
+// export const getPeriodesAVenirByEnseignant = async (req, res) => {
+//     const { enseignantId } = req.params;
+//     const { nbElement = 5, annee = 2023, semestre = 1 } = req.query;
+
+//     try {
+//         // Récupérer toutes les périodes de cours pour l'enseignant spécifié
+//         const filter = {
+//             $or: [
+//                 { enseignantPrincipal: enseignantId },
+//                 { enseignantSuppleant: enseignantId }
+//             ]
+//         };
+
+//         // Si une année est spécifiée dans la requête, l'utiliser
+//         if (annee && !isNaN(annee)) {
+//             filter.annee = parseInt(annee);
+//         }
+
+//         // Si un semestre est spécifié dans la requête, l'utiliser
+//         if (semestre && !isNaN(semestre)) {
+//             filter.semestre = parseInt(semestre);
+//         }
+
+//         // Rechercher les périodes en fonction du filtre
+//         const periodes = await Periode.find(filter)
+//             .populate({
+//                 path: 'matieres',
+//                 select: 'code libelleFr libelleEn'
+//             })
+//             .populate({
+//                 path: 'enseignantsPrincipaux',
+//                 select: 'nom prenom'
+//             })
+//             .populate({
+//                 path: 'enseignantsSuppleants',
+//                 select: 'nom prenom'
+//             })
+//             .exec();
+
+
+//         // Déterminer le jour actuel
+//         const now = new Date();
+//         const currentDayIndex = now.getDay(); // 0 pour dimanche, 1 pour lundi, ..., 6 pour samedi
+
+//         // Diviser les périodes en groupes par jour de la semaine
+//         const periodesParJour = {};
+//         for (let i = 0; i < 7; i++) {
+//             periodesParJour[i] = [];
+//         }
+//         periodes.forEach(periode => {
+//             const [heure, minutes] = periode.heureDebut.split(':');
+//             const heureDebut = new Date();
+//             heureDebut.setHours(parseInt(heure));
+//             heureDebut.setMinutes(parseInt(minutes));
+//             const jourIndex = periode.jour == 1 ? 1 :
+//                 periode.jour == 2 ? 2 :
+//                 periode.jour == 3 ? 3 :
+//                 periode.jour == 4 ? 4 :
+//                 periode.jour == 5 ? 5 :
+//                 periode.jour == 6 ? 6 :
+//                 0; // Dimanche
+            
+//                  // Vérifier si l'heure de début est déjà passée
+//                 if (heureDebut <= now) {
+//                     // Si l'heure de début est passée, ajoutez la période à la fin de la liste
+//                     periodesParJour[jourIndex].push(periode);
+//                 } else {
+//                     // Sinon, ajoutez-la au début de la liste
+//                     periodesParJour[jourIndex].unshift(periode);
+//                 }
+            
+//         });
+//         // Concaténer les groupes de périodes dans l'ordre de la semaine, en commençant par le jour actuel
+//         let periodesAVenir = [];
+//         let periodesJourCourantDejaPasse = [];
+//         periodesParJour[currentDayIndex].forEach(periode => {
+//             const [heure, minutes] = periode.heureDebut.split(':');
+//             const heureDebut = new Date();
+//             heureDebut.setHours(parseInt(heure));
+//             heureDebut.setMinutes(parseInt(minutes));
+            
+//             // Vérifier si l'heure de début est déjà passée
+//             if (heureDebut <= now) {
+//                 // Si oui, ajouter la période à la liste periodesJourCourantDejaPasse
+//                 periodesJourCourantDejaPasse.push(periode);
+//             } else {
+//                 // Sinon, ajouter la période à la liste periodesAVenir
+//                 periodesAVenir.push(periode);
+//             }
+//         });
+        
+//         for (let i = currentDayIndex+1; i <= 6; i++) {
+//             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
+//         }
+//         for (let i = 0; i < currentDayIndex; i++) {
+//             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
+//         }
+//         periodesAVenir = periodesAVenir.concat(periodesJourCourantDejaPasse);
+        
+
+        
+
+//         // Filtrer les périodes null
+//         periodesAVenir = periodesAVenir.filter(periode => periode !== null);
+
+//         // Limiter le nombre de périodes à renvoyer
+//         const periodesAVenirLimitees = periodesAVenir.slice(0, nbElement);
+
+//         res.status(200).json({
+//             success: true,
+//             data: { periodes: periodesAVenirLimitees }
+//         });
+//     } catch (error) {
+//         console.error('Erreur lors de la récupération des périodes de cours à venir pour l\'enseignant :', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Une erreur est survenue lors de la récupération des périodes de cours à venir.'
+//         });
+//     }
+// }
+
 export const getPeriodesAVenirByEnseignant = async (req, res) => {
     const { enseignantId } = req.params;
     const { nbElement = 5, annee = 2023, semestre = 1 } = req.query;
 
     try {
-        // Récupérer toutes les périodes de cours pour l'enseignant spécifié
+        // Filtre pour récupérer les périodes associées à l'enseignant
         const filter = {
             $or: [
-                { enseignantPrincipal: enseignantId },
-                { enseignantSuppleant: enseignantId }
-            ]
+                { enseignantsPrincipaux: enseignantId },
+                { enseignantsSuppleants: enseignantId }
+            ],
+            annee: parseInt(annee),
+            semestre: parseInt(semestre)
         };
 
-        // Si une année est spécifiée dans la requête, l'utiliser
-        if (annee && !isNaN(annee)) {
-            filter.annee = parseInt(annee);
-        }
-
-        // Si un semestre est spécifié dans la requête, l'utiliser
-        if (semestre && !isNaN(semestre)) {
-            filter.semestre = parseInt(semestre);
-        }
-
-        // Rechercher les périodes en fonction du filtre
+        // Récupérer les périodes de cours en fonction du filtre
         const periodes = await Periode.find(filter)
             .populate({
-                path: 'matiere',
+                path: 'matieres',
                 select: 'code libelleFr libelleEn'
             })
             .populate({
-                path: 'enseignantPrincipal',
+                path: 'enseignantsPrincipaux',
                 select: 'nom prenom'
             })
             .populate({
-                path: 'enseignantSuppleant',
+                path: 'enseignantsSuppleants',
                 select: 'nom prenom'
             })
             .exec();
 
-
-        // Déterminer le jour actuel
+        // Obtenir l'heure et le jour actuels
         const now = new Date();
         const currentDayIndex = now.getDay(); // 0 pour dimanche, 1 pour lundi, ..., 6 pour samedi
 
-        // Diviser les périodes en groupes par jour de la semaine
-        const periodesParJour = {};
-        for (let i = 0; i < 7; i++) {
-            periodesParJour[i] = [];
-        }
+        // Diviser les périodes par jour de la semaine
+        const periodesParJour = Array(7).fill([]); // Tableau avec 7 jours
+
         periodes.forEach(periode => {
-            const [heure, minutes] = periode.heureDebut.split(':');
+            // Conversion de l'heure de début en objet Date pour la comparaison
+            const [heureDebutStr, minuteDebutStr] = periode.heureDebut.split(':');
             const heureDebut = new Date();
-            heureDebut.setHours(parseInt(heure));
-            heureDebut.setMinutes(parseInt(minutes));
-            const jourIndex = periode.jour == 1 ? 1 :
-                periode.jour == 2 ? 2 :
-                periode.jour == 3 ? 3 :
-                periode.jour == 4 ? 4 :
-                periode.jour == 5 ? 5 :
-                periode.jour == 6 ? 6 :
-                0; // Dimanche
-            
-                 // Vérifier si l'heure de début est déjà passée
-                if (heureDebut <= now) {
-                    // Si l'heure de début est passée, ajoutez la période à la fin de la liste
-                    periodesParJour[jourIndex].push(periode);
-                } else {
-                    // Sinon, ajoutez-la au début de la liste
-                    periodesParJour[jourIndex].unshift(periode);
-                }
-            
+            heureDebut.setHours(parseInt(heureDebutStr));
+            heureDebut.setMinutes(parseInt(minuteDebutStr));
+
+            // Utiliser l'index du jour (0 = dimanche, 1 = lundi, etc.)
+            const jourIndex = periode.jour % 7; // Assurer que dimanche = 0 et samedi = 6
+
+            // Ajouter la période au bon jour
+            periodesParJour[jourIndex] = [...periodesParJour[jourIndex], periode];
         });
-        // Concaténer les groupes de périodes dans l'ordre de la semaine, en commençant par le jour actuel
+
+        // Trier les périodes du jour courant
         let periodesAVenir = [];
-        let periodesJourCourantDejaPasse = [];
-        periodesParJour[currentDayIndex].forEach(periode => {
-            const [heure, minutes] = periode.heureDebut.split(':');
+        const periodesJourCourant = periodesParJour[currentDayIndex];
+
+        const periodesJourCourantDejaPasse = periodesJourCourant.filter(periode => {
+            const [heureDebutStr, minuteDebutStr] = periode.heureDebut.split(':');
             const heureDebut = new Date();
-            heureDebut.setHours(parseInt(heure));
-            heureDebut.setMinutes(parseInt(minutes));
-            
-            // Vérifier si l'heure de début est déjà passée
-            if (heureDebut <= now) {
-                // Si oui, ajouter la période à la liste periodesJourCourantDejaPasse
-                periodesJourCourantDejaPasse.push(periode);
-            } else {
-                // Sinon, ajouter la période à la liste periodesAVenir
-                periodesAVenir.push(periode);
-            }
+            heureDebut.setHours(parseInt(heureDebutStr));
+            heureDebut.setMinutes(parseInt(minuteDebutStr));
+
+            return heureDebut <= now;
         });
-        
-        for (let i = currentDayIndex+1; i <= 6; i++) {
+
+        const periodesJourCourantAVenir = periodesJourCourant.filter(periode => {
+            const [heureDebutStr, minuteDebutStr] = periode.heureDebut.split(':');
+            const heureDebut = new Date();
+            heureDebut.setHours(parseInt(heureDebutStr));
+            heureDebut.setMinutes(parseInt(minuteDebutStr));
+
+            return heureDebut > now;
+        });
+
+        // Ajouter d'abord les périodes à venir du jour actuel
+        periodesAVenir = [...periodesJourCourantAVenir];
+
+        // Ajouter les périodes des jours suivants
+        for (let i = currentDayIndex + 1; i <= 6; i++) {
             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
         }
+
+        // Ajouter les périodes des jours précédents
         for (let i = 0; i < currentDayIndex; i++) {
             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
         }
+
+        // Ajouter les périodes déjà passées du jour courant en dernier
         periodesAVenir = periodesAVenir.concat(periodesJourCourantDejaPasse);
-        
-
-        
-
-        // Filtrer les périodes null
-        periodesAVenir = periodesAVenir.filter(periode => periode !== null);
 
         // Limiter le nombre de périodes à renvoyer
         const periodesAVenirLimitees = periodesAVenir.slice(0, nbElement);
-
+        // Renvoyer les périodes à venir
         res.status(200).json({
             success: true,
             data: { periodes: periodesAVenirLimitees }
@@ -982,8 +924,7 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
             message: 'Une erreur est survenue lors de la récupération des périodes de cours à venir.'
         });
     }
-}
-
+};
 
 export const generateEmploisDuTemps = async (req, res) => {
     const {  annee, semestre } = req.params;
@@ -1029,15 +970,15 @@ export const generateEmploisDuTemps = async (req, res) => {
     // Rechercher les périodes en fonction du filtre
     const periodes = await Periode.find(filter)
         .populate({
-            path: 'matiere',
+            path: 'matieres',
             select: 'code libelleFr libelleEn'
         })
         .populate({
-            path: 'enseignantPrincipal',
+            path: 'enseignantsPrincipaux',
             select: 'nom prenom'
         })
         .populate({
-            path: 'enseignantSuppleant',
+            path: 'enseignantsSuppleants',
             select: 'nom prenom'
         })
         .exec();
@@ -1065,7 +1006,7 @@ const exportToExcel = async (res, periodes, langue) => {
         if(settings.length>0){
             setting=settings[0]
         }
-
+        
         // Créer un nouveau classeur Excel
         const workbook = new ExcelJS.Workbook();
         // Ajouter une nouvelle feuille de calcul
@@ -1080,6 +1021,7 @@ const exportToExcel = async (res, periodes, langue) => {
         // Créer un dictionnaire pour organiser les cours par jour et heure
         const coursParJourEtHeure = {};
         periodes.forEach(periode => {
+            
             const jourLabel = jours[periode.jour - 1];  // Convertir l'index du jour en libellé
             const heure = `${periode.heureDebut} - ${periode.heureFin}`;
             
@@ -1087,21 +1029,42 @@ const exportToExcel = async (res, periodes, langue) => {
             if (!coursParJourEtHeure[heure]) {
                 coursParJourEtHeure[heure] = {};
             }
-
-           // Déterminer le libellé du jour en fonction de la langue
+            
+            // Déterminer le libellé du jour en fonction de la langue
             const jourKey = langue === 'fr' ? jourLabel.libelleFr : jourLabel.libelleEn;
-
-            // Déterminer le libellé de la matière en fonction de la langue
-            const matiereLibelle = langue === 'fr' ? periode.matiere.libelleFr : periode.matiere.libelleEn;
-
-            // Construire les informations à afficher : matière, enseignants et salle de cours, avec des sauts de ligne
-            const enseignants = `${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal?.prenom || ""}` + 
-                                (periode.enseignantSuppleant ? `\\${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant?.prenom || ""}` : '');
-
-            const salleDeCours = setting?setting.sallesDeCours.find(sal=>sal._id.toString()===periode.salleCours.toString()):"";
-
+            
+            // Itération sur les salles de cours et ajout de leurs libellés
+            const sallesLibelle = periode.sallesCours && periode.sallesCours.length > 0 
+            ? [...new Set(periode.sallesCours.map(salle => setting?.sallesDeCours.find(sc => sc._id.toString() === salle.toString())?.[langue === 'fr' ? 'libelleFr' : 'libelleEn'] || ''))]
+                .filter(libelle => libelle) // Filtrer les valeurs vides ou nulles
+                .join('/ ')
+            : '';
+            
+            
+            // Itération sur les enseignants principaux
+            const enseignantsLibelle = periode.enseignantsPrincipaux && periode.enseignantsPrincipaux.length > 0
+            ? periode.enseignantsPrincipaux.map((ensPrincipal, index) => {
+                const suppléant = periode.enseignantsSuppleants && periode.enseignantsSuppleants[index]; // Suppléant correspondant à l'index
+                const principalLibelle = `${premierElement(ensPrincipal.nom)} ${ensPrincipal.prenom ? premierElement(ensPrincipal.prenom) : ""}`;
+                const suppléantLibelle = suppléant ? `${premierElement(suppléant.nom)} ${suppléant.prenom ? premierElement(suppléant.prenom) : ""}` : "-";
+                return `${principalLibelle}/${suppléantLibelle}`;
+            }).join(', ')
+            : "-";
+            
+            
+            // Itération sur les matières
+            const matieresLibelle = periode.matieres && periode.matieres.length > 0
+                ? periode.matieres.map(matiere => langue === 'fr' ? matiere.libelleFr : matiere.libelleEn).join('/ ')
+                : "";
+            
             // Ajouter le cours à l'horaire correspondant, avec des informations sur des lignes séparées
-            coursParJourEtHeure[heure][jourKey] = `${matiereLibelle} - (${enseignants}) - ${langue==='fr'?salleDeCours?.libelleFr || "":salleDeCours?.libelleEn || ""}`;
+            if(!periode.pause){
+                coursParJourEtHeure[heure][jourKey] = `${matieresLibelle} - (${enseignantsLibelle}) - ${sallesLibelle}`;
+            }else{
+                const pauseLibelle = periode.pause ? (langue === 'fr' ? 'Pause' : 'Break') : '';
+                coursParJourEtHeure[heure][jourKey] = `${pauseLibelle}`;
+            }
+            
         });
 
         // Trier les heures par ordre croissant
@@ -1183,27 +1146,32 @@ async function fillTemplateEmplois(langue, section, cycle, niveau, periodes, fil
             const slot = `${periode.heureDebut}-${periode.heureFin}`;
             const timeSlot = $(`.time-slot[data-time="${slot}"][data-day="${periode.jour}"]`);
             if(!periode.pause){
-                const typeEns = setting.typesEnseignement.find(type=>type._id.toString()===periode.typeEnseignement.toString()).code;
-                const salle = setting.sallesDeCours.find(sal=>sal._id.toString()===periode.salleCours.toString());
                 if (timeSlot.length > 0) {
-                    // const content = `${langue==='fr'?periode.matiere.libelleFr:periode.matiere.libelleEn} (${typeEns?typeEns:""}) - ${periode.enseignantPrincipal.nom} ${periode.enseignantPrincipal.prenom}/${periode.enseignantSuppleant.nom} ${periode.enseignantSuppleant.prenom} - ${salle?salle:""}`;
-                    let nomPrinc = formatNameSurname(periode.enseignantPrincipal.nom);
-                    let prenomPrinc="";
-                    if(periode.enseignantPrincipal.prenom){
-                        prenomPrinc=formatNameSurname(periode.enseignantPrincipal.prenom);
-                    }
-                    let enseignant=nomPrinc.concat(" "+prenomPrinc)
-                    let nomSup="";
-                    let prenomSup="";
-                    if(periode.enseignantSuppleant){
-                        nomSup=formatNameSurname(periode.enseignantSuppleant.nom);
-                        if(periode.enseignantSuppleant.prenom){
-                            prenomSup=formatNameSurname(periode.enseignantSuppleant.prenom);
-                        }
-                        enseignant=enseignant.concat(" / ").concat(nomSup).concat(" "+prenomSup).trim();
-                    }
+                    // Itération sur les salles de cours et ajout de leurs libellés
+                    const sallesLibelle = periode.sallesCours && periode.sallesCours.length > 0 
+                    ? [...new Set(periode.sallesCours.map(salle => setting?.sallesDeCours.find(sc => sc._id.toString() === salle.toString())?.[langue === 'fr' ? 'libelleFr' : 'libelleEn'] || ''))]
+                        .filter(libelle => libelle) // Filtrer les valeurs vides ou nulles
+                        .join('/ ')
+                    : '';
+                    
+                    
+                    // Itération sur les enseignants principaux
+                    const enseignantsLibelle = periode.enseignantsPrincipaux && periode.enseignantsPrincipaux.length > 0
+                    ? periode.enseignantsPrincipaux.map((ensPrincipal, index) => {
+                        const suppléant = periode.enseignantsSuppleants && periode.enseignantsSuppleants[index]; // Suppléant correspondant à l'index
+                        const principalLibelle = `${premierElement(ensPrincipal.nom)} ${ensPrincipal.prenom ? premierElement(ensPrincipal.prenom) : ""}`;
+                        const suppléantLibelle = suppléant ? `${premierElement(suppléant.nom)} ${suppléant.prenom ? premierElement(suppléant.prenom) : ""}` : "-";
+                        return `${principalLibelle}/${suppléantLibelle}`;
+                    }).join(', ')
+                    : "-";
+                    
+                    
+                    // Itération sur les matières
+                    const matieresLibelle = periode.matieres && periode.matieres.length > 0
+                    ? periode.matieres.map(matiere => langue === 'fr' ? matiere.libelleFr : matiere.libelleEn).join('/ ')
+                    : "";
 
-                    const content = `${langue==='fr'?periode.matiere.libelleFr:periode.matiere.libelleEn} <br> ${enseignant}  <br> ${salle?langue==='fr'?salle.libelleFr:salle.libelleEn:""}`;
+                    const content = `${matieresLibelle} <br> ${enseignantsLibelle}  <br> ${sallesLibelle}`;
                     timeSlot.append(`<div>${content}</div>`);
                 }
             }else{

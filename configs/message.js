@@ -282,9 +282,14 @@ const message = {
         fr: "La période de cours n'a pas été trouvée.",
         en: "The course period was not found.",
     },
+    
     existe_periode_cours: {
         fr: "Une période de cours avec les mêmes paramètres existe déjà",
         en: "A course period with the same parameters already exists",
+    },
+    existe_enseignant_cours:{
+        fr: "L'un des enseignants a déjà un cours programmé au même moment",
+        en: "One teacher already has a scheduled class at the same time",
     },
     existe_enseignant_p_cours: {
         fr: "L'enseignant principal a déjà un cours programmé au même moment",
