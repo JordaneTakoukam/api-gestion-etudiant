@@ -308,6 +308,12 @@ const message = {
         fr: "Format de l'heure invalide. Utilisez HH:MM.",
         en: "Invalid time format. Use HH:MM.",
     },
+
+    heure_debut_fin_invalides: {
+        fr: "L'heure de début doit être antérieure à l'heure de fin.",
+        en: "The start time must be before the end time.",
+    },
+
     periode_non_trouve: {
         fr: "Période d'enseignement non trouvée.",
         en: "Teaching period not found.",

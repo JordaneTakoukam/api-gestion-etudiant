@@ -32,24 +32,21 @@ export const createPeriode = async (req, res) => {
         matieres,
         typesEnseignements,
         enseignantsPrincipaux,
-        enseignantsSuppleants,
+        enseignantsSuppleants = [],
         heureDebut,
         heureFin,
         sallesCours,
         pause
     } = req.body;
-    console.log(matieres)
+
     try {
-        // Validation des champs
-        if (pause) {
-            if (!jour || !semestre || !annee || !niveau || !heureDebut || !heureFin) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.champ_obligatoire,
-                });
-            }
-        } else {
-            if (!jour || !semestre || !annee || !niveau || !matieres || !typesEnseignements || !enseignantsPrincipaux || !heureDebut || !heureFin || !sallesCours) {
+        // Validation des champs requis
+        const requiredFields = pause 
+            ? ['jour', 'semestre', 'annee', 'niveau', 'heureDebut', 'heureFin'] 
+            : ['jour', 'semestre', 'annee', 'niveau', 'matieres', 'typesEnseignements', 'enseignantsPrincipaux', 'heureDebut', 'heureFin', 'sallesCours'];
+
+        for (const field of requiredFields) {
+            if (!req.body[field]) {
                 return res.status(400).json({
                     success: false,
                     message: message.champ_obligatoire,
@@ -58,26 +55,10 @@ export const createPeriode = async (req, res) => {
         }
 
         // Validation des ObjectIDs
-        if (!mongoose.Types.ObjectId.isValid(niveau)) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide,
-            });
-        }
-
-        const validateArrayIdsObj = (array, messageKey) => {
-            for (const item of array) {
-                if (!mongoose.Types.ObjectId.isValid(item._id)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: message[messageKey],
-                    });
-                }
-            }
-        };
         const validateArrayIds = (array, messageKey) => {
             for (const item of array) {
-                if (!mongoose.Types.ObjectId.isValid(item)) {
+                const id = item._id || item;  // Support both arrays of objects or IDs
+                if (!mongoose.Types.ObjectId.isValid(id)) {
                     return res.status(400).json({
                         success: false,
                         message: message[messageKey],
@@ -87,10 +68,10 @@ export const createPeriode = async (req, res) => {
         };
 
         if (!pause) {
-            validateArrayIdsObj(matieres, 'identifiant_invalide');
+            validateArrayIds(matieres, 'identifiant_invalide');
             validateArrayIds(typesEnseignements, 'identifiant_invalide');
-            validateArrayIdsObj(enseignantsPrincipaux, 'identifiant_invalide');
-            if (enseignantsSuppleants) validateArrayIdsObj(enseignantsSuppleants, 'identifiant_invalide');
+            validateArrayIds(enseignantsPrincipaux, 'identifiant_invalide');
+            validateArrayIds(enseignantsSuppleants, 'identifiant_invalide');
             validateArrayIds(sallesCours, 'identifiant_invalide');
         }
 
@@ -103,89 +84,95 @@ export const createPeriode = async (req, res) => {
             });
         }
 
-        // Vérifier les conflits d'horaires
-        const findTimeConflict  = async (filters) => {
-            return await Periode.findOne({
+        // Convertir les heures en minutes pour faciliter la comparaison
+        const convertToMinutes = (time) => {
+            const [hours, minutes] = time.split(':');
+            return parseInt(hours) * 60 + parseInt(minutes);
+        };
+
+        const startMinutes = convertToMinutes(heureDebut);
+        const endMinutes = convertToMinutes(heureFin);
+
+        // Vérifier si l'heure de début est avant l'heure de fin
+        if (startMinutes >= endMinutes) {
+            return res.status(400).json({
+                success: false,
+                message: message.heure_debut_fin_invalides,
+            });
+        }
+
+        // Vérifier les conflits pour les enseignants et les salles
+        const checkConflicts = async () => {
+            const conflictingPeriodes = await Periode.find({
                 jour,
                 semestre,
                 annee,
-                ...filters,
                 $or: [
-                    { heureDebut: { $lt: heureFin }, heureFin: { $gt: heureDebut } }, // Chevauchements
-                    { heureDebut: { $gt: heureDebut, $lt: heureFin } }, // Se termine avant qu'un autre commence
+                    {
+                        heureDebut: { $lt: heureFin },
+                        heureFin: { $gt: heureDebut }
+                    }
                 ]
             });
+
+            // Vérifier les conflits pour les enseignants principaux et suppléants
+            const allEnseignants = [...enseignantsPrincipaux, ...enseignantsSuppleants];
+            for (const enseignant of allEnseignants) {
+                const enseignantConflict = conflictingPeriodes.some(periode => 
+                    periode.enseignantsPrincipaux.some(e => e._id.toString() === enseignant._id.toString()) ||
+                    (periode.enseignantsSuppleants && periode.enseignantsSuppleants.some(e => e._id.toString() === enseignant._id.toString()))
+                );
+                if (enseignantConflict) {
+                    return { conflict: true, type: 'enseignant' };
+                }
+            }
+
+            // Vérifier les conflits pour les salles
+            for (const salle of sallesCours) {
+                const salleConflict = conflictingPeriodes.some(periode => 
+                    periode.sallesCours.includes(salle)
+                );
+                if (salleConflict) {
+                    return { conflict: true, type: 'salle' };
+                }
+            }
+
+            return { conflict: false };
         };
 
-        // Vérifier les salles de cours
-        // for (const salle of sallesCours) {
-        //     const existingSalleCoursCours = await findTimeConflict ({ sallesCours: salle });
-        //     if (existingSalleCoursCours) {
-        //         return res.status(400).json({
-        //             success: false,
-        //             message: message.existe_salle_cours_programme,
-        //         });
-        //     }
-        // }
+        const conflictCheckResult = await checkConflicts();
+        if (conflictCheckResult.conflict) {
+            return res.status(400).json({
+                success: false,
+                message: conflictCheckResult.type === 'enseignant' ? message.existe_enseignant_cours : message.existe_salle_cours_programme,
+            });
+        }
 
-        // Vérifier les enseignants principaux et suppléants
-        // const allEnseignants = [...enseignantsPrincipaux, ...(enseignantsSuppleants || [])];
-        // for (const enseignant of allEnseignants) {
-        //     const existingEnseignantCours = await findTimeConflict ({
-        //         $or: [
-        //             { 'enseignantsPrincipaux': enseignant },
-        //             { 'enseignantsSuppleants': enseignant }
-        //         ]
-        //     });
-        //     if (existingEnseignantCours) {
-        //         return res.status(400).json({
-        //             success: false,
-        //             message: message.existe_enseignant_cours,
-        //         });
-        //     }
-        // }
-
-        // Chercher la période existante pour l'année, le semestre et le niveau
-        let existingPeriode = await Periode.findOne({
-            annee,
-            semestre,
-            niveau,
-            jour,
-            heureDebut,
-            heureFin
-        });
-        console.log(existingPeriode)
+        // Création ou mise à jour de la période
+        let existingPeriode = await Periode.findOne({ annee, semestre, niveau, jour, heureDebut, heureFin });
         if (existingPeriode) {
-            // Si une période existe, ajouter les informations sans doublons
+            // Ajouter les informations sans doublons
             matieres.forEach(matiere => {
-                const matiereExistante = existingPeriode.matieres.find(m => m._id.toString() === matiere._id.toString());
-                if (!matiereExistante) {
+                if (!existingPeriode.matieres.some(m => m._id.toString() === matiere._id.toString())) {
                     existingPeriode.matieres.push(matiere);
                 }
             });
-            
             enseignantsPrincipaux.forEach(enseignant => {
-                const enseignantExistant = existingPeriode.enseignantsPrincipaux.find(e => e._id.toString() === enseignant._id.toString());
-                if (!enseignantExistant) {
+                if (!existingPeriode.enseignantsPrincipaux.some(e => e._id.toString() === enseignant._id.toString())) {
                     existingPeriode.enseignantsPrincipaux.push(enseignant);
                 }
             });
-
-            if (enseignantsSuppleants) {
-                enseignantsSuppleants.forEach(suppleant => {
-                    const suppleantExistant = existingPeriode.enseignantsSuppleants.find(es => es._id.toString() === suppleant._id.toString());
-                    if (!suppleantExistant) {
-                        existingPeriode.enseignantsSuppleants.push(suppleant);
-                    }
-                });
-            }
+            enseignantsSuppleants.forEach(suppleant => {
+                if (!existingPeriode.enseignantsSuppleants.some(es => es._id.toString() === suppleant._id.toString())) {
+                    existingPeriode.enseignantsSuppleants.push(suppleant);
+                }
+            });
             existingPeriode.typesEnseignements = [...new Set([...existingPeriode.typesEnseignements, ...typesEnseignements])];
             existingPeriode.sallesCours = [...new Set([...existingPeriode.sallesCours, ...sallesCours])];
             existingPeriode.heureDebut = heureDebut;
             existingPeriode.heureFin = heureFin;
             existingPeriode.pause = pause;
 
-            // Mise à jour de la période
             const updatedPeriode = await existingPeriode.save();
             const populatedPeriode = await Periode.populate(updatedPeriode, [
                 { path: 'matieres', select: '_id code libelleFr libelleEn' },
@@ -199,20 +186,10 @@ export const createPeriode = async (req, res) => {
                 data: populatedPeriode
             });
         } else {
-            // Si aucune période n'existe, créer une nouvelle période
             const newPeriodeCours = new Periode({
-                jour,
-                semestre,
-                annee,
-                pause,
-                niveau,
-                matieres,
-                typesEnseignements,
-                heureDebut,
-                heureFin,
-                sallesCours,
-                enseignantsPrincipaux,
-                enseignantsSuppleants
+                jour, semestre, annee, pause, niveau, matieres,
+                typesEnseignements, heureDebut, heureFin, sallesCours,
+                enseignantsPrincipaux, enseignantsSuppleants
             });
 
             const savedPeriode = await newPeriodeCours.save();
@@ -237,6 +214,7 @@ export const createPeriode = async (req, res) => {
     }
 };
 
+
 // update
 export const updatePeriode = async (req, res) => {
     const {periodeId} = req.params;
@@ -256,7 +234,27 @@ export const updatePeriode = async (req, res) => {
     } = req.body;
 
     try {
+        // Vérifier l'existence de l'ID de la période
+        if (!mongoose.Types.ObjectId.isValid(periodeId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+            });
+        }
         // Validation des champs
+        const requiredFields = pause 
+            ? ['jour', 'semestre', 'annee', 'niveau', 'heureDebut', 'heureFin'] 
+            : ['jour', 'semestre', 'annee', 'niveau', 'matieres', 'typesEnseignements', 'enseignantsPrincipaux', 'heureDebut', 'heureFin', 'sallesCours'];
+
+        for (const field of requiredFields) {
+            if (!req.body[field]) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.champ_obligatoire,
+                });
+            }
+        }
+
         if (!periodeId) {
             return res.status(400).json({
                 success: false,
@@ -264,44 +262,11 @@ export const updatePeriode = async (req, res) => {
             });
         }
 
-        if (pause) {
-            if (!jour || !semestre || !annee || !niveau || !heureDebut || !heureFin) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.champ_obligatoire,
-                });
-            }
-        } else {
-            if (!jour || !semestre || !annee || !niveau || !matieres || !typesEnseignements || !enseignantsPrincipaux || !heureDebut || !heureFin || !sallesCours) {
-                return res.status(400).json({
-                    success: false,
-                    message: message.champ_obligatoire,
-                });
-            }
-        }
-
         // Validation des ObjectIDs
-        if (!mongoose.Types.ObjectId.isValid(periodeId) || !mongoose.Types.ObjectId.isValid(niveau)) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide,
-            });
-        }
-
-        const validateArrayIdsObj = (array, messageKey) => {
-            for (const item of array) {
-                if (!mongoose.Types.ObjectId.isValid(item._id)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: message[messageKey],
-                    });
-                }
-            }
-        };
-
         const validateArrayIds = (array, messageKey) => {
             for (const item of array) {
-                if (!mongoose.Types.ObjectId.isValid(item)) {
+                const id = item._id || item;  // Support both arrays of objects or IDs
+                if (!mongoose.Types.ObjectId.isValid(id)) {
                     return res.status(400).json({
                         success: false,
                         message: message[messageKey],
@@ -311,10 +276,10 @@ export const updatePeriode = async (req, res) => {
         };
 
         if (!pause) {
-            validateArrayIdsObj(matieres, 'identifiant_invalide');
+            validateArrayIds(matieres, 'identifiant_invalide');
             validateArrayIds(typesEnseignements, 'identifiant_invalide');
-            validateArrayIdsObj(enseignantsPrincipaux, 'identifiant_invalide');
-            if (enseignantsSuppleants) validateArrayIdsObj(enseignantsSuppleants, 'identifiant_invalide');
+            validateArrayIds(enseignantsPrincipaux, 'identifiant_invalide');
+            validateArrayIds(enseignantsSuppleants, 'identifiant_invalide');
             validateArrayIds(sallesCours, 'identifiant_invalide');
         }
 
@@ -327,48 +292,70 @@ export const updatePeriode = async (req, res) => {
             });
         }
 
-        // Vérification des conflits d'horaires
-        const findTimeConflict  = async (filters) => {
-            return await Periode.findOne({
+        // Convertir les heures en minutes pour faciliter la comparaison
+        const convertToMinutes = (time) => {
+            const [hours, minutes] = time.split(':');
+            return parseInt(hours) * 60 + parseInt(minutes);
+        };
+
+        const startMinutes = convertToMinutes(heureDebut);
+        const endMinutes = convertToMinutes(heureFin);
+
+        // Vérifier si l'heure de début est avant l'heure de fin
+        if (startMinutes >= endMinutes) {
+            return res.status(400).json({
+                success: false,
+                message: message.heure_debut_fin_invalides,
+            });
+        }
+
+        // Vérifier les conflits pour les enseignants et les salles
+        const checkConflicts = async () => {
+            const conflictingPeriodes = await Periode.find({
                 jour,
                 semestre,
                 annee,
-                _id: { $ne: periodeId }, // Ne pas inclure la période actuelle dans les vérifications
-                ...filters,
+                _id: { $ne : periodeId },
                 $or: [
-                    { heureDebut: { $lt: heureFin }, heureFin: { $gt: heureDebut } }, // Chevauchements
-                    { heureDebut: { $gt: heureDebut, $lt: heureFin } }, // Se termine avant qu'un autre commence
+                    {
+                        heureDebut: { $lt: heureFin },
+                        heureFin: { $gt: heureDebut }
+                    }
                 ]
             });
+
+            // Vérifier les conflits pour les enseignants principaux et suppléants
+            const allEnseignants = [...enseignantsPrincipaux, ...enseignantsSuppleants];
+            for (const enseignant of allEnseignants) {
+                const enseignantConflict = conflictingPeriodes.some(periode => 
+                    periode.enseignantsPrincipaux.some(e => e._id.toString() === enseignant._id.toString()) ||
+                    (periode.enseignantsSuppleants && periode.enseignantsSuppleants.some(e => e._id.toString() === enseignant._id.toString()))
+                );
+                if (enseignantConflict) {
+                    return { conflict: true, type: 'enseignant' };
+                }
+            }
+
+            // Vérifier les conflits pour les salles
+            for (const salle of sallesCours) {
+                const salleConflict = conflictingPeriodes.some(periode => 
+                    periode.sallesCours.includes(salle)
+                );
+                if (salleConflict) {
+                    return { conflict: true, type: 'salle' };
+                }
+            }
+
+            return { conflict: false };
         };
 
-        // Vérification des salles de cours
-        // for (const salle of sallesCours) {
-        //     const existingSalleCours = await findTimeConflict({ sallesCours: salle });
-        //     if (existingSalleCours) {
-        //         return res.status(400).json({
-        //             success: false,
-        //             message: message.existe_salle_cours_programme,
-        //         });
-        //     }
-        // }
-
-        // Vérification des enseignants principaux et suppléants
-        // const allEnseignants = [...enseignantsPrincipaux, ...(enseignantsSuppleants || [])];
-        // for (const enseignant of allEnseignants) {
-        //     const existingEnseignantCours = await findTimeConflict({
-        //         $or: [
-        //             { 'enseignantsPrincipaux': enseignant },
-        //             { 'enseignantsSuppleants': enseignant }
-        //         ]
-        //     });
-        //     if (existingEnseignantCours) {
-        //         return res.status(400).json({
-        //             success: false,
-        //             message: message.existe_enseignant_cours,
-        //         });
-        //     }
-        // }
+        const conflictCheckResult = await checkConflicts();
+        if (conflictCheckResult.conflict) {
+            return res.status(400).json({
+                success: false,
+                message: conflictCheckResult.type === 'enseignant' ? message.existe_enseignant_cours : message.existe_salle_cours_programme,
+            });
+        }
 
         // Mise à jour de la période existante
         let existingPeriode = await Periode.findById(periodeId);
