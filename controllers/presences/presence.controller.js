@@ -283,14 +283,13 @@ export const getPresencesWithTotalHoraire = async (req, res) => {
 
         // Étape 2: Obtenir les présences des enseignants avec totalHoraire
         const presences = await Presence.find(filter)
-            .populate({ path: 'enseignant', select: 'nom prenom', strictPopulate: false })
+            .populate({ path: 'utilisateur', select: 'nom prenom', strictPopulate: false })
             .exec();
-
         // Calculer le totalHoraire pour chaque enseignant
         const enseignantHoraireMap = {};
 
         presences.forEach(presence => {
-            const enseignantId = presence.enseignant._id;
+            const enseignantId = presence.utilisateur._id;
             const heureDebut = parseInt(presence.heureDebut.split(':')[0]);
             const minuteDebut = parseInt(presence.heureDebut.split(':')[1]);
             const heureFin = parseInt(presence.heureFin.split(':')[0]);
@@ -308,9 +307,9 @@ export const getPresencesWithTotalHoraire = async (req, res) => {
             } else {
                 enseignantHoraireMap[enseignantId] = {
                     enseignant: {
-                        _id: presence.enseignant._id,
-                        nom: presence.enseignant.nom,
-                        prenom: presence.enseignant.prenom,
+                        _id: presence.utilisateur._id,
+                        nom: presence.utilisateur.nom,
+                        prenom: presence.utilisateur.prenom,
                     },
                     totalHoraire: differenceHeures
                 };
@@ -409,15 +408,15 @@ export const searchEnseignantPresence = async (req, res) => {
         const uniqueEnseignantsIds = [...new Set(enseignantsIds)];
 
         // Étape 2: Obtenir les présences des enseignants avec totalHoraire
-        const presences = await Presence.find({ 'enseignant._id': { $in: uniqueEnseignantsIds } })
-            .populate('enseignant', 'nom prenom')
+        const presences = await Presence.find({ 'utilisateur._id': { $in: uniqueEnseignantsIds } })
+            .populate('utilisateur', 'nom prenom')
             .exec();
 
         // Calculer le totalHoraire pour chaque enseignant
         const enseignantHoraireMap = {};
 
         presences.forEach(presence => {
-            const enseignantId = presence.enseignant._id;
+            const enseignantId = presence.utilisateur._id;
             const heureDebut = parseInt(presence.heureDebut.split(':')[0]);
             const minuteDebut = parseInt(presence.heureDebut.split(':')[1]);
             const heureFin = parseInt(presence.heureFin.split(':')[0]);
@@ -432,9 +431,9 @@ export const searchEnseignantPresence = async (req, res) => {
             } else {
                 enseignantHoraireMap[enseignantId] = {
                     enseignant: {
-                        _id: presence.enseignant._id,
-                        nom: presence.enseignant.nom,
-                        prenom: presence.enseignant.prenom,
+                        _id: presence.utilisateur._id,
+                        nom: presence.utilisateur.nom,
+                        prenom: presence.utilisateur.prenom,
                     },
                     totalHoraire: differenceHeures
                 };
@@ -551,14 +550,14 @@ export const generateListPresenceByNiveau = async (req, res)=>{
 
         // Étape 2: Obtenir les présences des enseignants avec totalHoraire
         const presences = await Presence.find(filter)
-            .populate({ path: 'enseignant', select: 'nom prenom', strictPopulate: false })
+            .populate({ path: 'utilisateur', select: 'nom prenom', strictPopulate: false })
             .exec();
 
         // Calculer le totalHoraire pour chaque enseignant
         const enseignantHoraireMap = {};
 
         presences.forEach(presence => {
-            const enseignantId = presence.enseignant._id;
+            const enseignantId = presence.utilisateur._id;
             const heureDebut = parseInt(presence.heureDebut.split(':')[0]);
             const minuteDebut = parseInt(presence.heureDebut.split(':')[1]);
             const heureFin = parseInt(presence.heureFin.split(':')[0]);
@@ -576,9 +575,9 @@ export const generateListPresenceByNiveau = async (req, res)=>{
             } else {
                 enseignantHoraireMap[enseignantId] = {
                     enseignant: {
-                        _id: presence.enseignant._id,
-                        nom: presence.enseignant.nom,
-                        prenom: presence.enseignant.prenom,
+                        _id: presence.utilisateur._id,
+                        nom: presence.utilisateur.nom,
+                        prenom: presence.utilisateur.prenom,
                     },
                     totalHoraire: differenceHeures
                 };
