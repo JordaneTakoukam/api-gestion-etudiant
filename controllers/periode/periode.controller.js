@@ -29,21 +29,17 @@ export const createPeriode = async (req, res) => {
         semestre,
         annee,
         niveau,
-        matieres,
-        typesEnseignements,
-        enseignantsPrincipaux,
-        enseignantsSuppleants = [],
+        enseignements,
+        pause,
         heureDebut,
-        heureFin,
-        sallesCours,
-        pause
+        heureFin
     } = req.body;
 
     try {
         // Validation des champs requis
         const requiredFields = pause 
             ? ['jour', 'semestre', 'annee', 'niveau', 'heureDebut', 'heureFin'] 
-            : ['jour', 'semestre', 'annee', 'niveau', 'matieres', 'typesEnseignements', 'enseignantsPrincipaux', 'heureDebut', 'heureFin', 'sallesCours'];
+            : ['jour', 'semestre', 'annee', 'niveau', 'enseignements', 'heureDebut', 'heureFin'];
 
         for (const field of requiredFields) {
             if (!req.body[field]) {
@@ -67,12 +63,26 @@ export const createPeriode = async (req, res) => {
             }
         };
 
+        const validateObjectId = (id, messageKey) => {
+            if (id && !mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message[messageKey],
+                });
+            }
+        };
+
         if (!pause) {
-            validateArrayIds(matieres, 'identifiant_invalide');
-            validateArrayIds(typesEnseignements, 'identifiant_invalide');
-            validateArrayIds(enseignantsPrincipaux, 'identifiant_invalide');
-            validateArrayIds(enseignantsSuppleants, 'identifiant_invalide');
-            validateArrayIds(sallesCours, 'identifiant_invalide');
+            enseignements.forEach(matiere => {
+                
+                // Validation des identifiants des enseignants principaux et suppléants
+                validateObjectId(matiere.enseignantPrincipal._id, 'identifiant_invalide');
+                if (matiere.enseignantSuppleant) {
+                    validateObjectId(matiere.enseignantSuppleant._id, 'identifiant_invalide');
+                }
+                validateObjectId(matiere.salleCours, 'identifiant_invalide');
+                validateObjectId(matiere.typeEnseignement, 'identifiant_invalide');
+            });
         }
 
         // Validation des heures
@@ -116,21 +126,25 @@ export const createPeriode = async (req, res) => {
             });
 
             // Vérifier les conflits pour les enseignants principaux et suppléants
-            const allEnseignants = [...enseignantsPrincipaux, ...enseignantsSuppleants];
-            for (const enseignant of allEnseignants) {
-                const enseignantConflict = conflictingPeriodes.some(periode => 
-                    periode.enseignantsPrincipaux.some(e => e._id.toString() === enseignant._id.toString()) ||
-                    (periode.enseignantsSuppleants && periode.enseignantsSuppleants.some(e => e._id.toString() === enseignant._id.toString()))
-                );
-                if (enseignantConflict) {
-                    return { conflict: true, type: 'enseignant' };
+            for (const matiere of enseignements) {
+                const allEnseignants = [matiere.enseignantPrincipal, matiere.enseignantSuppleant].filter(Boolean); // On garde que les enseignants définis
+                for (const enseignant of allEnseignants) {
+                    const enseignantConflict = conflictingPeriodes.some(periode => 
+                        periode.enseignements.some(m => 
+                            m.enseignantPrincipal.toString() === enseignant.toString() ||
+                            (m.enseignantSuppleant && m.enseignantSuppleant.toString() === enseignant.toString())
+                        )
+                    );
+                    if (enseignantConflict) {
+                        return { conflict: true, type: 'enseignant' };
+                    }
                 }
             }
 
             // Vérifier les conflits pour les salles
-            for (const salle of sallesCours) {
+            for (const matiere of enseignements) {
                 const salleConflict = conflictingPeriodes.some(periode => 
-                    periode.sallesCours.includes(salle)
+                    periode.enseignements.some(m => m.salleCours.toString() === matiere.salleCours.toString())
                 );
                 if (salleConflict) {
                     return { conflict: true, type: 'salle' };
@@ -140,45 +154,38 @@ export const createPeriode = async (req, res) => {
             return { conflict: false };
         };
 
-        const conflictCheckResult = await checkConflicts();
-        if (conflictCheckResult.conflict) {
-            return res.status(400).json({
-                success: false,
-                message: conflictCheckResult.type === 'enseignant' ? message.existe_enseignant_cours : message.existe_salle_cours_programme,
-            });
-        }
+        // const conflictCheckResult = await checkConflicts();
+        // if (conflictCheckResult.conflict) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: conflictCheckResult.type === 'enseignant' ? message.existe_enseignant_cours : message.existe_salle_cours_programme,
+        //     });
+        // }
 
-        // Création ou mise à jour de la période
         let existingPeriode = await Periode.findOne({ annee, semestre, niveau, jour, heureDebut, heureFin });
-        if (existingPeriode) {
-            // Ajouter les informations sans doublons
-            matieres.forEach(matiere => {
-                if (!existingPeriode.matieres.some(m => m._id.toString() === matiere._id.toString())) {
-                    existingPeriode.matieres.push(matiere);
-                }
-            });
-            enseignantsPrincipaux.forEach(enseignant => {
-                if (!existingPeriode.enseignantsPrincipaux.some(e => e._id.toString() === enseignant._id.toString())) {
-                    existingPeriode.enseignantsPrincipaux.push(enseignant);
-                }
-            });
-            enseignantsSuppleants.forEach(suppleant => {
-                if (!existingPeriode.enseignantsSuppleants.some(es => es._id.toString() === suppleant._id.toString())) {
-                    existingPeriode.enseignantsSuppleants.push(suppleant);
-                }
-            });
-            existingPeriode.typesEnseignements = [...new Set([...existingPeriode.typesEnseignements, ...typesEnseignements])];
-            existingPeriode.sallesCours = [...new Set([...existingPeriode.sallesCours, ...sallesCours])];
-            existingPeriode.heureDebut = heureDebut;
-            existingPeriode.heureFin = heureFin;
-            existingPeriode.pause = pause;
+        if (existingPeriode) {            
+           // Ajouter de nouvelles matières sans doublons
+            if (enseignements && enseignements.length > 0) {
+                // Vérifier si les matières sont déjà présentes, sinon les ajouter sans doublons
+                const updatedEnseignements = [...existingPeriode.enseignements];
+                
+                enseignements.forEach((newEnseignement) => {
+                    // Vérification par rapport à l'ID de la matière
+                    const alreadyExists = updatedEnseignements.some(enseignement => enseignement.matiere._id.toString() === newEnseignement.matiere._id.toString());                    
+                    if (!alreadyExists) {
+                        updatedEnseignements.push(newEnseignement);
+                    }
+                });
+                existingPeriode.enseignements = updatedEnseignements;
+            }
 
             const updatedPeriode = await existingPeriode.save();
             const populatedPeriode = await Periode.populate(updatedPeriode, [
-                { path: 'matieres', select: '_id code libelleFr libelleEn' },
-                { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
-                { path: 'enseignantsSuppleants', select: '_id nom prenom' }
+                { path: 'enseignements.matiere', select: '_id code libelleFr libelleEn' },
+                { path: 'enseignements.enseignantPrincipal', select: '_id nom prenom' },
+                { path: 'enseignements.enseignantSuppleant', select: '_id nom prenom' },
             ]);
+
 
             return res.status(200).json({
                 success: true,
@@ -186,17 +193,16 @@ export const createPeriode = async (req, res) => {
                 data: populatedPeriode
             });
         } else {
+             // Création de la période
             const newPeriodeCours = new Periode({
-                jour, semestre, annee, pause, niveau, matieres,
-                typesEnseignements, heureDebut, heureFin, sallesCours,
-                enseignantsPrincipaux, enseignantsSuppleants
+                jour, semestre, annee, pause, niveau, enseignements, heureDebut, heureFin
             });
 
             const savedPeriode = await newPeriodeCours.save();
             const populatedPeriode = await Periode.populate(savedPeriode, [
-                { path: 'matieres', select: '_id code libelleFr libelleEn' },
-                { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
-                { path: 'enseignantsSuppleants', select: '_id nom prenom' }
+                { path: 'enseignements.matiere', select: '_id code libelleFr libelleEn' },
+                { path: 'enseignements.enseignantPrincipal', select: '_id nom prenom' },
+                { path: 'enseignements.enseignantSuppleant', select: '_id nom prenom' },
             ]);
 
             return res.status(201).json({
@@ -205,6 +211,9 @@ export const createPeriode = async (req, res) => {
                 data: populatedPeriode
             });
         }
+
+       
+
     } catch (error) {
         console.error('Erreur lors de l\'enregistrement de la période de cours :', error);
         res.status(500).json({
@@ -214,7 +223,6 @@ export const createPeriode = async (req, res) => {
     }
 };
 
-
 // update
 export const updatePeriode = async (req, res) => {
     const {periodeId} = req.params;
@@ -223,13 +231,9 @@ export const updatePeriode = async (req, res) => {
         semestre,
         annee,
         niveau,
-        matieres,
-        typesEnseignements,
-        enseignantsPrincipaux,
-        enseignantsSuppleants,
+        enseignements,
         heureDebut,
         heureFin,
-        sallesCours,
         pause
     } = req.body;
 
@@ -241,10 +245,10 @@ export const updatePeriode = async (req, res) => {
                 message: message.identifiant_invalide,
             });
         }
-        // Validation des champs
+        // Validation des champs requis
         const requiredFields = pause 
             ? ['jour', 'semestre', 'annee', 'niveau', 'heureDebut', 'heureFin'] 
-            : ['jour', 'semestre', 'annee', 'niveau', 'matieres', 'typesEnseignements', 'enseignantsPrincipaux', 'heureDebut', 'heureFin', 'sallesCours'];
+            : ['jour', 'semestre', 'annee', 'niveau', 'enseignements', 'heureDebut', 'heureFin'];
 
         for (const field of requiredFields) {
             if (!req.body[field]) {
@@ -253,13 +257,6 @@ export const updatePeriode = async (req, res) => {
                     message: message.champ_obligatoire,
                 });
             }
-        }
-
-        if (!periodeId) {
-            return res.status(400).json({
-                success: false,
-                message: message.identifiant_invalide,
-            });
         }
 
         // Validation des ObjectIDs
@@ -275,12 +272,26 @@ export const updatePeriode = async (req, res) => {
             }
         };
 
+        const validateObjectId = (id, messageKey) => {
+            if (id && !mongoose.Types.ObjectId.isValid(id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: message[messageKey],
+                });
+            }
+        };
+
         if (!pause) {
-            validateArrayIds(matieres, 'identifiant_invalide');
-            validateArrayIds(typesEnseignements, 'identifiant_invalide');
-            validateArrayIds(enseignantsPrincipaux, 'identifiant_invalide');
-            validateArrayIds(enseignantsSuppleants, 'identifiant_invalide');
-            validateArrayIds(sallesCours, 'identifiant_invalide');
+            enseignements.forEach(enseignement => {
+                
+                // Validation des identifiants des enseignants principaux et suppléants
+                validateObjectId(enseignement.enseignantPrincipal._id, 'identifiant_invalide');
+                if (enseignement.enseignantSuppleant) {
+                    validateObjectId(enseignement.enseignantSuppleant._id, 'identifiant_invalide');
+                }
+                validateObjectId(enseignement.salleCours, 'identifiant_invalide');
+                validateObjectId(enseignement.typeEnseignement, 'identifiant_invalide');
+            });
         }
 
         // Validation des heures
@@ -309,8 +320,9 @@ export const updatePeriode = async (req, res) => {
             });
         }
 
-        // Vérifier les conflits pour les enseignants et les salles
-        const checkConflicts = async () => {
+
+         // Vérifier les conflits pour les enseignants et les salles
+         const checkConflicts = async () => {
             const conflictingPeriodes = await Periode.find({
                 jour,
                 semestre,
@@ -325,21 +337,25 @@ export const updatePeriode = async (req, res) => {
             });
 
             // Vérifier les conflits pour les enseignants principaux et suppléants
-            const allEnseignants = [...enseignantsPrincipaux, ...enseignantsSuppleants];
-            for (const enseignant of allEnseignants) {
-                const enseignantConflict = conflictingPeriodes.some(periode => 
-                    periode.enseignantsPrincipaux.some(e => e._id.toString() === enseignant._id.toString()) ||
-                    (periode.enseignantsSuppleants && periode.enseignantsSuppleants.some(e => e._id.toString() === enseignant._id.toString()))
-                );
-                if (enseignantConflict) {
-                    return { conflict: true, type: 'enseignant' };
+            for (const enseignement of enseignements) {
+                const allEnseignants = [enseignement.enseignantPrincipal, enseignement.enseignantSuppleant].filter(Boolean); // On garde que les enseignants définis
+                for (const enseignant of allEnseignants) {
+                    const enseignantConflict = conflictingPeriodes.some(periode => 
+                        periode.enseignements.some(m => 
+                            m.enseignantPrincipal.toString() === enseignant.toString() ||
+                            (m.enseignantSuppleant && m.enseignantSuppleant.toString() === enseignant.toString())
+                        )
+                    );
+                    if (enseignantConflict) {
+                        return { conflict: true, type: 'enseignant' };
+                    }
                 }
             }
 
             // Vérifier les conflits pour les salles
-            for (const salle of sallesCours) {
+            for (const enseignement of enseignements) {
                 const salleConflict = conflictingPeriodes.some(periode => 
-                    periode.sallesCours.includes(salle)
+                    periode.enseignements.some(e => e.salleCours.toString() === enseignement.salleCours.toString())
                 );
                 if (salleConflict) {
                     return { conflict: true, type: 'salle' };
@@ -357,6 +373,8 @@ export const updatePeriode = async (req, res) => {
             });
         }
 
+        
+
         // Mise à jour de la période existante
         let existingPeriode = await Periode.findById(periodeId);
         if (!existingPeriode) {
@@ -370,11 +388,7 @@ export const updatePeriode = async (req, res) => {
         existingPeriode.semestre = semestre;
         existingPeriode.annee = annee;
         existingPeriode.niveau = niveau;
-        existingPeriode.matieres = matieres;
-        existingPeriode.typesEnseignements = typesEnseignements;
-        existingPeriode.enseignantsPrincipaux = enseignantsPrincipaux;
-        existingPeriode.enseignantsSuppleants = enseignantsSuppleants || [];
-        existingPeriode.sallesCours = sallesCours;
+        existingPeriode.enseignements = enseignements;
         existingPeriode.heureDebut = heureDebut;
         existingPeriode.heureFin = heureFin;
         existingPeriode.pause = pause;
@@ -382,9 +396,9 @@ export const updatePeriode = async (req, res) => {
         // Sauvegarde des modifications
         const updatedPeriode = await existingPeriode.save();
         const populatedPeriode = await Periode.populate(updatedPeriode, [
-            { path: 'matieres', select: '_id code libelleFr libelleEn' },
-            { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
-            { path: 'enseignantsSuppleants', select: '_id nom prenom' }
+            { path: 'enseignements.matiere', select: '_id code libelleFr libelleEn' },
+            { path: 'enseignements.enseignantPrincipal', select: '_id nom prenom' },
+            { path: 'enseignements.enseignantSuppleant', select: '_id nom prenom' },
         ]);
 
         return res.status(200).json({
@@ -417,7 +431,7 @@ export const deletePeriode = async (req, res) => {
         }
 
         // Si la période est une pause ou si elle ne contient qu'une seule matière, supprimer la période
-        if (periode.pause || periode.matieres.length === 1) {
+        if (periode.pause || periode.enseignements.length === 1) {
             await Periode.findByIdAndDelete(periodeId);
             return res.status(200).json({
                 success: true,
@@ -426,7 +440,7 @@ export const deletePeriode = async (req, res) => {
         }
 
         // Vérifier que l'index de la matière est valide
-        if (matiereIndex < 0 || matiereIndex >= periode.matieres.length) {
+        if (matiereIndex < 0 || matiereIndex >= periode.enseignements.length) {
             return res.status(400).json({
                 success: false,
                 message: message.matiere_non_trouvee,
@@ -434,31 +448,14 @@ export const deletePeriode = async (req, res) => {
         }
 
         // Supprimer la matière en fonction de l'index
-        periode.matieres.splice(matiereIndex, 1);
-
-        // Supprimer les entités associées à cette matière en utilisant le même index
-        if (periode.typesEnseignements.length > matiereIndex) {
-            periode.typesEnseignements.splice(matiereIndex, 1);
-        }
-        
-        if (periode.sallesCours.length > matiereIndex) {
-            periode.sallesCours.splice(matiereIndex, 1);
-        }
-        
-        if (periode.enseignantsPrincipaux.length > matiereIndex) {
-            periode.enseignantsPrincipaux.splice(matiereIndex, 1);
-        }
-
-        if (periode.enseignantsSuppleants && periode.enseignantsSuppleants.length > matiereIndex) {
-            periode.enseignantsSuppleants.splice(matiereIndex, 1);
-        }
+        periode.enseignements.splice(matiereIndex, 1);
 
         // Sauvegarder la période mise à jour
         const updatedPeriode = await periode.save();
         const populatedPeriode = await Periode.populate(updatedPeriode, [
-            { path: 'matieres', select: '_id code libelleFr libelleEn' },
-            { path: 'enseignantsPrincipaux', select: '_id nom prenom' },
-            { path: 'enseignantsSuppleants', select: '_id nom prenom' }
+            { path: 'enseignements.matiere', select: '_id code libelleFr libelleEn' },
+            { path: 'enseignements.enseignantPrincipal', select: '_id nom prenom' },
+            { path: 'enseignements.enseignantSuppleant', select: '_id nom prenom' },
         ]);
         return res.status(200).json({
             success: true,
@@ -479,7 +476,7 @@ export const deletePeriode = async (req, res) => {
 
 export const getPeriodesByNiveau = async (req, res) => {
     const { niveauId } = req.params;
-    const { annee, semestre } = req.query;
+    const { annee, semestre, page = 1, pageSize = 10 } = req.query; // Pagination ajoutée
 
     try {
         // Vérifier si l'ID du niveau est valide
@@ -496,21 +493,6 @@ export const getPeriodesByNiveau = async (req, res) => {
         // Si une année est spécifiée dans la requête, l'utiliser
         if (annee && !isNaN(annee)) {
             filter.annee = parseInt(annee);
-            // const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
-            // if (!periodesCurrentYear) {
-            //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-            //     let found = false;
-            //     let previousYear = parseInt(annee) - 1;
-            //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-            //         const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
-            //         if (periodesPreviousYear) {
-            //             filter.annee = previousYear;
-            //             found = true;
-            //         } else {
-            //             previousYear--;
-            //         }
-            //     }
-            // } 
         }
 
         // Si un semestre est spécifié dans la requête, l'utiliser
@@ -518,32 +500,39 @@ export const getPeriodesByNiveau = async (req, res) => {
             filter.semestre = parseInt(semestre);
         }
 
+        // Calcul de l'index pour la pagination
+        const skip = (page - 1) * pageSize;
 
-        // Rechercher les périodes en fonction du filtre
+        // Rechercher les périodes en fonction du filtre et ajouter la pagination
         const periodes = await Periode.find(filter)
+            .skip(skip)
+            .limit(Number(pageSize))  // Limite le nombre de résultats par page
             .populate({
-                path: 'matieres',
-                select: '_id code libelleFr libelleEn typesEnseignement'
+                path: 'enseignements.matiere',  // Peupler la matière à partir de enseignements.matiere
+                select: '_id code libelleFr libelleEn typesEnseignement'  // Sélectionner les champs nécessaires
             })
             .populate({
-                path: 'enseignantsPrincipaux',
+                path: 'enseignements.enseignantPrincipal',  // Peupler l'enseignant principal
                 select: '_id nom prenom'
             })
             .populate({
-                path: 'enseignantsSuppleants',
+                path: 'enseignements.enseignantSuppleant',  // Peupler l'enseignant suppléant
                 select: '_id nom prenom'
-            })
-            .exec();
+            }).exec();
+
+        // Compter le nombre total de périodes correspondant aux filtres
+        const totalItems = await Periode.countDocuments(filter).exec();
+        const totalPages = Math.ceil(totalItems / pageSize);
 
         // Envoyer la réponse avec les données
         res.status(200).json({ 
             success: true,
             data: {
                 periodes,
-                currentPage: 0,
-                totalPages: 0,
-                totalItems: periodes.length,
-                pageSize: periodes.length
+                currentPage: page,
+                totalPages,
+                totalItems,
+                pageSize: Number(pageSize)
             }
         });
     } catch (error) {
@@ -555,6 +544,7 @@ export const getPeriodesByNiveau = async (req, res) => {
         });
     }
 }
+
 
 export const getPeriodesAVenirByNiveau = async (req, res) => {
     const { niveauId } = req.params;
@@ -568,21 +558,6 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
        // Si une année est spécifiée dans la requête, l'utiliser
        if (annee && !isNaN(annee)) {
            filter.annee = parseInt(annee);
-        //    const periodesCurrentYear = await Periode.findOne({ niveau: niveauId, annee }).exec();
-        //    if (!periodesCurrentYear) {
-        //        // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-        //        let found = false;
-        //        let previousYear = parseInt(annee) - 1;
-        //        while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-        //            const periodesPreviousYear = await Periode.findOne({ niveau: niveauId, annee: previousYear }).exec();
-        //            if (periodesPreviousYear) {
-        //                filter.annee = previousYear;
-        //                found = true;
-        //            } else {
-        //                previousYear--;
-        //            }
-        //        }
-        //    } 
        }
 
        // Si un semestre est spécifié dans la requête, l'utiliser
@@ -594,15 +569,15 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
        // Rechercher les périodes en fonction du filtre
        const periodes = await Periode.find(filter)
            .populate({
-               path: 'matieres',
+               path: 'enseignements.matiere',
                select: 'code libelleFr libelleEn'
            })
            .populate({
-               path: 'enseignantsPrincipaux',
+               path: 'enseignements.enseignantPrincipal',
                select: 'nom prenom'
            })
            .populate({
-               path: 'enseignantsSuppleants',
+               path: 'enseignements.enseignantSuppleant',
                select: 'nom prenom'
            })
            .exec();
@@ -686,126 +661,6 @@ export const getPeriodesAVenirByNiveau = async (req, res) => {
     }
 }
 
-// export const getPeriodesAVenirByEnseignant = async (req, res) => {
-//     const { enseignantId } = req.params;
-//     const { nbElement = 5, annee = 2023, semestre = 1 } = req.query;
-
-//     try {
-//         // Récupérer toutes les périodes de cours pour l'enseignant spécifié
-//         const filter = {
-//             $or: [
-//                 { enseignantPrincipal: enseignantId },
-//                 { enseignantSuppleant: enseignantId }
-//             ]
-//         };
-
-//         // Si une année est spécifiée dans la requête, l'utiliser
-//         if (annee && !isNaN(annee)) {
-//             filter.annee = parseInt(annee);
-//         }
-
-//         // Si un semestre est spécifié dans la requête, l'utiliser
-//         if (semestre && !isNaN(semestre)) {
-//             filter.semestre = parseInt(semestre);
-//         }
-
-//         // Rechercher les périodes en fonction du filtre
-//         const periodes = await Periode.find(filter)
-//             .populate({
-//                 path: 'matieres',
-//                 select: 'code libelleFr libelleEn'
-//             })
-//             .populate({
-//                 path: 'enseignantsPrincipaux',
-//                 select: 'nom prenom'
-//             })
-//             .populate({
-//                 path: 'enseignantsSuppleants',
-//                 select: 'nom prenom'
-//             })
-//             .exec();
-
-
-//         // Déterminer le jour actuel
-//         const now = new Date();
-//         const currentDayIndex = now.getDay(); // 0 pour dimanche, 1 pour lundi, ..., 6 pour samedi
-
-//         // Diviser les périodes en groupes par jour de la semaine
-//         const periodesParJour = {};
-//         for (let i = 0; i < 7; i++) {
-//             periodesParJour[i] = [];
-//         }
-//         periodes.forEach(periode => {
-//             const [heure, minutes] = periode.heureDebut.split(':');
-//             const heureDebut = new Date();
-//             heureDebut.setHours(parseInt(heure));
-//             heureDebut.setMinutes(parseInt(minutes));
-//             const jourIndex = periode.jour == 1 ? 1 :
-//                 periode.jour == 2 ? 2 :
-//                 periode.jour == 3 ? 3 :
-//                 periode.jour == 4 ? 4 :
-//                 periode.jour == 5 ? 5 :
-//                 periode.jour == 6 ? 6 :
-//                 0; // Dimanche
-            
-//                  // Vérifier si l'heure de début est déjà passée
-//                 if (heureDebut <= now) {
-//                     // Si l'heure de début est passée, ajoutez la période à la fin de la liste
-//                     periodesParJour[jourIndex].push(periode);
-//                 } else {
-//                     // Sinon, ajoutez-la au début de la liste
-//                     periodesParJour[jourIndex].unshift(periode);
-//                 }
-            
-//         });
-//         // Concaténer les groupes de périodes dans l'ordre de la semaine, en commençant par le jour actuel
-//         let periodesAVenir = [];
-//         let periodesJourCourantDejaPasse = [];
-//         periodesParJour[currentDayIndex].forEach(periode => {
-//             const [heure, minutes] = periode.heureDebut.split(':');
-//             const heureDebut = new Date();
-//             heureDebut.setHours(parseInt(heure));
-//             heureDebut.setMinutes(parseInt(minutes));
-            
-//             // Vérifier si l'heure de début est déjà passée
-//             if (heureDebut <= now) {
-//                 // Si oui, ajouter la période à la liste periodesJourCourantDejaPasse
-//                 periodesJourCourantDejaPasse.push(periode);
-//             } else {
-//                 // Sinon, ajouter la période à la liste periodesAVenir
-//                 periodesAVenir.push(periode);
-//             }
-//         });
-        
-//         for (let i = currentDayIndex+1; i <= 6; i++) {
-//             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
-//         }
-//         for (let i = 0; i < currentDayIndex; i++) {
-//             periodesAVenir = periodesAVenir.concat(periodesParJour[i]);
-//         }
-//         periodesAVenir = periodesAVenir.concat(periodesJourCourantDejaPasse);
-        
-
-        
-
-//         // Filtrer les périodes null
-//         periodesAVenir = periodesAVenir.filter(periode => periode !== null);
-
-//         // Limiter le nombre de périodes à renvoyer
-//         const periodesAVenirLimitees = periodesAVenir.slice(0, nbElement);
-
-//         res.status(200).json({
-//             success: true,
-//             data: { periodes: periodesAVenirLimitees }
-//         });
-//     } catch (error) {
-//         console.error('Erreur lors de la récupération des périodes de cours à venir pour l\'enseignant :', error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'Une erreur est survenue lors de la récupération des périodes de cours à venir.'
-//         });
-//     }
-// }
 
 export const getPeriodesAVenirByEnseignant = async (req, res) => {
     const { enseignantId } = req.params;
@@ -825,15 +680,15 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
         // Récupérer les périodes de cours en fonction du filtre
         const periodes = await Periode.find(filter)
             .populate({
-                path: 'matieres',
+                path: 'enseignements.matiere',
                 select: 'code libelleFr libelleEn'
             })
             .populate({
-                path: 'enseignantsPrincipaux',
+                path: 'enseignements.enseignantPrincipal',
                 select: 'nom prenom'
             })
             .populate({
-                path: 'enseignantsSuppleants',
+                path: 'enseignements.enseignantSuppleant',
                 select: 'nom prenom'
             })
             .exec();
@@ -846,17 +701,29 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
         const periodesParJour = Array(7).fill([]); // Tableau avec 7 jours
 
         periodes.forEach(periode => {
-            // Conversion de l'heure de début en objet Date pour la comparaison
-            const [heureDebutStr, minuteDebutStr] = periode.heureDebut.split(':');
-            const heureDebut = new Date();
-            heureDebut.setHours(parseInt(heureDebutStr));
-            heureDebut.setMinutes(parseInt(minuteDebutStr));
+            // Vérifier si l'enseignant est dans les enseignantsPrincipaux ou enseignantsSuppleants
+            const matieresFiltrees = periode.enseignements.filter(e => {
+                const enseignantPrincipal = e.enseignantPrincipal?._id.toString() === enseignantId;
+                const enseignantSuppleant = e.enseignantSuppleant?._id.toString() === enseignantId;
+                
+                return enseignantPrincipal || enseignantSuppleant;
+            });
 
-            // Utiliser l'index du jour (0 = dimanche, 1 = lundi, etc.)
-            const jourIndex = periode.jour % 7; // Assurer que dimanche = 0 et samedi = 6
+            if(matieresFiltrees.length>0){
+                periode.matieres = matieresFiltrees; // Ne conserver que les matières de l'enseignant
+                // Conversion de l'heure de début en objet Date pour la comparaison
+                const [heureDebutStr, minuteDebutStr] = periode.heureDebut.split(':');
+                const heureDebut = new Date();
+                heureDebut.setHours(parseInt(heureDebutStr));
+                heureDebut.setMinutes(parseInt(minuteDebutStr));
 
-            // Ajouter la période au bon jour
-            periodesParJour[jourIndex] = [...periodesParJour[jourIndex], periode];
+                // Utiliser l'index du jour (0 = dimanche, 1 = lundi, etc.)
+                const jourIndex = periode.jour % 7; // Assurer que dimanche = 0 et samedi = 6
+
+                // Ajouter la période au bon jour
+                periodesParJour[jourIndex] = [...periodesParJour[jourIndex], periode];
+            }
+
         });
 
         // Trier les périodes du jour courant
@@ -896,6 +763,7 @@ export const getPeriodesAVenirByEnseignant = async (req, res) => {
 
         // Ajouter les périodes déjà passées du jour courant en dernier
         periodesAVenir = periodesAVenir.concat(periodesJourCourantDejaPasse);
+        
 
         // Limiter le nombre de périodes à renvoyer
         const periodesAVenirLimitees = periodesAVenir.slice(0, nbElement);
@@ -931,21 +799,6 @@ export const generateEmploisDuTemps = async (req, res) => {
     // Si une année est spécifiée dans la requête, l'utiliser
     if (annee && !isNaN(annee)) {
         filter.annee = parseInt(annee);
-        // const periodesCurrentYear = await Periode.findOne({ niveau: niveau._id, annee }).exec();
-        // if (!periodesCurrentYear) {
-        //     // Si aucune période pour l'année actuelle, rechercher dans les années précédentes jusqu'à en trouver une
-        //     let found = false;
-        //     let previousYear = parseInt(annee) - 1;
-        //     while (!found && previousYear >= 2023) { // Limite arbitraire de 2023 pour éviter une boucle infinie
-        //         const periodesPreviousYear = await Periode.findOne({ niveau: niveau._id, annee: previousYear }).exec();
-        //         if (periodesPreviousYear) {
-        //             filter.annee = previousYear;
-        //             found = true;
-        //         } else {
-        //             previousYear--;
-        //         }
-        //     }
-        // } 
     }
 
     // Si un semestre est spécifié dans la requête, l'utiliser
@@ -957,15 +810,15 @@ export const generateEmploisDuTemps = async (req, res) => {
     // Rechercher les périodes en fonction du filtre
     const periodes = await Periode.find(filter)
         .populate({
-            path: 'matieres',
+            path: 'enseignements.matiere',
             select: 'code libelleFr libelleEn'
         })
         .populate({
-            path: 'enseignantsPrincipaux',
+            path: 'enseignements.enseignantPrincipal',
             select: 'nom prenom'
         })
         .populate({
-            path: 'enseignantsSuppleants',
+            path: 'enseignements.enseignantSuppleant',
             select: 'nom prenom'
         })
         .exec();
@@ -1021,27 +874,27 @@ const exportToExcel = async (res, periodes, langue) => {
             const jourKey = langue === 'fr' ? jourLabel.libelleFr : jourLabel.libelleEn;
             
             // Itération sur les salles de cours et ajout de leurs libellés
-            const sallesLibelle = periode.sallesCours && periode.sallesCours.length > 0 
-            ? [...new Set(periode.sallesCours.map(salle => setting?.sallesDeCours.find(sc => sc._id.toString() === salle.toString())?.[langue === 'fr' ? 'libelleFr' : 'libelleEn'] || ''))]
+            const sallesLibelle = periode.enseignements && periode.enseignements.length > 0 
+            ? [...new Set(periode.enseignements.map(e => setting?.sallesDeCours.find(sc => sc._id.toString() === e.salleCours.toString())?.[langue === 'fr' ? 'libelleFr' : 'libelleEn'] || ''))]
                 .filter(libelle => libelle) // Filtrer les valeurs vides ou nulles
                 .join('/ ')
             : '';
             
             
             // Itération sur les enseignants principaux
-            const enseignantsLibelle = periode.enseignantsPrincipaux && periode.enseignantsPrincipaux.length > 0
-            ? periode.enseignantsPrincipaux.map((ensPrincipal, index) => {
-                const suppléant = periode.enseignantsSuppleants && periode.enseignantsSuppleants[index]; // Suppléant correspondant à l'index
-                const principalLibelle = `${premierElement(ensPrincipal.nom)} ${ensPrincipal.prenom ? premierElement(ensPrincipal.prenom) : ""}`;
-                const suppléantLibelle = suppléant ? `${premierElement(suppléant.nom)} ${suppléant.prenom ? premierElement(suppléant.prenom) : ""}` : "-";
-                return `${principalLibelle}/${suppléantLibelle}`;
+            const enseignantsLibelle = periode.enseignements && periode.enseignements.length > 0
+            ? periode.enseignements.map((e, index) => {
+                const suppleant = periode.enseignements && periode.enseignements[index] && periode.enseignements[index].enseignantSuppleant; // Suppléant correspondant à l'index
+                const principalLibelle = `${premierElement(e.enseignantPrincipal.nom)} ${e.enseignantPrincipal.prenom ? premierElement(e.enseignantPrincipal.prenom) : ""}`;
+                const suppleantLibelle = suppleant ? `${premierElement(suppleant.nom)} ${suppleant.prenom ? premierElement(suppleant.prenom) : ""}` : "-";
+                return `${principalLibelle}/${suppleantLibelle}`;
             }).join(', ')
             : "-";
             
             
             // Itération sur les matières
-            const matieresLibelle = periode.matieres && periode.matieres.length > 0
-                ? periode.matieres.map(matiere => langue === 'fr' ? matiere.libelleFr : matiere.libelleEn).join('/ ')
+            const matieresLibelle = periode.enseignements && periode.enseignements.length > 0
+                ? periode.enseignements.map(e => langue === 'fr' ? e.matiere.libelleFr : e.matiere.libelleEn).join('/ ')
                 : "";
             
             // Ajouter le cours à l'horaire correspondant, avec des informations sur des lignes séparées
@@ -1134,29 +987,29 @@ async function fillTemplateEmplois(langue, section, cycle, niveau, periodes, fil
             const timeSlot = $(`.time-slot[data-time="${slot}"][data-day="${periode.jour}"]`);
             if(!periode.pause){
                 if (timeSlot.length > 0) {
-                    // Itération sur les salles de cours et ajout de leurs libellés
-                    const sallesLibelle = periode.sallesCours && periode.sallesCours.length > 0 
-                    ? [...new Set(periode.sallesCours.map(salle => setting?.sallesDeCours.find(sc => sc._id.toString() === salle.toString())?.[langue === 'fr' ? 'libelleFr' : 'libelleEn'] || ''))]
+                     // Itération sur les salles de cours et ajout de leurs libellés
+                    const sallesLibelle = periode.enseignements && periode.enseignements.length > 0 
+                    ? [...new Set(periode.enseignements.map(e => setting?.sallesDeCours.find(sc => sc._id.toString() === e.salleCours.toString())?.[langue === 'fr' ? 'libelleFr' : 'libelleEn'] || ''))]
                         .filter(libelle => libelle) // Filtrer les valeurs vides ou nulles
                         .join('/ ')
                     : '';
                     
                     
                     // Itération sur les enseignants principaux
-                    const enseignantsLibelle = periode.enseignantsPrincipaux && periode.enseignantsPrincipaux.length > 0
-                    ? periode.enseignantsPrincipaux.map((ensPrincipal, index) => {
-                        const suppléant = periode.enseignantsSuppleants && periode.enseignantsSuppleants[index]; // Suppléant correspondant à l'index
-                        const principalLibelle = `${premierElement(ensPrincipal.nom)} ${ensPrincipal.prenom ? premierElement(ensPrincipal.prenom) : ""}`;
-                        const suppléantLibelle = suppléant ? `${premierElement(suppléant.nom)} ${suppléant.prenom ? premierElement(suppléant.prenom) : ""}` : "-";
-                        return `${principalLibelle}/${suppléantLibelle}`;
+                    const enseignantsLibelle = periode.enseignements && periode.enseignements.length > 0
+                    ? periode.enseignements.map((e, index) => {
+                        const suppleant = periode.enseignements && periode.enseignements[index] && periode.enseignements[index].enseignantSuppleant; // Suppléant correspondant à l'index
+                        const principalLibelle = `${premierElement(e.enseignantPrincipal.nom)} ${e.enseignantPrincipal.prenom ? premierElement(e.enseignantPrincipal.prenom) : ""}`;
+                        const suppleantLibelle = suppleant ? `${premierElement(suppleant.nom)} ${suppleant.prenom ? premierElement(suppleant.prenom) : ""}` : "-";
+                        return `${principalLibelle}/${suppleantLibelle}`;
                     }).join(', ')
                     : "-";
                     
                     
                     // Itération sur les matières
-                    const matieresLibelle = periode.matieres && periode.matieres.length > 0
-                    ? periode.matieres.map(matiere => langue === 'fr' ? matiere.libelleFr : matiere.libelleEn).join('/ ')
-                    : "";
+                    const matieresLibelle = periode.enseignements && periode.enseignements.length > 0
+                        ? periode.enseignements.map(e => langue === 'fr' ? e.matiere.libelleFr : e.matiere.libelleEn).join('/ ')
+                        : "";
 
                     const content = `${matieresLibelle} <br> ${enseignantsLibelle}  <br> ${sallesLibelle}`;
                     timeSlot.append(`<div>${content}</div>`);

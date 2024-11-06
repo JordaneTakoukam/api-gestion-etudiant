@@ -229,6 +229,7 @@ export const deletePresence = async (req, res) => {
 export const getPresencesWithTotalHoraire = async (req, res) => {
     const { niveauId } = req.params;
     const { page = 1, pageSize = 10, annee, semestre } = req.query;
+
     try {
         const startIndex = (page - 1) * pageSize;
 
@@ -244,15 +245,28 @@ export const getPresencesWithTotalHoraire = async (req, res) => {
             periodeFilter.niveau = niveauId;
         }
 
-        // Étape 1: Obtenir tous les enseignants du niveau pour le semestre et l'année
+        // Étape 1: Obtenir tous les enseignants principaux et suppléants du niveau pour le semestre et l'année
         const periodes = await Periode.find(periodeFilter)
-            .select('enseignantPrincipal enseignantSuppleant')
-            .populate('enseignantPrincipal enseignantSuppleant', 'nom prenom');
+            .select('enseignements')
+            .populate({
+                path: 'enseignements.enseignantPrincipal enseignements.enseignantSuppleant',
+                select: 'nom prenom',
+                strictPopulate: false
+            });
 
-        // Extraire les enseignants principaux et suppléants
+        // Extraire tous les IDs d'enseignants principaux et suppléants
         const enseignantsIds = periodes.reduce((acc, periode) => {
-            if (periode.enseignantPrincipal) acc.push(periode.enseignantPrincipal._id);
-            if (periode.enseignantSuppleant) acc.push(periode.enseignantSuppleant._id);
+            periode.enseignements.forEach(enseignement => {
+                // Ajouter l'enseignant principal s'il est défini
+                if (enseignement.enseignantPrincipal) {
+                    acc.push(enseignement.enseignantPrincipal._id);
+                }
+
+                // Ajouter l'enseignant suppléant s'il est défini
+                if (enseignement.enseignantSuppleant) {
+                    acc.push(enseignement.enseignantSuppleant._id);
+                }
+            });
             return acc;
         }, []);
 
@@ -261,21 +275,18 @@ export const getPresencesWithTotalHoraire = async (req, res) => {
 
         // Vérification des types et conversion en ObjectId si nécessaire
         const filter = { annee: parseInt(annee), semestre: parseInt(semestre) };
-
         if (mongoose.Types.ObjectId.isValid(niveauId)) {
-            filter.niveau = niveauId; // Conversion du niveauId en ObjectId
+            filter.niveau = niveauId;
         } else {
-            return res.status(400).json({ success: false, message: "niveauId invalide" });
+            return res.status(400).json({ success: false, message: message.identifiant_invalide });
         }
 
         // Étape 2: Obtenir les présences des enseignants avec totalHoraire
+        const presences = await Presence.find(filter)
+            .populate({ path: 'enseignant', select: 'nom prenom', strictPopulate: false })
+            .exec();
 
-         // Étape 1 : Récupérer toutes les présences
-         const presences = await Presence.find(filter)
-         .populate('enseignant', 'nom prenom')
-         .exec();
-
-        // Étape 2 : Calculer le totalHoraire pour chaque enseignant
+        // Calculer le totalHoraire pour chaque enseignant
         const enseignantHoraireMap = {};
 
         presences.forEach(presence => {
@@ -284,19 +295,14 @@ export const getPresencesWithTotalHoraire = async (req, res) => {
             const minuteDebut = parseInt(presence.heureDebut.split(':')[1]);
             const heureFin = parseInt(presence.heureFin.split(':')[0]);
             const minuteFin = parseInt(presence.heureFin.split(':')[1]);
-    
+
             // Calculer les heures et minutes de début et de fin en décimales
             const heureDebutDecimal = heureDebut + minuteDebut / 60;
             const heureFinDecimal = heureFin + minuteFin / 60;
-    
+
             // Calculer la différence d'heures entre l'heure de début et l'heure de fin
-            let differenceHeures = heureFinDecimal - heureDebutDecimal;
-    
-            // Si la différence de minutes est négative, ajuster les heures
-            if (minuteFin < minuteDebut) {
-                differenceHeures -= 1 / 60; // Retirer une heure
-            }
-        
+            const differenceHeures = heureFinDecimal - heureDebutDecimal;
+
             if (enseignantHoraireMap[enseignantId]) {
                 enseignantHoraireMap[enseignantId].totalHoraire += differenceHeures;
             } else {
@@ -315,41 +321,30 @@ export const getPresencesWithTotalHoraire = async (req, res) => {
         const enseignantsPresences = [];
 
         uniqueEnseignantsIds.forEach(enseignantId => {
-            // Chercher la présence de l'enseignant principal
             const presence = enseignantHoraireMap[enseignantId];
-            
+
             if (presence) {
-                
-                // Si l'enseignant a une présence, on l'ajoute directement
                 enseignantsPresences.push(presence);
             } else {
-                // Si l'enseignant n'a pas de présence, on le récupère depuis les périodes
-                const periodeCorrespondante = periodes.find(p => 
-                    (p.enseignantPrincipal && p.enseignantPrincipal._id.equals(enseignantId)) ||
-                    (p.enseignantSuppleant && p.enseignantSuppleant._id.equals(enseignantId))
+                const periodeCorrespondante = periodes.find(p =>
+                    p.enseignements.some(e =>
+                        (e.enseignantPrincipal && e.enseignantPrincipal._id.equals(enseignantId)) ||
+                        (e.enseignantSuppleant && e.enseignantSuppleant._id.equals(enseignantId))
+                    )
                 );
 
-                // Récupération de l'enseignant principal
-                if (periodeCorrespondante && periodeCorrespondante.enseignantPrincipal && periodeCorrespondante.enseignantPrincipal._id.equals(enseignantId)) {
-                    enseignantsPresences.push({
-                        enseignant: {
-                            _id: periodeCorrespondante.enseignantPrincipal._id,
-                            nom: periodeCorrespondante.enseignantPrincipal.nom,
-                            prenom: periodeCorrespondante.enseignantPrincipal.prenom
-                        },
-                        totalHoraire: 0 // Pas de présence enregistrée
-                    });
-                }
+                const enseignantPrincipal = periodeCorrespondante?.enseignements.find(e => e.enseignantPrincipal && e.enseignantPrincipal._id.equals(enseignantId))?.enseignantPrincipal;
+                const enseignantSuppleant = periodeCorrespondante?.enseignements.find(e => e.enseignantSuppleant && e.enseignantSuppleant._id.equals(enseignantId))?.enseignantSuppleant;
 
-                // Récupération de l'enseignant suppléant
-                if (periodeCorrespondante && periodeCorrespondante.enseignantSuppleant && periodeCorrespondante.enseignantSuppleant._id.equals(enseignantId)) {
+                const enseignant = enseignantPrincipal || enseignantSuppleant;
+                if (enseignant) {
                     enseignantsPresences.push({
                         enseignant: {
-                            _id: periodeCorrespondante.enseignantSuppleant._id,
-                            nom: periodeCorrespondante.enseignantSuppleant.nom,
-                            prenom: periodeCorrespondante.enseignantSuppleant.prenom
+                            _id: enseignant._id,
+                            nom: enseignant.nom,
+                            prenom: enseignant.prenom
                         },
-                        totalHoraire: 0 // Pas de présence enregistrée
+                        totalHoraire: 0
                     });
                 }
             }
@@ -376,45 +371,49 @@ export const getPresencesWithTotalHoraire = async (req, res) => {
     }
 };
 
+
 export const searchEnseignantPresence = async (req, res) => {
-    const { searchString, limit = 5 } = req.query;
+    const { searchString, limit = 5} = req.query;
+
     try {
-        // Étape 1: Obtenir tous les enseignants du niveau pour le semestre et l'année
+        const startIndex = (1 - 1) * limit;
+
+        
+
+        // Étape 1: Obtenir les enseignants principaux et suppléants en fonction du filtre
         const periodes = await Periode.find({})
-            .select('enseignantPrincipal enseignantSuppleant')
-            .populate('enseignantPrincipal enseignantSuppleant', 'nom prenom');
+            .select('enseignements')
+            .populate({
+                path: 'enseignements.enseignantPrincipal enseignements.enseignantSuppleant',
+                select: 'nom prenom',
+                strictPopulate: false
+            });
 
-        // Filtre les enseignants principaux en fonction de searchString
-        const filteredEnseignantsPrincipaux = periodes.filter(periode => {
-            return periode.enseignantPrincipal &&
-                (periode.enseignantPrincipal.nom.toLowerCase().includes(searchString.toLowerCase()) ||
-                 periode.enseignantPrincipal.prenom.toLowerCase().includes(searchString.toLowerCase()));
-        });
+        // Extraire les enseignants qui correspondent au searchString
+        const enseignantsIds = periodes.reduce((acc, periode) => {
+            periode.enseignements.forEach(enseignement => {
+                if (enseignement.enseignantPrincipal &&
+                    (enseignement.enseignantPrincipal.nom.toLowerCase().includes(searchString.toLowerCase()) ||
+                     enseignement.enseignantPrincipal.prenom.toLowerCase().includes(searchString.toLowerCase()))) {
+                    acc.push(enseignement.enseignantPrincipal._id);
+                }
+                if (enseignement.enseignantSuppleant &&
+                    (enseignement.enseignantSuppleant.nom.toLowerCase().includes(searchString.toLowerCase()) ||
+                     enseignement.enseignantSuppleant.prenom.toLowerCase().includes(searchString.toLowerCase()))) {
+                    acc.push(enseignement.enseignantSuppleant._id);
+                }
+            });
+            return acc;
+        }, []);
 
-        // Filtre les enseignants suppléants en fonction de searchString
-        const filteredEnseignantsSuppleants = periodes.filter(periode => {
-            return periode.enseignantSuppleant &&
-                (periode.enseignantSuppleant.nom.toLowerCase().includes(searchString.toLowerCase()) ||
-                 periode.enseignantSuppleant.prenom.toLowerCase().includes(searchString.toLowerCase()));
-        });
-
-        // Extraire les IDs uniques des enseignants principaux et suppléants filtrés
-        const enseignantsPrincipauxIds = filteredEnseignantsPrincipaux.map(periode => periode.enseignantPrincipal._id);
-        const enseignantsSuppleantsIds = filteredEnseignantsSuppleants.map(periode => periode.enseignantSuppleant._id);
-
-        // Combiner les résultats tout en supprimant les doublons
-        const uniqueEnseignantsIds = [...new Set([...enseignantsPrincipauxIds, ...enseignantsSuppleantsIds])];
+        const uniqueEnseignantsIds = [...new Set(enseignantsIds)];
 
         // Étape 2: Obtenir les présences des enseignants avec totalHoraire
-        const filter = {
-            'enseignant._id': { $in: uniqueEnseignantsIds }
-        };
-
-        const presences = await Presence.find(filter)
+        const presences = await Presence.find({ 'enseignant._id': { $in: uniqueEnseignantsIds } })
             .populate('enseignant', 'nom prenom')
             .exec();
 
-        // Étape 3: Calculer le totalHoraire pour chaque enseignant
+        // Calculer le totalHoraire pour chaque enseignant
         const enseignantHoraireMap = {};
 
         presences.forEach(presence => {
@@ -424,12 +423,9 @@ export const searchEnseignantPresence = async (req, res) => {
             const heureFin = parseInt(presence.heureFin.split(':')[0]);
             const minuteFin = parseInt(presence.heureFin.split(':')[1]);
 
-            // Calculer les heures et minutes de début et de fin en décimales
             const heureDebutDecimal = heureDebut + minuteDebut / 60;
             const heureFinDecimal = heureFin + minuteFin / 60;
-
-            // Calculer la différence d'heures entre l'heure de début et l'heure de fin
-            let differenceHeures = heureFinDecimal - heureDebutDecimal;
+            const differenceHeures = heureFinDecimal - heureDebutDecimal;
 
             if (enseignantHoraireMap[enseignantId]) {
                 enseignantHoraireMap[enseignantId].totalHoraire += differenceHeures;
@@ -445,7 +441,7 @@ export const searchEnseignantPresence = async (req, res) => {
             }
         });
 
-        // Étape 4: Combiner les enseignants sans présence avec ceux qui en ont
+        // Ajouter les enseignants sans présence
         const enseignantsPresences = [];
 
         uniqueEnseignantsIds.forEach(enseignantId => {
@@ -455,27 +451,22 @@ export const searchEnseignantPresence = async (req, res) => {
                 enseignantsPresences.push(presence);
             } else {
                 const periodeCorrespondante = periodes.find(p =>
-                    (p.enseignantPrincipal && p.enseignantPrincipal._id.equals(enseignantId)) ||
-                    (p.enseignantSuppleant && p.enseignantSuppleant._id.equals(enseignantId))
+                    p.enseignements.some(e =>
+                        (e.enseignantPrincipal && e.enseignantPrincipal._id.equals(enseignantId)) ||
+                        (e.enseignantSuppleant && e.enseignantSuppleant._id.equals(enseignantId))
+                    )
                 );
 
-                if (periodeCorrespondante && periodeCorrespondante.enseignantPrincipal && periodeCorrespondante.enseignantPrincipal._id.equals(enseignantId)) {
-                    enseignantsPresences.push({
-                        enseignant: {
-                            _id: periodeCorrespondante.enseignantPrincipal._id,
-                            nom: periodeCorrespondante.enseignantPrincipal.nom,
-                            prenom: periodeCorrespondante.enseignantPrincipal.prenom
-                        },
-                        totalHoraire: 0
-                    });
-                }
+                const enseignantPrincipal = periodeCorrespondante?.enseignements.find(e => e.enseignantPrincipal && e.enseignantPrincipal._id.equals(enseignantId))?.enseignantPrincipal;
+                const enseignantSuppleant = periodeCorrespondante?.enseignements.find(e => e.enseignantSuppleant && e.enseignantSuppleant._id.equals(enseignantId))?.enseignantSuppleant;
 
-                if (periodeCorrespondante && periodeCorrespondante.enseignantSuppleant && periodeCorrespondante.enseignantSuppleant._id.equals(enseignantId)) {
+                const enseignant = enseignantPrincipal || enseignantSuppleant;
+                if (enseignant) {
                     enseignantsPresences.push({
                         enseignant: {
-                            _id: periodeCorrespondante.enseignantSuppleant._id,
-                            nom: periodeCorrespondante.enseignantSuppleant.nom,
-                            prenom: periodeCorrespondante.enseignantSuppleant.prenom
+                            _id: enseignant._id,
+                            nom: enseignant.nom,
+                            prenom: enseignant.prenom
                         },
                         totalHoraire: 0
                     });
@@ -483,15 +474,18 @@ export const searchEnseignantPresence = async (req, res) => {
             }
         });
 
-        const paginatedEnseignants = enseignantsPresences.slice(0, parseInt(limit));
+        // Pagination
+        const paginatedEnseignants = enseignantsPresences.slice(startIndex, startIndex + parseInt(limit));
+        const totalItems = enseignantsPresences.length;
+        const totalPages = Math.ceil(totalItems / parseInt(limit));
 
         res.status(200).json({
             success: true,
             data: {
                 presencePaies: paginatedEnseignants,
-                totalPages: Math.ceil(enseignantsPresences.length / limit),
+                totalPages: totalPages,
                 currentPage: 1,
-                totalItems: enseignantsPresences.length,
+                totalItems: totalItems,
                 pageSize: limit
             }
         });
@@ -506,51 +500,61 @@ export const generateListPresenceByNiveau = async (req, res)=>{
     const { niveauId } = req.params;
     const { annee, semestre, langue, departement, section, cycle, niveau, fileType } = req.query;
 
-    // Filtre pour l'année, le semestre et le niveau
-    const periodeFilter = {};
-    if (annee && !isNaN(annee)) {
-        periodeFilter.annee = parseInt(annee);
-    }
-    if (semestre && !isNaN(semestre)) {
-        periodeFilter.semestre = parseInt(semestre);
-    }
-    if (niveauId) {
-        periodeFilter.niveau = niveauId;
-    }
+    try{
+        // Filtre pour l'année, le semestre et le niveau
+        const periodeFilter = {};
+        if (annee && !isNaN(annee)) {
+            periodeFilter.annee = parseInt(annee);
+        }
+        if (semestre && !isNaN(semestre)) {
+            periodeFilter.semestre = parseInt(semestre);
+        }
+        if (niveauId) {
+            periodeFilter.niveau = niveauId;
+        }
 
-    // Étape 1: Obtenir tous les enseignants du niveau pour le semestre et l'année
-    const periodes = await Periode.find(periodeFilter)
-        .select('enseignantPrincipal enseignantSuppleant')
-        .populate('enseignantPrincipal enseignantSuppleant', 'nom prenom');
+        // Étape 1: Obtenir tous les enseignants principaux et suppléants du niveau pour le semestre et l'année
+        const periodes = await Periode.find(periodeFilter)
+            .select('enseignements')
+            .populate({
+                path: 'enseignements.enseignantPrincipal enseignements.enseignantSuppleant',
+                select: 'nom prenom',
+                strictPopulate: false
+            });
 
-    // Extraire les enseignants principaux et suppléants
-    const enseignantsIds = periodes.reduce((acc, periode) => {
-        if (periode.enseignantPrincipal) acc.push(periode.enseignantPrincipal._id);
-        if (periode.enseignantSuppleant) acc.push(periode.enseignantSuppleant._id);
-        return acc;
-    }, []);
+        // Extraire tous les IDs d'enseignants principaux et suppléants
+        const enseignantsIds = periodes.reduce((acc, periode) => {
+            periode.enseignements.forEach(enseignement => {
+                // Ajouter l'enseignant principal s'il est défini
+                if (enseignement.enseignantPrincipal) {
+                    acc.push(enseignement.enseignantPrincipal._id);
+                }
 
-    // Supprimer les doublons
-    const uniqueEnseignantsIds = [...new Set(enseignantsIds)];
+                // Ajouter l'enseignant suppléant s'il est défini
+                if (enseignement.enseignantSuppleant) {
+                    acc.push(enseignement.enseignantSuppleant._id);
+                }
+            });
+            return acc;
+        }, []);
 
-    // Étape 2: Obtenir les présences des enseignants avec totalHoraire
-    // Vérification des types et conversion en ObjectId si nécessaire
-    const filter = { annee: parseInt(annee), semestre: parseInt(semestre) };
+        // Supprimer les doublons
+        const uniqueEnseignantsIds = [...new Set(enseignantsIds)];
 
-    if (mongoose.Types.ObjectId.isValid(niveauId)) {
-        filter.niveau = niveauId; // Conversion du niveauId en ObjectId
-    } else {
-        return res.status(400).json({ success: false, message: "niveauId invalide" });
-    }
+        // Vérification des types et conversion en ObjectId si nécessaire
+        const filter = { annee: parseInt(annee), semestre: parseInt(semestre) };
+        if (mongoose.Types.ObjectId.isValid(niveauId)) {
+            filter.niveau = niveauId;
+        } else {
+            return res.status(400).json({ success: false, message: message.identifiant_invalide });
+        }
 
-    // Étape 2: Obtenir les présences des enseignants avec totalHoraire
+        // Étape 2: Obtenir les présences des enseignants avec totalHoraire
+        const presences = await Presence.find(filter)
+            .populate({ path: 'enseignant', select: 'nom prenom', strictPopulate: false })
+            .exec();
 
-     // Étape 1 : Récupérer toutes les présences
-     const presences = await Presence.find(filter)
-     .populate('enseignant', 'nom prenom')
-     .exec();
-
-        // Étape 2 : Calculer le totalHoraire pour chaque enseignant
+        // Calculer le totalHoraire pour chaque enseignant
         const enseignantHoraireMap = {};
 
         presences.forEach(presence => {
@@ -565,13 +569,8 @@ export const generateListPresenceByNiveau = async (req, res)=>{
             const heureFinDecimal = heureFin + minuteFin / 60;
 
             // Calculer la différence d'heures entre l'heure de début et l'heure de fin
-            let differenceHeures = heureFinDecimal - heureDebutDecimal;
+            const differenceHeures = heureFinDecimal - heureDebutDecimal;
 
-            // Si la différence de minutes est négative, ajuster les heures
-            if (minuteFin < minuteDebut) {
-                differenceHeures -= 1 / 60; // Retirer une heure
-            }
-        
             if (enseignantHoraireMap[enseignantId]) {
                 enseignantHoraireMap[enseignantId].totalHoraire += differenceHeures;
             } else {
@@ -590,62 +589,56 @@ export const generateListPresenceByNiveau = async (req, res)=>{
         const enseignantsPresences = [];
 
         uniqueEnseignantsIds.forEach(enseignantId => {
-        // Chercher la présence de l'enseignant principal
-        const presence = enseignantHoraireMap[enseignantId];
-        
-        if (presence) {
-            // Si l'enseignant a une présence, on l'ajoute directement
-            enseignantsPresences.push(presence);
-        } else {
-            // Si l'enseignant n'a pas de présence, on le récupère depuis les périodes
-            const periodeCorrespondante = periodes.find(p => 
-                (p.enseignantPrincipal && p.enseignantPrincipal._id.equals(enseignantId)) ||
-                (p.enseignantSuppleant && p.enseignantSuppleant._id.equals(enseignantId))
-            );
+            const presence = enseignantHoraireMap[enseignantId];
 
-            // Récupération de l'enseignant principal
-            if (periodeCorrespondante && periodeCorrespondante.enseignantPrincipal && periodeCorrespondante.enseignantPrincipal._id.equals(enseignantId)) {
-                enseignantsPresences.push({
-                    enseignant: {
-                        _id: periodeCorrespondante.enseignantPrincipal._id,
-                        nom: periodeCorrespondante.enseignantPrincipal.nom,
-                        prenom: periodeCorrespondante.enseignantPrincipal.prenom
-                    },
-                    totalHoraire: 0 // Pas de présence enregistrée
-                });
+            if (presence) {
+                enseignantsPresences.push(presence);
+            } else {
+                const periodeCorrespondante = periodes.find(p =>
+                    p.enseignements.some(e =>
+                        (e.enseignantPrincipal && e.enseignantPrincipal._id.equals(enseignantId)) ||
+                        (e.enseignantSuppleant && e.enseignantSuppleant._id.equals(enseignantId))
+                    )
+                );
+
+                const enseignantPrincipal = periodeCorrespondante?.enseignements.find(e => e.enseignantPrincipal && e.enseignantPrincipal._id.equals(enseignantId))?.enseignantPrincipal;
+                const enseignantSuppleant = periodeCorrespondante?.enseignements.find(e => e.enseignantSuppleant && e.enseignantSuppleant._id.equals(enseignantId))?.enseignantSuppleant;
+
+                const enseignant = enseignantPrincipal || enseignantSuppleant;
+                if (enseignant) {
+                    enseignantsPresences.push({
+                        enseignant: {
+                            _id: enseignant._id,
+                            nom: enseignant.nom,
+                            prenom: enseignant.prenom
+                        },
+                        totalHoraire: 0
+                    });
+                }
             }
+        });
 
-            // Récupération de l'enseignant suppléant
-            if (periodeCorrespondante && periodeCorrespondante.enseignantSuppleant && periodeCorrespondante.enseignantSuppleant._id.equals(enseignantId)) {
-                enseignantsPresences.push({
-                    enseignant: {
-                        _id: periodeCorrespondante.enseignantSuppleant._id,
-                        nom: periodeCorrespondante.enseignantSuppleant.nom,
-                        prenom: periodeCorrespondante.enseignantSuppleant.prenom
-                    },
-                    totalHoraire: 0 // Pas de présence enregistrée
-                });
+        let settings = await Setting.find().select('tauxHoraire');
+        let setting = null;
+        if(settings.length>0){
+            setting=settings[0]
+        }
+        const tauxHoraire = setting?.tauxHoraire || 0;
+        if(fileType.toLowerCase() === 'pdf'){
+            let filePath='./templates/templates_fr/template_presence_fr.html';
+            if(langue==='en'){
+                filePath='./templates/templates_en/template_presence_en.html';
             }
-        }
-    });
+            const htmlContent = await fillTemplate( langue, departement, section, cycle, niveau, enseignantsPresences, filePath, annee, semestre, tauxHoraire);
 
-    let settings = await Setting.find().select('tauxHoraire');
-    let setting = null;
-    if(settings.length>0){
-        setting=settings[0]
-    }
-    const tauxHoraire = setting?.tauxHoraire || 0;
-    if(fileType.toLowerCase() === 'pdf'){
-        let filePath='./templates/templates_fr/template_presence_fr.html';
-        if(langue==='en'){
-            filePath='./templates/templates_en/template_presence_en.html';
+            // Générer le PDF à partir du contenu HTML
+            generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        }else{
+            exportToExcel(enseignantsPresences, langue, res, tauxHoraire);
         }
-        const htmlContent = await fillTemplate( langue, departement, section, cycle, niveau, enseignantsPresences, filePath, annee, semestre, tauxHoraire);
-
-        // Générer le PDF à partir du contenu HTML
-        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
-    }else{
-        exportToExcel(enseignantsPresences, langue, res, tauxHoraire);
+    }catch(error){
+        console.log(error);
+        return res.status(500).json({success:false, message: message.erreurServeur });
     }
 }
 

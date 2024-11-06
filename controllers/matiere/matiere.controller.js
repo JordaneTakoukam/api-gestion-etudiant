@@ -279,10 +279,16 @@ export const getMatieresByNiveau = async (req, res) => {
             }
 
             // Rechercher les périodes en fonction du filtre
-            const periodes = await Periode.find(filter).select('matieres').exec();
+            const periodes = await Periode.find(filter).select('enseignements').exec();
 
             // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-            const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+            const matiereIds = [
+                ...new Set(
+                    periodes.flatMap(periode => 
+                        periode.enseignements.map(e => e.matiere) // Récupérer l'ID de la matière
+                    )
+                )
+            ];
 
             // Récupérer les détails de chaque matière à partir des identifiants uniques
             let matieres = [];
@@ -501,10 +507,16 @@ export const generateListMatByNiveau = async (req, res) => {
             }
 
             // Rechercher les périodes en fonction du filtre
-            const periodes = await Periode.find(filter).select('matieres').exec();
+             const periodes = await Periode.find(filter).select('enseignements').exec();
 
-            // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-            const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+             // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+             const matiereIds = [
+                 ...new Set(
+                     periodes.flatMap(periode => 
+                         periode.enseignements.map(e => e.matiere) // Récupérer l'ID de la matière
+                     )
+                 )
+             ];
 
             // Récupérer les détails de chaque matière à partir des identifiants uniques
             if (langue === 'fr') {
@@ -655,11 +667,17 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
                 semestre: parseInt(semestre)
             };
 
-            // Rechercher les périodes en fonction du filtre
-            const periodes = await Periode.find(filter).select('matieres').exec();
+             // Rechercher les périodes en fonction du filtre
+             const periodes = await Periode.find(filter).select('enseignements').exec();
 
-            // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-            const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+             // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
+             const matiereIds = [
+                 ...new Set(
+                     periodes.flatMap(periode => 
+                         periode.enseignements.map(e => e.matiere) // Récupérer l'ID de la matière
+                     )
+                 )
+             ];
 
             // Récupérer les détails de chaque matière à partir des identifiants uniques
             let matieres = [];
@@ -765,12 +783,24 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
             filter.semestre = parseInt(semestre);
         }
 
-        // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
+         // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('enseignements').exec();
 
         // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements
+                        .filter(e => 
+                            String(e.enseignantPrincipal) === enseignantId || 
+                            String(e.enseignantSuppleant) === enseignantId
+                        )
+                        .map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
 
+        
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];
         if (langue === 'fr') {
@@ -786,6 +816,8 @@ export const getMatieresByEnseignantNiveau = async (req, res) => {
                 .populate('objectifs')
                 .exec();
         }
+
+        
 
         res.status(200).json({
             success: true,
@@ -826,11 +858,24 @@ export const generateListMatByEnseignantNiveau = async (req, res) => {
             filter.semestre = parseInt(semestre);
         }
 
-        // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
+         // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('enseignements').exec();
 
         // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements
+                        .filter(e => 
+                            String(e.enseignantPrincipal) === enseignantId || 
+                            String(e.enseignantSuppleant) === enseignantId
+                        )
+                        .map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
+
+        
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];
@@ -1123,11 +1168,19 @@ export const generateProgressByNiveau = async (req, res)=>{
             filter.semestre = parseInt(semestre);
         }
 
-        // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
+         // Rechercher les périodes en fonction du filtre
+        const periodes = await Periode.find(filter).select('enseignements').exec();
 
         // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements.map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
+
+       
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];
@@ -1198,10 +1251,16 @@ export const generateProgressChapitreByNiveau = async (req, res)=>{
         }
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
+        const periodes = await Periode.find(filter).select('enseignements').exec();
 
         // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements.map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];
@@ -1279,10 +1338,21 @@ export const generateProgressByEnseignant = async (req, res)=>{
         }
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
+        const periodes = await Periode.find(filter).select('enseignements').exec();
 
         // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements
+                        .filter(e => 
+                            String(e.enseignantPrincipal) === enseignantId || 
+                            String(e.enseignantSuppleant) === enseignantId
+                        )
+                        .map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
 
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
@@ -1356,11 +1426,23 @@ export const generateProgressChapitreByEnseignant = async (req, res)=>{
         }
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
+        const periodes = await Periode.find(filter).select('enseignements').exec();
 
         // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements
+                        .filter(e => 
+                            String(e.enseignantPrincipal) === enseignantId || 
+                            String(e.enseignantSuppleant) === enseignantId
+                        )
+                        .map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
 
+       
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];
         if(langue === 'fr'){
@@ -1669,11 +1751,18 @@ export const searchMatiereByEnseignant = async (req, res) => {
 
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
+        const periodes = await Periode.find(filter).select('enseignements').exec();
 
         // Extraire les identifiants uniques des matières (chaque période peut avoir plusieurs matières)
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements.map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
 
+      
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         let matieres = [];
