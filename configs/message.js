@@ -318,6 +318,12 @@ const message = {
         fr: "Période d'enseignement non trouvée.",
         en: "Teaching period not found.",
     },
+
+    permission_non_trouvee:{
+        fr:"Permission non trouvee.",
+        en:"Permission not found."
+    },
+    
     userNotFound: {
         fr: "Utilisateur non trouvé.",
         en: "User not found.",

@@ -755,7 +755,7 @@ export const getMatieresByNiveauWithPagination = async (req, res) => {
         }
     } catch (error) {
         console.error('Erreur lors de la récupération des matières par niveau :', error);
-        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières.' });
+        res.status(500).json({ success: false, message: message.erreurServeur });
     }
 };
 
