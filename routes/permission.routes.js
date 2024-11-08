@@ -1,5 +1,5 @@
 import express from 'express';
-import {createPermission, updatePermission, deletePermission, getPermissions, getPermissionsWithPagination, createManyPermission} from '../controllers/permissions/permission.controller.js';
+import {createPermission, updatePermission, deletePermission, getPermissions, getPermissionsWithPagination, createManyPermission, searchPermission} from '../controllers/permissions/permission.controller.js';
 
 const router = express.Router();
 
@@ -17,5 +17,6 @@ router.delete('/delete/:permissionId', deletePermission);
 // Route pour récupérer la liste des permissions
 router.get('/getPermissions', getPermissions);
 router.get('/getPermissionsWithPagination', getPermissionsWithPagination);
+router.get('/searchPermission/:searchString', searchPermission);
 
 export default router;
