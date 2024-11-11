@@ -3,6 +3,8 @@ import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 import fs from 'fs';
 import path from 'path';
+import UserPermission from '../../models/user_permission.model.js';
+import RolePermission from '../../models/role_permission.model.js';
 
 // Contrôleur pour créer une nouvelle permission
 export const createPermission = async (req, res) => {
@@ -230,6 +232,122 @@ export const searchPermission = async (req, res) => {
     }
 };
 
+export const grantedPermission = async(req, res) =>{
+    const { userId, permissionName, isGranted } = req.body;
+    
+    if (!userId || !permissionName || isGranted === undefined) {
+        return res.status(400).json({
+            success:false,
+            message: message.champ_obligatoire,
+        });
+    }
+
+    try {
+        // Vérifiez si la permission existe dans la base de données
+        const permission = await Permission.findOne({ nom: permissionName});
+
+        let permission_id="";
+        if (!permission) {
+            return res.status(404).json({
+                success:false,
+                message: message.permission_non_trouvee,
+            });
+        }else{
+            permission_id = permission._id;
+        }
+
+        // Vérifiez si cette permission est déjà attribuée à l'utilisateur
+        const existingUserPermission = await UserPermission.findOne({
+                user: userId,
+                permission: permission.id,
+            });
+        console.log(existingUserPermission)
+        if (existingUserPermission) {
+            //si la permission est déjà liée à l'utilisateur, modifier la valeur de is_granted
+            existingUserPermission.is_granted = isGranted;
+            await existingUserPermission.save();
+        }else{
+            //si la permission est déjà n'est pas liée à l'utilisateur enregitrer comme une nouvelle permission
+            const newPermission = new UserPermission({ user:userId, permission:permission_id, is_granted:isGranted });
+            await newPermission.save();
+        }
+
+        
+
+        return res.status(200).json({
+            success:true,
+            message: message.mis_a_jour,
+        });
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout de la permission:', error);
+        return res.status(500).json({
+            success:false,
+            message: message.erreurServeur,
+        });
+    }
+}
+
+// Controller pour récupérer les permissions d'un utilisateur
+export const getUserPermissions = async (req, res) => {
+    const { userId } = req.params;
+
+    if (!userId) {
+        return res.status(400).json({
+            success: false,
+            message: message.champ_obligatoire,
+        });
+    }
+
+    try {
+        // Récupère les permissions de l'utilisateur avec un populate sur la permission
+        const userPermissions = await UserPermission.find({ user: userId })
+            .select('permission is_granted')  // Sélectionne seulement 'permission' et 'is_granted'
+            .populate('permission', 'nom'); // Remplace 'nom' et 'description' par les champs que tu veux
+
+        console.log(userPermissions)
+
+        return res.status(200).json({
+            success: true,
+            data: userPermissions,
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des permissions de l\'utilisateur:', error);
+        return res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
+};
+
+// Controller pour récupérer les permissions d'un utilisateur
+export const getRolePermissions = async (req, res) => {
+    const { role } = req.params;
+    console.log(role);
+    if (!role) {
+        return res.status(400).json({
+            success: false,
+            message: message.champ_obligatoire,
+        });
+    }
+
+    try {
+        // Récupère les permissions de l'utilisateur avec un populate sur la permission
+        const rolePermissions = await RolePermission.find({ role: role }).select("permission");
+
+        return res.status(200).json({
+            success: true,
+            data: rolePermissions,
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des permissions de l\'utilisateur:', error);
+        return res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+        });
+    }
+};
+
+
 export const createManyPermission = async(req, res)=>{
     try {
         
@@ -248,6 +366,29 @@ export const createManyPermission = async(req, res)=>{
         // Enregistrer les permissions en base de données
         const createdPermissions = await Permission.insertMany(permissionsData);
         return res.status(201).json({ message: 'Permissions enregistrées avec succès.', data: createdPermissions });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erreur serveur, impossible d\'enregistrer les permissions.', error });
+    }
+}
+
+export const addManyRolePermission = async(req, res)=>{
+    try {
+        
+
+        // Lire le fichier JSON et le parser
+        const fileData = fs.readFileSync('./default_permissions_admin.json', 'utf8');
+        const permissionsData = JSON.parse(fileData);
+
+        let rolePermissions = [];
+        permissionsData.forEach(element => {
+            rolePermissions.push({role:"super-admin", permission:element.nom})
+        });
+
+        
+        // Enregistrer les permissions en base de données
+        const createdPermissions = await RolePermission.insertMany(rolePermissions);
+        return res.status(201).json({ message: 'Permissions par role enregistrées avec succès.', data: createdPermissions });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erreur serveur, impossible d\'enregistrer les permissions.', error });

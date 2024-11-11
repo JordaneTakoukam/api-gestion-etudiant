@@ -323,7 +323,12 @@ const message = {
         fr:"Permission non trouvee.",
         en:"Permission not found."
     },
-    
+
+    permission_attribuee:{
+        fr:"Cette permission est déjà attribuée à l'utilisateur.",
+        en:"The permission has already been granted to the user."
+    },
+
     userNotFound: {
         fr: "Utilisateur non trouvé.",
         en: "User not found.",

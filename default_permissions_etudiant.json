@@ -1,0 +1,146 @@
+[
+    {
+        "_id": "672e3cdc4b66c827d780347a",
+        "nom": "consulter_emplois_du_temps",
+        "libelleFr": "Consulter l'emploi du temps",
+        "libelleEn": "View timetable",
+        "descriptionFr": "Permet à un utilisateur de consulter leur emploi du temps en fonction de leur cycle et niveau.",
+        "descriptionEn": "Allows a user to view their timetable based on their cycle and level.",
+        "__v": 0
+    },
+    {
+        "_id": "672f25ce5bc4e469a56c4375",
+        "nom": "consulter_liste_absence",
+        "libelleFr": "Consulter la liste des absences",
+        "libelleEn": "View absence list",
+        "descriptionFr": "Permet à un utilisateur de consulter la liste de ses absences",
+        "descriptionEn": "Allows a user to view their absence list",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780348a",
+        "nom": "consulter_cahiers_exercices",
+        "libelleFr": "Consulter la liste des cahiers d'exercices",
+        "libelleEn": "View exercise books list",
+        "descriptionFr": "Permet de consulter la liste des cahiers d'exercices et de les effectuer.",
+        "descriptionEn": "Allows viewing the list of exercise books and completing them.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780346b",
+        "nom": "consulter_liste_chapitres",
+        "libelleFr": "Consulter la liste des chapitres d'une matière",
+        "libelleEn": "View subject chapters list",
+        "descriptionFr": "Permet de consulter la liste des chapitres associés à une matière.",
+        "descriptionEn": "Allows viewing the list of chapters associated with a subject.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780347e",
+        "nom": "consulter_liste_documents",
+        "libelleFr": "Consulter la liste des documents",
+        "libelleEn": "View document list",
+        "descriptionFr": "Permet de voir la liste des documents et de téléchager un document.",
+        "descriptionEn": "Allows viewing the document list and downloading documents.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d7803469",
+        "nom": "consulter_liste_matieres",
+        "libelleFr": "Consulter la liste des matières",
+        "libelleEn": "View subjects list",
+        "descriptionFr": "Permet de consulter la liste des matières et des objectifs, chapitres et activités pédagogiques associés.",
+        "descriptionEn": "Allows viewing the list of subjects and associated objectives, chapters, and pedagogical activities.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780346a",
+        "nom": "consulter_liste_objectifs",
+        "libelleFr": "Consulter la liste des objectifs d'une matière",
+        "libelleEn": "View subject objectives list",
+        "descriptionFr": "Permet de consulter la liste des objectifs associés à une matière.",
+        "descriptionEn": "Allows viewing the list of objectives associated with a subject.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d7803470",
+        "nom": "consulter_progression_cours_chapitre",
+        "libelleFr": "Consulter la progression du cours par chapitre",
+        "libelleEn": "View course progress by chapter",
+        "descriptionFr": "Permet à un utilisateur de consulter l'avancement des cours dans leurs unités d'enseignement par chapitre.",
+        "descriptionEn": "Allows a user to view course progress by chapter.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780346f",
+        "nom": "consulter_progression_cours_objectif",
+        "libelleFr": "Consulter la progression du cours par objectif",
+        "libelleEn": "View course progress by objective",
+        "descriptionFr": "Permet à un utilisateur de consulter l'avancement des cours dans leurs unités d'enseignement par objectif.",
+        "descriptionEn": "Allows a user to view course progress by objective.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780347c",
+        "nom": "consulter_calendrier_academique",
+        "libelleFr": "Consulter le calendrier académique",
+        "libelleEn": "View academic calendar",
+        "descriptionFr": "Permet à un utilisateur de consulter le calendrier académique pour voir les événements à venir.",
+        "descriptionEn": "Allows a user to view the academic calendar for upcoming events.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780348c",
+        "nom": "consulter_guide_pedagogiqe",
+        "libelleFr": "Consulter le guide pédagogique",
+        "libelleEn": "View the pedagogical guide",
+        "descriptionFr": "Permet à un utilisateur de consulter et télécharger un guide pédagogique.",
+        "descriptionEn": "Allows a user to view and download a pedagogical guide.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d7803488",
+        "nom": "consulter_supports_cours_etudiants",
+        "libelleFr": "Consulter les supports de cours des étudiants",
+        "libelleEn": "View student course materials",
+        "descriptionFr": "Permet à un utilisateur de consulter et télécharger les supports de cours étudiants.",
+        "descriptionEn": "Allows a user to view and download student course materials.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d7803464",
+        "nom": "marquer_presence",
+        "libelleFr": "Marquer sa présence au cours",
+        "libelleEn": "Report class presence",
+        "descriptionFr": "Permet aux enseignants et aux étudiants de marquer leur présence, visible par les autres utilisateurs concernés.",
+        "descriptionEn": "Allows teachers and students to mark their presence, visible to relevant users.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d780347f",
+        "nom": "recevoir_notifications",
+        "libelleFr": "Recevoir des notifications",
+        "libelleEn": "Receive notifications",
+        "descriptionFr": "Permet de recevoir des notifications sur les événements du calendrier académique, les cours et les absences.",
+        "descriptionEn": "Allows receiving notifications on academic calendar events, courses, and absences.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d7803463",
+        "nom": "signaler_absence",
+        "libelleFr": "Signaler une absence au cours",
+        "libelleEn": "Report class absence",
+        "descriptionFr": "Permet aux enseignants et aux étudiants de signaler leur absence, visible par les autres utilisateurs concernés.",
+        "descriptionEn": "Allows teachers and students to report their absence, visible to relevant users.",
+        "__v": 0
+    },
+    {
+        "_id": "672e3cdc4b66c827d7803480",
+        "nom": "utiliser_bilinguisme",
+        "libelleFr": "Utiliser le bilinguisme",
+        "libelleEn": "Use bilingual mode",
+        "descriptionFr": "Permet aux utilisateurs de choisir l'interface en français ou en anglais selon leur préférence.",
+        "descriptionEn": "Allows users to choose the interface in French or English based on their preference.",
+        "__v": 0
+    }
+]
