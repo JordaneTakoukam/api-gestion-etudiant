@@ -5,7 +5,7 @@ import { enregistrerAbsencesApresCours } from '../controllers/abscences/absence.
 import moment from 'moment-timezone';
 
 // Planifier le cron job pour qu'il s'exécute à 18h chaque jour du lundi au vendredi
-cron.schedule('30 13 * * 1-5', async () => {
+cron.schedule('35 13 * * 1-5', async () => {
     console.log("Exécution du cron à 18h pour l'enregistrement des absences.");
 
     try {
