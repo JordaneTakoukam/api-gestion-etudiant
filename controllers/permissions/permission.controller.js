@@ -347,6 +347,47 @@ export const getRolePermissions = async (req, res) => {
     }
 };
 
+// Contrôleur pour créer une nouvelle permission
+export const createPermissionAddRole = async (req, res) => {
+    const { nom, libelleFr, libelleEn, descriptionFr, descriptionEn, roles } = req.body;
+
+    try {
+
+        const requiredFields = ['nom'];
+
+        for (const field of requiredFields) {
+            if (!req.body[field]) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.champ_obligatoire,
+                });
+            }
+        }
+        const newPermission = new Permission({ nom, libelleFr, libelleEn, descriptionFr, descriptionEn });
+        // await newPermission.save();
+        let rolesPermissions = [];
+        roles.forEach(role => {
+            rolesPermissions.push({role:role, permission:nom})
+        });
+
+        console.log(rolesPermissions);
+        // Enregistrer les permissions en base de données
+        const createdPermissions = await RolePermission.insertMany(rolesPermissions);
+
+        res.status(201).json({
+            success: true,
+            message: message.ajouter_avec_success,
+            data: createdPermissions
+        });
+    } catch (error) {
+        console.error("Erreur lors de la création de la permission :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
+        });
+    }
+};
+
 
 export const createManyPermission = async(req, res)=>{
     try {

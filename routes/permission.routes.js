@@ -1,6 +1,6 @@
 import express from 'express';
 import {createPermission, updatePermission, deletePermission, getPermissions, getPermissionsWithPagination, createManyPermission, searchPermission,
-    getUserPermissions, grantedPermission, getRolePermissions, addManyRolePermission
+    getUserPermissions, grantedPermission, getRolePermissions, addManyRolePermission, createPermissionAddRole
 } from '../controllers/permissions/permission.controller.js';
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.post('/create', createPermission);
 router.post('/createManyPermission', createManyPermission);
 router.post('/addManyRolePermission', addManyRolePermission);
 router.post('/grantedPermission', grantedPermission);
+router.post('/createPermissionAddRole', createPermissionAddRole);
 
 
 // Route pour mettre à jour une permission par ID
