@@ -51,7 +51,7 @@ export const uploadDoc = [
         }
 
         if (!req.file || !req.file.filename) {
-            return res.status(400).json({ success: false, message: { fr: "Aucun fichier n'a été ajouté.", en: "No file was added." } });
+            return res.status(400).json({ success: false, message: message.fournir_fichier });
         }
 
         const dateCreation = DateTime.now().toJSDate();
@@ -69,11 +69,18 @@ export const uploadDoc = [
             res.status(200).json({
                 success: true,
                 data: savedDocument,
-                message: { fr: "Le document a été ajouté avec succès.", en: "Document has been successfully added." }
+                message: message.ajouter_avec_success
             });
         } catch (error) {
+             // Gestion des erreurs spécifiques à multer
+             if (error instanceof multer.MulterError) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.erreur_upload,
+                });
+            }
             console.error("Erreur lors de l'enregistrement du document :", error);
-            res.status(500).json({ success: false, message: { fr: "Une erreur s'est produite lors de l'enregistrement du document.", en: "An error occurred while saving the document." } });
+            res.status(500).json({ success: false, message: message.erreurServeur});
         }
     }
 ];
@@ -110,7 +117,7 @@ export const downloadDoc = async (req, res) => {
         const {id}=req.params;
         const document = await Document.findById(id);
         if (!document) {
-          return res.status(404).json({ message: 'Document non trouvé' });
+          return res.status(404).json({ message: message.document_non_trouve });
         }
         const fileName = path.basename(document.file_path);
         const filePath = path.join('./public/documents/documents_upload',fileName);        
@@ -118,7 +125,7 @@ export const downloadDoc = async (req, res) => {
         res.download(filePath,fileName);
       } catch (error) {
         console.log(error)
-        res.status(500).json({ message: 'Erreur lors du téléchargement du document', error });
+        res.status(500).json({success:false, message: message.erreur_upload });
       }
 
 }
@@ -128,7 +135,7 @@ export const deleteDoc = async (req, res) => {
         const {id}=req.params
         const document = await Document.findById(id);
         if (!document) {
-          return res.status(404).json({ message: 'Document non trouvé' });
+          return res.status(404).json({ message: message.document_non_trouve });
         }
     
         const fileName = path.basename(document.file_path);
@@ -136,7 +143,7 @@ export const deleteDoc = async (req, res) => {
         // Supprimer le fichier du système de fichiers
         fs.unlink(filePath, async (err) => {
           if (err) {
-            return res.status(500).json({ message: 'Erreur lors de la suppression du fichier', error: err });
+            return res.status(500).json({success:false, message: message.erreur_suppression });
           }
     
           // Supprimer l'entrée de la base de données
@@ -180,6 +187,6 @@ export const downloadPiecesJointes = async (req, res) => {
         
     } catch (error) {
         console.log(error);
-        res.status(500).json({ message: 'Erreur lors du téléchargement des documents', error });
+        res.status(500).json({success:false, message: message.erreur_upload });
     }
 };

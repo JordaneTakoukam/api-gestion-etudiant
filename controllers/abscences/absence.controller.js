@@ -46,7 +46,7 @@ export const ajouterAbsence = async (req, res) => {
         // Enregistrer les modifications de l'utilisateur
         await utilisateur.save();
 
-        res.status(201).json({ success: true, message: message.absence_ajoutee_succes});
+        res.status(201).json({ success: true, message: message.absence_ajoutee_succes, data:absenceEnregistree});
     } catch (error) {
         console.error("Erreur lors de l'ajout de l'absence à l'utilisateur :", error);
         res.status(500).json({ success: false, message: message.erreur_ajout_absence });
@@ -134,37 +134,102 @@ export const justifierAbsence = async (req, res) => {
     }
 };
 
-export const enregistrerAbsencesApresCours = async (niveauId, matiereId, annee, semestre, jour, heureDebut, heureFin) => {
-    try {
+// export const enregistrerAbsencesApresCours = async (niveauId, annee, semestre, jour, heureDebut, heureFin) => {
+//     try {
         
-        const query = {
-            'niveaux': {
+//         const query = {
+//             'niveaux': {
+//                 $elemMatch: {
+//                     niveau: niveauId,
+//                     annee: Number(annee),
+//                 },
+//             },
+//         };
+//         // Récupérer tous les étudiants inscrits dans le niveau concerné
+//         const etudiants = await User.find(query);
+
+//         // Parcourir la liste des étudiants
+//         for (const etudiant of etudiants) {
+//             // Vérifier si l'étudiant a déjà enregistré sa présence pour ce cours
+//             const presenceExistante = await Presence.findOne({
+//                 utilisateur: etudiant._id,
+//                 niveau: niveauId,
+//                 annee,
+//                 semestre,
+//                 jour,
+//                 debutCours:true,
+//                 finCours:true
+//             });
+
+//             // Si pas de présence enregistrée, marquer une absence
+//             if (!presenceExistante) {
+//                 const nouvelleAbsence = new Absence({
+//                     user: etudiant._id,
+//                     semestre,
+//                     annee,
+//                     dateAbsence: new Date(),
+//                     heureDebut,
+//                     heureFin,
+//                     etat: 0, // Statut indiquant l'absence
+//                     motif: '',
+//                 });
+
+//                 // Sauvegarder l'absence
+//                 await nouvelleAbsence.save();
+
+//                 // Ajouter cette absence dans le champ `absences` de l'étudiant
+//                 etudiant.absences.push(nouvelleAbsence._id);
+//                 await etudiant.save();
+//             }
+//         }
+
+//         return { success: true, message: "Absences enregistrées avec succès." };
+
+//     } catch (error) {
+//         console.error("Erreur lors de l'enregistrement des absences :", error);
+//         return { success: false, message: "Erreur lors de l'enregistrement des absences." };
+//     }
+// };
+
+export const enregistrerAbsencesApresCours = async (niveauId, annee, semestre, jour, heureDebut, heureFin) => {
+    try {
+        // Étape 1 : Récupérer tous les étudiants du niveau concerné
+        const etudiants = await User.find({
+            niveaux: {
                 $elemMatch: {
                     niveau: niveauId,
                     annee: Number(annee),
                 },
             },
-        };
-        // Récupérer tous les étudiants inscrits dans le niveau concerné
-        const etudiants = await User.find(query);
+        }).select('_id absences');
 
-        // Parcourir la liste des étudiants
+        if (etudiants.length === 0) {
+            console.log(`Aucun étudiant trouvé pour le niveau ${niveauId}`);
+            return { success: true, message:message.etudiant_non_trouvee };
+        }
+
+        // Étape 2 : Récupérer toutes les présences existantes pour ces étudiants
+        const etudiantIds = etudiants.map(e => e._id);
+        const presencesExistantes = await Presence.find({
+            utilisateur: { $in: etudiantIds },
+            niveau: niveauId,
+            annee,
+            semestre,
+            jour,
+            debutCours: true,
+            finCours: true,
+        }).select('utilisateur');
+
+        // Créer un ensemble pour un accès rapide
+        const utilisateursAvecPresence = new Set(presencesExistantes.map(p => p.utilisateur.toString()));
+
+        // Étape 3 : Préparer les absences pour les étudiants sans présence
+        const absences = [];
+        const absencesPourEtudiants = [];
+
         for (const etudiant of etudiants) {
-            // Vérifier si l'étudiant a déjà enregistré sa présence pour ce cours
-            const presenceExistante = await Presence.findOne({
-                utilisateur: etudiant._id,
-                matiere: matiereId,
-                niveau: niveauId,
-                annee,
-                semestre,
-                jour,
-                debutCours:true,
-                finCours:true
-            });
-
-            // Si pas de présence enregistrée, marquer une absence
-            if (!presenceExistante) {
-                const nouvelleAbsence = new Absence({
+            if (!utilisateursAvecPresence.has(etudiant._id.toString())) {
+                const nouvelleAbsence = {
                     user: etudiant._id,
                     semestre,
                     annee,
@@ -173,24 +238,39 @@ export const enregistrerAbsencesApresCours = async (niveauId, matiereId, annee, 
                     heureFin,
                     etat: 0, // Statut indiquant l'absence
                     motif: '',
-                });
-
-                // Sauvegarder l'absence
-                await nouvelleAbsence.save();
-
-                // Ajouter cette absence dans le champ `absences` de l'étudiant
-                etudiant.absences.push(nouvelleAbsence._id);
-                await etudiant.save();
+                };
+                absences.push(nouvelleAbsence);
+                absencesPourEtudiants.push({ etudiantId: etudiant._id, absence: nouvelleAbsence });
             }
         }
 
-        return { success: true, message: "Absences enregistrées avec succès." };
+        // Étape 4 : Insérer les absences en une seule opération
+        if (absences.length > 0) {
+            const nouvellesAbsences = await Absence.insertMany(absences);
+
+            // Mettre à jour les étudiants avec les ID des nouvelles absences
+            const updatePromises = nouvellesAbsences.map((absence, index) => {
+                const etudiantId = absencesPourEtudiants[index].etudiantId;
+                return User.updateOne(
+                    { _id: etudiantId },
+                    { $push: { absences: absence._id } }
+                );
+            });
+
+            await Promise.all(updatePromises);
+            console.log(`${nouvellesAbsences.length} absences enregistrées.`);
+        } else {
+            console.log("Aucune absence à enregistrer.");
+        }
+
+        return { success: true, message: message.absence_ajoutee_succes };
 
     } catch (error) {
         console.error("Erreur lors de l'enregistrement des absences :", error);
         return { success: false, message: "Erreur lors de l'enregistrement des absences." };
     }
 };
+
 
 
 

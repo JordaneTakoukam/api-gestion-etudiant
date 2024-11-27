@@ -24,6 +24,7 @@ import documentRoutes from "./routes/document.routes.js";
 import qrCodeRoutes from "./routes/qr_code.routes.js";
 import presenceRoutes from "./routes/presence.routes.js";
 import permissionRoutes from "./routes/permission.routes.js";
+import supportDeCoursRoutes from "./routes/support_cours.routes.js";
 
 // routes de settings
 import settingRoute from "./routes/settings/_setting.routes.js";
@@ -81,6 +82,8 @@ app.use('/private/images_profile', express.static('./public/images/images_profil
 app.use('/private/documents', express.static('./public/documents/documents_upload'));
 // Définir le chemin vers les pièces jointes de justification absence
 app.use('/private/documents', express.static('./public/documents/pieces_jointes'));
+// Définir le chemin vers le répertoire des supports de cours
+app.use('/private/supports', express.static('./public/supports/supports_upload'));
 
 
 //
@@ -96,6 +99,7 @@ app.use("/api/v1/periode-enseignement/", periodeEnseignementRoutes);
 app.use("/api/v1/qr-code/", qrCodeRoutes);
 app.use("/api/v1/presence/", presenceRoutes);
 app.use("/api/v1/permission/", permissionRoutes);
+app.use("/api/v1/support-de-cours/", supportDeCoursRoutes);
 
 app.use("/api/v1/settings", settingRoute);
 app.use("/api/v1/setting/service", serviceRoutes);

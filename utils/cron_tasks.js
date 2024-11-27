@@ -5,8 +5,8 @@ import { enregistrerAbsencesApresCours } from '../controllers/abscences/absence.
 import moment from 'moment-timezone';
 
 // Planifier le cron job pour qu'il s'exécute à 18h chaque jour du lundi au vendredi
-cron.schedule('35 13 * * 1-5', async () => {
-    console.log("Exécution du cron à 18h pour l'enregistrement des absences.");
+cron.schedule('0 20 * * 1-5', async () => {
+    console.log("Exécution du cron à 20h pour l'enregistrement des absences.");
 
     try {
         // Récupérer les paramètres
@@ -54,14 +54,13 @@ cron.schedule('35 13 * * 1-5', async () => {
                     try {
                         await enregistrerAbsencesApresCours(
                             niveau._id,
-                            periode.matiere,
                             periode.annee,
                             periode.semestre,
                             jourCameroun,
                             periode.heureDebut,
                             periode.heureFin
                         );
-                        console.log(`Absences enregistrées pour la matière ${periode.matiere} du niveau ${niveau._id}`);
+                        console.log(`Absences enregistrées pour le niveau ${niveau._id}`);
                     } catch (error) {
                         console.error(`Erreur pour la matière ${periode.matiere} :`, error);
                     }

@@ -4,6 +4,10 @@ const message = {
         en: "Internal server error!"
     },
 
+    role_non_autorise:{
+        fr:"Rôle utilisateur non autorisé.",
+        en:"Unauthorised user role.",
+    },
     
     emailExiste: {
        fr: "Cette adresse e-mail est déjà enregistrée !",
@@ -250,6 +254,30 @@ const message = {
         fr: "Liste des événements récupérée avec succès",
         en: "List of events retrieved successfully",
     },
+    document_non_trouve:{
+        fr:"Document non trouvé.",
+        en:"Document not available."
+    },
+    support_non_trouve:{
+        fr:"Support de cours introuvable.",
+        en:"Course materials not available."
+    },
+    fournir_fichier:{
+        fr:"Veuillez fournir un fichier.",
+        en:"Please provide a file."
+    },
+    type_fichier_invalide:{
+        fr:"Type de fichier invalide.",
+        en:"Invalid file type."
+    },
+    erreur_upload:{
+        fr:"Erreur lors de l’upload du fichier",
+        en:"Error uploading file"
+    },
+    erreur_suppression:{
+        fr:"Erreur lors de la suppression du fichier",
+        en:"Error when deleting file"
+    },
     liste_doc: {
         fr: "Liste des documents récupérée avec succès",
         en: "List of documents retrieved successfully",
@@ -392,6 +420,7 @@ const message = {
         fr:"Absence retirée de l'utilisateur avec succès",
         en:"Absence removed from user successfully"
     }
+
 };
 
 export { message };

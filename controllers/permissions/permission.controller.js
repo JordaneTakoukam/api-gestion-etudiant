@@ -370,7 +370,6 @@ export const createPermissionAddRole = async (req, res) => {
             rolesPermissions.push({role:role, permission:nom})
         });
 
-        console.log(rolesPermissions);
         // Enregistrer les permissions en base de données
         const createdPermissions = await RolePermission.insertMany(rolesPermissions);
 
