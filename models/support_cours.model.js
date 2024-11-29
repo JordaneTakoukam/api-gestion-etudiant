@@ -12,6 +12,7 @@ const SupportDeCoursSchema = new Schema({
     utilisateur: { type: Schema.Types.ObjectId, ref: 'User', required: true }, //utilisateur ayant ajouter le support
     annee:{type:Number, required:true}, //Année académique à laquelle le support à été publié
     dateAjout: { type: Date, default: Date.now },
+    size:{type:Number}
 });
 
 const SupportDeCours = mongoose.model('SupportDeCours', SupportDeCoursSchema, 'supportDeCours'); // matieres

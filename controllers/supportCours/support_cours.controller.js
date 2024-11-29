@@ -95,6 +95,7 @@ export const createSupport = [
             }
 
             const fichier = `/private/supports/supports_upload/${req.file.filename}`;
+            const fileSizeInMB = Math.ceil(req.file.size / (1024));
 
             // Création du support de cours
             const support = new SupportDeCours({
@@ -107,13 +108,17 @@ export const createSupport = [
                 niveau,
                 utilisateur: user,
                 annee,
+                size : fileSizeInMB
             });
 
             await support.save();
+            const populatedSupport = await SupportDeCours.populate(support, [
+                { path: 'utilisateur', select: 'nom prenom' },
+            ]);
             res.status(201).json({
                 success: true,
                 message: message.ajouter_avec_success,
-                support,
+                data : populatedSupport,
             });
         } catch (error) {
             // Gestion des erreurs spécifiques à multer
@@ -186,6 +191,9 @@ export const updateSupport = [
             // Mise à jour du fichier si fourni
             if (req.file && req.file.filename) {
                 const fichier = `/private/supports/supports_upload/${req.file.filename}`;
+                const fileSizeInMB = Math.ceil(req.file.size / (1024));
+
+                
 
                 // Supprimer l'ancien fichier (si besoin)
                 if (support.fichier) {
@@ -199,13 +207,17 @@ export const updateSupport = [
                 }
 
                 support.fichier = fichier;
+                support.size = fileSizeInMB;
             }
 
             await support.save();
+            const populatedSupport = await SupportDeCours.populate(support, [
+                { path: 'utilisateur', select: 'nom prenom' },
+            ]);
             res.status(200).json({
                 success: true,
                 message: message.mis_a_jour,
-                support,
+                data : populatedSupport,
             });
         } catch (error) {
             res.status(500).json({
@@ -262,7 +274,7 @@ export const getSupportsByFilters = async (req, res) => {
         const { type, niveau, annee, page = 1, limit = 10 } = req.query;
 
         // Validation des paramètres
-        if (!type || ![0, 1].includes(parseInt(type))) {
+        if (type && ![0, 1].includes(parseInt(type))) {
             return res.status(400).json({
                 success: false,
                 message: message.type_fichier_invalide,
@@ -288,45 +300,48 @@ export const getSupportsByFilters = async (req, res) => {
         const pageSize = parseInt(limit) > 0 ? parseInt(limit) : 10;
         const skip = (pageNumber - 1) * pageSize;
 
+        // Création des filtres dynamiques
+        const query = {
+            niveau: niveau,
+            annee: parseInt(annee),
+        };
+
+        // Ajouter le type si fourni
+        if (type !== undefined) {
+            query.type = parseInt(type);
+        }
+
         // Requête pour récupérer les supports avec pagination
         const [supports, totalSupports] = await Promise.all([
-            SupportDeCours.find({
-                type: parseInt(type),
-                niveau: niveau,
-                annee: parseInt(annee),
-            })
+            SupportDeCours.find(query)
                 .populate('utilisateur', 'nom prenom') // Popule les informations de l'utilisateur
                 .sort({ dateAjout: -1 }) // Tri par date décroissante
                 .skip(skip) // Sauter les documents précédents
                 .limit(pageSize), // Limiter le nombre de documents retournés
 
-            SupportDeCours.countDocuments({
-                type: parseInt(type),
-                niveau: niveau,
-                annee: parseInt(annee),
-            }),
+            SupportDeCours.countDocuments(query),
         ]);
 
-       
         // Retourne les supports avec les métadonnées de pagination
         res.status(200).json({
             success: true,
             data: {
-                supportUploads:supports,
+                supportsDeCours: supports,
                 currentPage: pageNumber,
-                totalPages: Math.ceil(totalSupports /pageSize),
+                totalPages: Math.ceil(totalSupports / pageSize),
                 totalItems: totalSupports,
-                pageSize : pageSize
+                pageSize: pageSize,
             },
         });
     } catch (error) {
-        console.log(error)
+        console.error(error);
         res.status(500).json({
             success: false,
             message: message.erreurServeur,
         });
     }
 };
+
 
 
 export const searchSupports = async (req, res) => {
@@ -416,7 +431,13 @@ export const searchSupports = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            supports,
+            data: {
+                supportsDeCours:supports,
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: supports.length,
+                pageSize : limite
+            }
         });
     } catch (error) {
         res.status(500).json({
