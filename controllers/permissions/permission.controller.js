@@ -364,7 +364,7 @@ export const createPermissionAddRole = async (req, res) => {
             }
         }
         const newPermission = new Permission({ nom, libelleFr, libelleEn, descriptionFr, descriptionEn });
-        // await newPermission.save();
+        await newPermission.save();
         let rolesPermissions = [];
         roles.forEach(role => {
             rolesPermissions.push({role:role, permission:nom})
