@@ -347,6 +347,26 @@ const message = {
         en: "Teaching period not found.",
     },
 
+    devoir_non_trouve:{
+        fr: "Devoir non trouvé.",
+        en: "Assignment not found."
+    },
+
+    question_non_trouvee:{
+        fr: "Question non trouvée.",
+        en: "Question not found."
+    },
+
+    pas_de_tentatives:{
+        fr:"Pas de tentative trouvée pour ce devoir.",
+        en:"No attempt found for this assignment."
+    },
+
+    soumission_reussie:{
+        fr:"Soumission réussie.",
+        en:"Successful submission."
+    },
+
     permission_non_trouvee:{
         fr:"Permission non trouvee.",
         en:"Permission not found."
@@ -364,6 +384,16 @@ const message = {
     userUpdated: {
         fr: "Informations du profil mises à jour avec succès.",
         en: "Profile information updated successfully.",
+    },
+
+    qcm_incorrect : {
+        fr : "Les questions de type QCM doivent avoir au moins deux options.",
+        en : "MCQ type questions must have at least two options."
+    },
+
+    vf_incorrect:{
+        fr:"Pour les questions de type VRAI_FAUX, la réponse correcte doit être 'Vrai' ou 'Faux'.",
+        en:"For TRUE_FALSE questions, the correct answer must be 'True' or 'False'."
     },
     
     userDeleted: {

@@ -25,6 +25,7 @@ import qrCodeRoutes from "./routes/qr_code.routes.js";
 import presenceRoutes from "./routes/presence.routes.js";
 import permissionRoutes from "./routes/permission.routes.js";
 import supportDeCoursRoutes from "./routes/support_cours.routes.js";
+import devoirRoutes from "./routes/devoir.routes.js";
 
 // routes de settings
 import settingRoute from "./routes/settings/_setting.routes.js";
@@ -100,6 +101,7 @@ app.use("/api/v1/qr-code/", qrCodeRoutes);
 app.use("/api/v1/presence/", presenceRoutes);
 app.use("/api/v1/permission/", permissionRoutes);
 app.use("/api/v1/support-de-cours/", supportDeCoursRoutes);
+app.use("/api/v1/devoir/", devoirRoutes);
 
 app.use("/api/v1/settings", settingRoute);
 app.use("/api/v1/setting/service", serviceRoutes);
