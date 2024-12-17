@@ -6,8 +6,10 @@ import mongoose from 'mongoose';
 
 export const createDevoir = async (req, res) => {
     const {
-        titre,
-        description,
+        titre_fr,
+        titre_en,
+        description_fr,
+        description_en,
         niveau,
         utilisateur,
         questions,
@@ -20,7 +22,7 @@ export const createDevoir = async (req, res) => {
 
     try {
         // Champs obligatoires
-        const requiredFields = ['titre', 'niveau', 'utilisateur', 'deadline', 'annee'];
+        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'utilisateur', 'deadline', 'annee'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -31,15 +33,17 @@ export const createDevoir = async (req, res) => {
         }
 
         // Vérification de la validité des ObjectIds
-        if (!mongoose.Types.ObjectId.isValid(niveau) || !mongoose.Types.ObjectId.isValid(utilisateur._id)) {
+        if (!mongoose.Types.ObjectId.isValid(niveau) || !mongoose.Types.ObjectId.isValid(utilisateur)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
             });
         }
         const newDevoir = new Devoir({
-            titre,
-            description,
+            titre_fr,
+            titre_en,
+            description_fr,
+            description_en,
             niveau,
             questions,
             deadline,
@@ -74,8 +78,10 @@ export const createDevoir = async (req, res) => {
 export const updateDevoir = async (req, res) => {
     const { id } = req.params;
     const {
-        titre,
-        description,
+        titre_fr,
+        titre_en,
+        description_fr,
+        description_en,
         niveau,
         utilisateur,
         questions,
@@ -88,7 +94,7 @@ export const updateDevoir = async (req, res) => {
 
     try {
         // Champs obligatoires
-        const requiredFields = ['id', 'titre', 'niveau', 'utilisateur', 'deadline', 'annee'];
+        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'utilisateur', 'deadline', 'annee'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -100,7 +106,7 @@ export const updateDevoir = async (req, res) => {
 
         // Vérification de la validité des ObjectIds
         if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(niveau) 
-            || !mongoose.Types.ObjectId.isValid(utilisateur._id)) {
+            || !mongoose.Types.ObjectId.isValid(utilisateur)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -114,8 +120,10 @@ export const updateDevoir = async (req, res) => {
                 message: message.devoir_non_trouve,
             });
         }
-        updatedDevoir.titre = titre;
-        updatedDevoir.description = description;
+        updatedDevoir.titre_fr = titre_fr;
+        updatedDevoir.titre_en = titre_en;
+        updatedDevoir.description_fr = description_fr;
+        updatedDevoir.description_en = description_en;
         updatedDevoir.niveau = niveau;
         updatedDevoir.utilisateur = utilisateur;
         updatedDevoir.questions = questions;
@@ -205,6 +213,49 @@ export const getDevoirsByNiveauPaginated = async (req, res) => {
 
         // Compter le nombre total de devoirs pour la pagination
         const total = await Devoir.countDocuments({ niveau: niveauId, annee:annee });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                devoirs,
+                totalItems : total,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(total / parseInt(pageSize)),
+                pageSize: pageSize
+            },
+        });
+    } catch (error) {
+        console.error("Erreur lors de la récupération des devoirs paginés :", error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
+        });
+    }
+};
+
+export const getDevoirsByEnseignantPaginated = async (req, res) => {
+    const { enseignantId } = req.params;
+    const { page = 1, pageSize = 10, annee} = req.query;
+
+    try {
+        if (!enseignantId) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire,
+            });
+        }
+
+        // Calcul de l'offset pour la pagination
+        const skip = (parseInt(page) - 1) * parseInt(pageSize);
+
+        // Récupérer les devoirs triés par `createDate`
+        const devoirs = await Devoir.find({ utilisateur: enseignantId, annee: annee })
+            .sort({ createDate: 1 })
+            .skip(skip)
+            .limit(parseInt(pageSize));
+
+        // Compter le nombre total de devoirs pour la pagination
+        const total = await Devoir.countDocuments({ utilisateur: enseignantId, annee:annee });
 
         res.status(200).json({
             success: true,

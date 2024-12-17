@@ -25,20 +25,39 @@ export const soumettreTentative = async (req, res) => {
             });
         }
 
+        // Rechercher l'entrée de l'étudiant pour ce devoir
+        let reponse = await Reponse.findOne({ devoir: devoirId, etudiant: etudiantId });
+
+        // Vérifier si le nombre de tentatives a été atteint
+        if (reponse && reponse.tentative.length >= devoir.tentativesMax) {
+            return res.status(403).json({
+                success: false,
+                message: message.tentatives_max_atteintes,
+            });
+        }
+
         // Calculer le score pour la tentative
         const questions = await Question.find({ devoir: devoirId });
         let score = 0;
+
         questions.forEach((question) => {
-            const reponseEtudiant = reponses.find((r) => r.question === question._id.toString());
-            if (reponseEtudiant && reponseEtudiant.reponse === question.correctAnswer) {
+            const reponseEtudiant = reponses.find((r) => r.question.toString() === question._id.toString());
+            if (
+                reponseEtudiant &&
+                (reponseEtudiant.reponse === question.reponseCorrect_fr || reponseEtudiant.reponse === question.reponseCorrect_en)
+            ) {
                 score += 1; // Increment score for correct answers
             }
         });
 
-        // Rechercher ou créer une entrée pour l'étudiant et le devoir
-        let reponse = await Reponse.findOne({ devoir: devoirId, etudiant: etudiantId });
+        // Créer une nouvelle réponse si elle n'existe pas encore
         if (!reponse) {
-            reponse = new Reponse({ etudiant: etudiantId, devoir: devoirId, meilleureScore: 0 });
+            reponse = new Reponse({
+                etudiant: etudiantId,
+                devoir: devoirId,
+                meilleureScore: 0,
+                tentative: [],
+            });
         }
 
         // Ajouter la nouvelle tentative
@@ -69,6 +88,7 @@ export const soumettreTentative = async (req, res) => {
         });
     }
 };
+
 
 export const obtenirTentativesEtudiant = async (req, res) => {
     const { devoirId, etudiantId } = req.params;

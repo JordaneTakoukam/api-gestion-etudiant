@@ -367,6 +367,11 @@ const message = {
         en:"Successful submission."
     },
 
+    tentatives_max_atteintes:{
+        fr:"Le nombre maximum de tentatives a été atteint.",
+        en:"The maximum number of attempts has been reached."
+    },
+
     permission_non_trouvee:{
         fr:"Permission non trouvee.",
         en:"Permission not found."

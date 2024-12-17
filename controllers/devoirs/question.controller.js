@@ -4,11 +4,11 @@ import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 
 export const createQuestion = async (req, res) => {
-    const { text, type, options, correctAnswer, devoir } = req.body;
+    const { text_fr, text_en, type, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
 
     try {
         // Vérification des champs obligatoires
-        const requiredFields = ['text', 'type', 'correctAnswer', 'devoir'];
+        const requiredFields = ['text_fr', 'text_en', 'type', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -19,14 +19,15 @@ export const createQuestion = async (req, res) => {
         }
 
         // Validation spécifique au type de question
-        if (type === 'QCM' && (!options || options.length < 2)) {
+        if (type === 'QCM' && ((!options_fr || !options_en || options_fr.length < 2 || options_en.length < 2))) {
             return res.status(400).json({
                 success: false,
                 message: message.qcm_incorrect,
             });
         }
 
-        if (type === 'VRAI_FAUX' && !['Vrai', 'Faux'].includes(correctAnswer)) {
+       
+        if (type === 'VRAI_FAUX' && (!['Vrai', 'Faux'].includes(reponseCorrect_fr) || !['True', 'False'].includes(reponseCorrect_en))) {
             return res.status(400).json({
                 success: false,
                 message: message.vf_incorrect,
@@ -43,7 +44,7 @@ export const createQuestion = async (req, res) => {
         }
 
         // Créer et sauvegarder la question
-        const question = new Question({ text, type, options, correctAnswer, devoir });
+        const question = new Question({ text_fr, text_en, type, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir });
         const saveQuestion = await question.save();
         await Devoir.findByIdAndUpdate(devoir, { $push: { questions: saveQuestion._id } });
         res.status(201).json({
@@ -62,9 +63,20 @@ export const createQuestion = async (req, res) => {
 
 export const updateQuestion = async (req, res) => {
     const { id } = req.params;
-    const { text, type, options, correctAnswer, devoir } = req.body;
+    const { text_fr, text_en, type, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
 
     try {
+         // Vérification des champs obligatoires
+         const requiredFields = ['text_fr', 'text_en', 'type', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
+         for (const field of requiredFields) {
+             if (!req.body[field]) {
+                 return res.status(400).json({
+                     success: false,
+                     message: `${field} est un champ obligatoire.`,
+                 });
+             }
+         }
+
         // Vérification de l'existence de la question
         const existQuestion = await Question.findById(id);
         if (!existQuestion) {
@@ -75,14 +87,15 @@ export const updateQuestion = async (req, res) => {
         }
 
         // Validation spécifique au type de question
-        if (type === 'QCM' && (!options || options.length < 2)) {
+        if (type === 'QCM' && (!options_fr || !options_en || options_fr.length < 2 || options_en.length < 2)) {
             return res.status(400).json({
                 success: false,
                 message: message.qcm_incorrect,
             });
         }
 
-        if (type === 'VRAI_FAUX' && !['Vrai', 'Faux'].includes(correctAnswer)) {
+
+        if (type === 'VRAI_FAUX' && (!['Vrai', 'Faux'].includes(reponseCorrect_fr) || !['True', 'False'].includes(reponseCorrect_en))) {
             return res.status(400).json({
                 success: false,
                 message: message.vf_incorrect,
@@ -117,10 +130,13 @@ export const updateQuestion = async (req, res) => {
         }
 
         // Mettre à jour les champs de la question
-        existQuestion.text = text;
+        existQuestion.text_fr = text_fr;
+        existQuestion.text_en = text_en;
         existQuestion.type = type;
-        existQuestion.options = options;
-        existQuestion.correctAnswer = correctAnswer;
+        existQuestion.options_fr = options_fr;
+        existQuestion.options_en = options_en;
+        existQuestion.reponseCorrect_fr = reponseCorrect_fr;
+        existQuestion.reponseCorrect_en = reponseCorrect_en;
         existQuestion.devoir = newDevoir ? newDevoir._id : existQuestion.devoir;
 
         await existQuestion.save();
@@ -144,8 +160,8 @@ export const deleteQuestion = async (req, res) => {
 
     try {
         // Vérification de l'existence de la question
-        const question = await Question.findById(id);
-        if (!question) {
+        const existQuestion = await Question.findById(id);
+        if (!existQuestion) {
             return res.status(404).json({
                 success: false,
                 message: message.question_non_trouvee,
@@ -153,7 +169,15 @@ export const deleteQuestion = async (req, res) => {
         }
 
         // Supprimer la question
-        await question.deleteOne();
+        const oldDevoir = await Devoir.findById(existQuestion.devoir);
+        if (oldDevoir) {
+            oldDevoir.questions = oldDevoir.questions.filter(
+                (questionId) => String(questionId) !== id
+            );
+            await oldDevoir.save();
+        }
+
+        await existQuestion.deleteOne();
 
         res.status(200).json({
             success: true,
@@ -167,5 +191,48 @@ export const deleteQuestion = async (req, res) => {
         });
     }
 };
+
+export const obtenirQuestionsDevoir = async (req, res) => {
+    const { devoirId } = req.params; // Récupération de l'ID du devoir
+    const { page = 1, pageSize = 10 } = req.query; // Paramètres pour la pagination (par défaut page 1, pageSizee 10)
+
+    try {
+        // Vérifier si le devoir existe
+        const devoir = await Devoir.findById(devoirId);
+        if (!devoir) {
+            return res.status(404).json({
+                success: false,
+                message: message.devoir_non_trouve,
+            });
+        }
+
+        // Récupérer les questions du devoir avec pagination
+        const questions = await Question.find({ devoir: devoirId })
+            .skip((parseInt(page) - 1) * parseInt(pageSize)) // Sauter les résultats précédents
+            .limit(parseInt(pageSize)) // Limiter le nombre de résultats
+            .exec();
+
+        // Compter le nombre total de questions
+        const totalQuestions = await Question.countDocuments({ devoir: devoirId });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                questions,
+                totalItems: totalQuestions,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(totalQuestions / parseInt(pageSize)),
+                pageSize: parseInt(pageSize),
+            },
+        });
+    } catch (error) {
+        console.error("Erreur lors de la récupération des questions :", error);
+        res.status(500).json({
+            success: false,
+            message: "Une erreur interne est survenue.",
+        });
+    }
+};
+
 
 

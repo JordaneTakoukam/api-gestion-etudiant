@@ -1,8 +1,10 @@
 import mongoose, { Schema } from 'mongoose';
 
 const devoirSchema = new mongoose.Schema({
-    titre: { type: String, required: true },
-    description: { type: String },
+    titre_fr: { type: String, required: true },
+    titre_en: { type: String, required: true },
+    description_fr: { type: String },
+    description_en: { type: String },
     utilisateur: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // utilisateur qui a crée le devoir
     niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },
     questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }], // Référence aux questions
