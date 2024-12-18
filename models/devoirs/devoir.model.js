@@ -7,6 +7,7 @@ const devoirSchema = new mongoose.Schema({
     description_en: { type: String },
     utilisateur: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // utilisateur qui a crée le devoir
     niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },
+    noteSur:{type:Number, required: true},
     questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }], // Référence aux questions
     deadline: { type: Date, required: true },
     ordreAleatoire: { type: Boolean, default: false }, // Si les questions doivent être affichées aléatoirement

@@ -11,6 +11,7 @@ export const createDevoir = async (req, res) => {
         description_fr,
         description_en,
         niveau,
+        noteSur,
         utilisateur,
         questions,
         deadline,
@@ -22,7 +23,7 @@ export const createDevoir = async (req, res) => {
 
     try {
         // Champs obligatoires
-        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'utilisateur', 'deadline', 'annee'];
+        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'noteSur', 'utilisateur', 'deadline', 'annee'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -31,9 +32,11 @@ export const createDevoir = async (req, res) => {
                 });
             }
         }
+        console.log(tentativesMax);
+        console.log(noteSur);
 
         // Vérification de la validité des ObjectIds
-        if (!mongoose.Types.ObjectId.isValid(niveau) || !mongoose.Types.ObjectId.isValid(utilisateur)) {
+        if (!mongoose.Types.ObjectId.isValid(niveau) || !mongoose.Types.ObjectId.isValid(utilisateur._id)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -45,9 +48,10 @@ export const createDevoir = async (req, res) => {
             description_fr,
             description_en,
             niveau,
+            noteSur,
             questions,
             deadline,
-            utilisateur,
+            utilisateur:utilisateur._id,
             ordreAleatoire: ordreAleatoire || false,
             tentativesMax: tentativesMax || 1,
             feedbackConfig: feedbackConfig || {
@@ -59,12 +63,15 @@ export const createDevoir = async (req, res) => {
            annee
         });
 
-        await newDevoir.save();
+        const saveDevoir = await newDevoir.save();
+        const populatedDevoir = await Devoir.populate(saveDevoir, [
+            { path: 'utilisateur', select: '_id nom prenom' },
+        ]);
 
         res.status(201).json({
             success: true,
             message: message.ajouter_avec_success,
-            data: newDevoir,
+            data: populatedDevoir,
         });
     } catch (error) {
         console.error("Erreur lors de la création du devoir :", error);
@@ -83,6 +90,7 @@ export const updateDevoir = async (req, res) => {
         description_fr,
         description_en,
         niveau,
+        noteSur,
         utilisateur,
         questions,
         deadline,
@@ -94,7 +102,7 @@ export const updateDevoir = async (req, res) => {
 
     try {
         // Champs obligatoires
-        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'utilisateur', 'deadline', 'annee'];
+        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'noteSur', 'utilisateur', 'deadline', 'annee'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -106,7 +114,7 @@ export const updateDevoir = async (req, res) => {
 
         // Vérification de la validité des ObjectIds
         if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(niveau) 
-            || !mongoose.Types.ObjectId.isValid(utilisateur)) {
+            || !mongoose.Types.ObjectId.isValid(utilisateur._id)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
@@ -125,7 +133,8 @@ export const updateDevoir = async (req, res) => {
         updatedDevoir.description_fr = description_fr;
         updatedDevoir.description_en = description_en;
         updatedDevoir.niveau = niveau;
-        updatedDevoir.utilisateur = utilisateur;
+        updatedDevoir.noteSur = noteSur;
+        updatedDevoir.utilisateur = utilisateur._id;
         updatedDevoir.questions = questions;
         updatedDevoir.deadline =  deadline;
         updatedDevoir.ordreAleatoire = ordreAleatoire;
@@ -133,12 +142,15 @@ export const updateDevoir = async (req, res) => {
         updatedDevoir.feedbackConfig = feedbackConfig;
         updatedDevoir.annee = annee;
 
-        await updatedDevoir.save();
+        const saveDevoir = await updatedDevoir.save();
+        const populatedDevoir = await Devoir.populate(saveDevoir, [
+            { path: 'utilisateur', select: '_id nom prenom' },
+        ]);
 
         res.status(200).json({
             success: true,
             message: message.mis_a_jour,
-            data: updatedDevoir,
+            data: populatedDevoir,
         });
     } catch (error) {
         console.error("Erreur lors de la mise à jour du devoir :", error);
@@ -207,6 +219,7 @@ export const getDevoirsByNiveauPaginated = async (req, res) => {
 
         // Récupérer les devoirs triés par `createDate`
         const devoirs = await Devoir.find({ niveau: niveauId, annee: annee })
+            .populate({path:'utilisateur', select:'nom prenom'})
             .sort({ createDate: 1 })
             .skip(skip)
             .limit(parseInt(pageSize));
@@ -250,6 +263,7 @@ export const getDevoirsByEnseignantPaginated = async (req, res) => {
 
         // Récupérer les devoirs triés par `createDate`
         const devoirs = await Devoir.find({ utilisateur: enseignantId, annee: annee })
+            .populate({path:'utilisateur', select:'nom prenom'})
             .sort({ createDate: 1 })
             .skip(skip)
             .limit(parseInt(pageSize));
@@ -273,6 +287,100 @@ export const getDevoirsByEnseignantPaginated = async (req, res) => {
             success: false,
             message: message.erreurServeur
         });
+    }
+};
+
+export const searchDevoir = async (req, res) => {
+    const { langue, searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    let {limit = 5} = req.query;
+    limit = parseInt(limit);
+    // console.log(searchString);
+    try {
+        // Construire la requête pour filtrer les devoir
+        let query = {
+             titre_fr: { $regex: `^${searchString}`, $options: 'i' } 
+        }
+        if(langue!=='fr'){
+            query = {
+                titre_en: { $regex: `^${searchString}`, $options: 'i' } 
+            }
+        }
+
+        let devoirs = [];
+
+        if(langue ==='fr'){
+            devoirs = await Devoir.find(query)
+                .sort({ titre_fr: 1 }) 
+                .populate({path:'utilisateur', select:'nom prenom'})
+                .limit(limit); // Limite à 5 résultats
+        }else{
+            devoirs = await Devoir.find(query)
+                .sort({titre_en: 1 }) 
+                .populate({path:'utilisateur', select:'nom prenom'})
+                .limit(limit); // Limite à 5 résultats
+        }
+        
+
+        res.json({
+            success: true,
+            data: {
+                devoirs,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: devoirs.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
+    }
+};
+
+export const searchDevoirByEnseignant = async (req, res) => {
+    const {searchString, langue} = req.params;
+    let { enseignantId, limit } = req.query;
+    limit = parseInt(limit);
+    try {
+       
+        
+        // Récupérer les détails de chaque matière à partir des identifiants uniques
+        let devoirs = [];
+    
+        if(langue==='fr'){
+            let query = {
+                utilisateur:enseignantId,
+                titre_fr: { $regex: `^${searchString}`, $options: 'i' } 
+            }
+            devoirs = await Devoir.find(query)
+                    .sort({ titre_fr: 1 }) 
+                    .populate({path:'utilisateur', select:'nom prenom'})
+                    .limit(limit);
+        }else{
+            let query = {
+                utilisateur:enseignantId,
+                titre_en: { $regex: `^${searchString}`, $options: 'i' } 
+            }
+            devoirs = await Devoir.find(query)
+                    .sort({titre_en: 1 }) 
+                    .populate({path:'utilisateur', select:'nom prenom'})
+                    .limit(limit); 
+        }
+            
+
+        res.json({
+            success: true,
+            data: {
+                devoirs,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: devoirs.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières par niveau :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue lors de la récupération des matières par niveau.' });
     }
 };
 

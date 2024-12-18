@@ -4,6 +4,7 @@ const questionSchema = new mongoose.Schema({
     text_fr: { type: String, required: true },
     text_en: { type: String, required: true },
     type: { type: String, enum: ['QCM', 'VRAI_FAUX'], required: true },
+    nbPoint:{type: Number, required:true},
     options_fr: [{ type: String }], // Utilisé pour les QCM
     options_en: [{ type: String }], // Utilisé pour les QCM
     reponseCorrect_fr: { type: String, required: true }, // La réponse correcte

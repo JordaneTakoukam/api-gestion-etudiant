@@ -4,11 +4,11 @@ import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 
 export const createQuestion = async (req, res) => {
-    const { text_fr, text_en, type, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
+    const { text_fr, text_en, type,nbPoint, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
 
     try {
         // Vérification des champs obligatoires
-        const requiredFields = ['text_fr', 'text_en', 'type', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
+        const requiredFields = ['text_fr', 'text_en', 'nbPoint', 'type', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -44,7 +44,7 @@ export const createQuestion = async (req, res) => {
         }
 
         // Créer et sauvegarder la question
-        const question = new Question({ text_fr, text_en, type, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir });
+        const question = new Question({ text_fr, text_en, type, nbPoint, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir });
         const saveQuestion = await question.save();
         await Devoir.findByIdAndUpdate(devoir, { $push: { questions: saveQuestion._id } });
         res.status(201).json({
@@ -63,11 +63,11 @@ export const createQuestion = async (req, res) => {
 
 export const updateQuestion = async (req, res) => {
     const { id } = req.params;
-    const { text_fr, text_en, type, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
+    const { text_fr, text_en, type,nbPoint, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
 
     try {
          // Vérification des champs obligatoires
-         const requiredFields = ['text_fr', 'text_en', 'type', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
+         const requiredFields = ['text_fr', 'text_en', 'type','nbPoint', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
          for (const field of requiredFields) {
              if (!req.body[field]) {
                  return res.status(400).json({
@@ -133,6 +133,7 @@ export const updateQuestion = async (req, res) => {
         existQuestion.text_fr = text_fr;
         existQuestion.text_en = text_en;
         existQuestion.type = type;
+        existQuestion.nbPoint = nbPoint;
         existQuestion.options_fr = options_fr;
         existQuestion.options_en = options_en;
         existQuestion.reponseCorrect_fr = reponseCorrect_fr;
@@ -231,6 +232,52 @@ export const obtenirQuestionsDevoir = async (req, res) => {
             success: false,
             message: "Une erreur interne est survenue.",
         });
+    }
+};
+export const searchQuestion = async (req, res) => {
+    const { langue, searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
+    let {limit = 10, devoirId} = req.query;
+    limit = parseInt(limit);
+    // console.log(searchString);
+    try {
+        // Construire la requête pour filtrer les matières
+        let query = {
+             text_fr: { $regex: `^${searchString}`, $options: 'i' },
+             devoir:devoirId,
+        }
+        if(langue!=='fr'){
+            query = {
+                text_en: { $regex: `^${searchString}`, $options: 'i' },
+                devoir:devoirId,
+            }
+        }
+
+        let questions = [];
+
+        if(langue ==='fr'){
+            questions = await Question.find(query)
+                .sort({ text_fr: 1 }) 
+                .limit(limit); // Limite à 5 résultats
+        }else{
+            questions = await Question.find(query)
+                .sort({text_en: 1 }) 
+                .limit(limit); // Limite à 5 résultats
+        }
+        
+
+        res.json({
+            success: true,
+            data: {
+                questions,
+                currentPage: 0,
+                totalPages: 1,
+                totalItems: questions.length,
+                pageSize: 10,
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des matières :', error);
+        res.status(500).json({ success: false, message: 'Une erreur est survenue sur le serveur.' });
     }
 };
 
