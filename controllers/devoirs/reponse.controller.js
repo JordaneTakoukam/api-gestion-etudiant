@@ -38,17 +38,29 @@ export const soumettreTentative = async (req, res) => {
 
         // Calculer le score pour la tentative
         const questions = await Question.find({ devoir: devoirId });
-        let score = 0;
+        const score = questions.reduce((total, question) => {
+            // Trouver les réponses associées à la question courante
+            const questionResponses = reponses.find((r) => r.question.toString() === question._id.toString());
+            console.log(questionResponses)
+            if (!questionResponses) return total;
+        
+            // Calculer le score total pour la question courante
+            const questionScore = questionResponses.reponses.reduce((acc, response) => {
+              // Trouver l'option correspondante
+              const option = question.options.find(
+                (opt) => opt.textFr === response || opt.textEn === response
+              );
 
-        questions.forEach((question) => {
-            const reponseEtudiant = reponses.find((r) => r.question.toString() === question._id.toString());
-            if (
-                reponseEtudiant &&
-                (reponseEtudiant.reponse === question.reponseCorrect_fr || reponseEtudiant.reponse === question.reponseCorrect_en)
-            ) {
-                score += 1; // Increment score for correct answers
-            }
-        });
+              if (option) {
+                return acc + (option.pourcentage / 100) * question.nbPoint;
+              }
+              
+              return acc;
+            }, 0);
+            // Ajouter le score de la question au score total
+            return total + questionScore;
+          }, 0);
+        
 
         // Créer une nouvelle réponse si elle n'existe pas encore
         if (!reponse) {
@@ -68,7 +80,7 @@ export const soumettreTentative = async (req, res) => {
         };
         reponse.tentative.push(nouvelleTentative);
 
-        // Mettre à jour le meilleur score si nécessaire
+        // // Mettre à jour le meilleur score si nécessaire
         if (score > reponse.meilleureScore) {
             reponse.meilleureScore = score;
         }
@@ -88,6 +100,7 @@ export const soumettreTentative = async (req, res) => {
         });
     }
 };
+
 
 
 export const obtenirTentativesEtudiant = async (req, res) => {

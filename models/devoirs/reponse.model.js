@@ -1,19 +1,22 @@
 import mongoose, { Schema } from 'mongoose';
 
 const reponseSchema = new mongoose.Schema({
-    etudiant: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    devoir: { type: mongoose.Schema.Types.ObjectId, ref: 'Devoir', required: true },
-    tentative: [{
-        reponses: [{
-            question: { type: mongoose.Schema.Types.ObjectId, ref: 'Question', required: true },
-            reponse: { type: String, required: true }, // Réponse donnée par l'étudiant
-        }],
-        score: { type: Number, default: 0 }, // Score obtenu pour cette tentative
-        dateSoumission: { type: Date, default: Date.now },
-    }],
-    meilleureScore: { type: Number, default: 0 }, // Meilleure note obtenue parmi les tentatives
+  etudiant: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Référence à l'étudiant
+  devoir: { type: mongoose.Schema.Types.ObjectId, ref: 'Devoir', required: true }, // Référence au devoir
+  tentative: [
+    {
+      reponses: [
+        {
+          question: { type: mongoose.Schema.Types.ObjectId, ref: 'Question', required: true }, // Référence à la question
+          reponses: [{ type: String, required: true }], // Réponses données par l'étudiant
+        },
+      ],
+      score: { type: Number, default: 0 }, // Score obtenu pour cette tentative
+      dateSoumission: { type: Date, default: Date.now }, // Date de soumission
+    },
+  ],
+  meilleureScore: { type: Number, default: 0 }, // Meilleure note obtenue parmi les tentatives
 });
-
 
 const Reponse = mongoose.model('Reponse', reponseSchema, 'reponses');
 

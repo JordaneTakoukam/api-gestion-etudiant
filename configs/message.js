@@ -397,8 +397,18 @@ const message = {
     },
 
     vf_incorrect:{
-        fr:"Pour les questions de type VRAI_FAUX, la réponse correcte doit être 'Vrai' ou 'Faux'.",
-        en:"For TRUE_FALSE questions, the correct answer must be 'True' or 'False'."
+        fr:"Une question VRAI ou FAUX doit avoir exactement deux options.",
+        en:"A TRUE or FALSE question must have exactly two options."
+    },
+
+    somme_pourcentage_positif:{
+        fr:"La somme des pourcentages positifs doit être égale à 100%.",
+        en:"The sum of positive percentages must equal 100%."
+    },
+
+    somme_pourcentage_negatif:{
+        fr:"La somme des pourcentages négatifs doit être supérieure ou égale à -100%.",
+        en:"The sum of negative percentages must be greater than or equal to -100%."
     },
     
     userDeleted: {

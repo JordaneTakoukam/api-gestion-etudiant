@@ -6,10 +6,10 @@ import mongoose from 'mongoose';
 
 export const createDevoir = async (req, res) => {
     const {
-        titre_fr,
-        titre_en,
-        description_fr,
-        description_en,
+        titreFr,
+        titreEn,
+        descriptionFr,
+        descriptionEn,
         niveau,
         noteSur,
         utilisateur,
@@ -23,7 +23,7 @@ export const createDevoir = async (req, res) => {
 
     try {
         // Champs obligatoires
-        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'noteSur', 'utilisateur', 'deadline', 'annee'];
+        const requiredFields = ['titreFr', 'titreEn', 'niveau', 'noteSur', 'utilisateur', 'deadline', 'annee'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -43,10 +43,10 @@ export const createDevoir = async (req, res) => {
             });
         }
         const newDevoir = new Devoir({
-            titre_fr,
-            titre_en,
-            description_fr,
-            description_en,
+            titreFr,
+            titreEn,
+            descriptionFr,
+            descriptionEn,
             niveau,
             noteSur,
             questions,
@@ -85,10 +85,10 @@ export const createDevoir = async (req, res) => {
 export const updateDevoir = async (req, res) => {
     const { id } = req.params;
     const {
-        titre_fr,
-        titre_en,
-        description_fr,
-        description_en,
+        titreFr,
+        titreEn,
+        descriptionFr,
+        descriptionEn,
         niveau,
         noteSur,
         utilisateur,
@@ -102,7 +102,7 @@ export const updateDevoir = async (req, res) => {
 
     try {
         // Champs obligatoires
-        const requiredFields = ['titre_fr', 'titre_en', 'niveau', 'noteSur', 'utilisateur', 'deadline', 'annee'];
+        const requiredFields = ['titreFr', 'titreEn', 'niveau', 'noteSur', 'utilisateur', 'deadline', 'annee'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
@@ -128,10 +128,10 @@ export const updateDevoir = async (req, res) => {
                 message: message.devoir_non_trouve,
             });
         }
-        updatedDevoir.titre_fr = titre_fr;
-        updatedDevoir.titre_en = titre_en;
-        updatedDevoir.description_fr = description_fr;
-        updatedDevoir.description_en = description_en;
+        updatedDevoir.titreFr = titreFr;
+        updatedDevoir.titreEn = titreEn;
+        updatedDevoir.descriptionFr = descriptionFr;
+        updatedDevoir.descriptionEn = descriptionEn;
         updatedDevoir.niveau = niveau;
         updatedDevoir.noteSur = noteSur;
         updatedDevoir.utilisateur = utilisateur._id;
@@ -298,11 +298,11 @@ export const searchDevoir = async (req, res) => {
     try {
         // Construire la requête pour filtrer les devoir
         let query = {
-             titre_fr: { $regex: `^${searchString}`, $options: 'i' } 
+             titreFr: { $regex: `^${searchString}`, $options: 'i' } 
         }
         if(langue!=='fr'){
             query = {
-                titre_en: { $regex: `^${searchString}`, $options: 'i' } 
+                titreEn: { $regex: `^${searchString}`, $options: 'i' } 
             }
         }
 
@@ -310,12 +310,12 @@ export const searchDevoir = async (req, res) => {
 
         if(langue ==='fr'){
             devoirs = await Devoir.find(query)
-                .sort({ titre_fr: 1 }) 
+                .sort({ titreFr: 1 }) 
                 .populate({path:'utilisateur', select:'nom prenom'})
                 .limit(limit); // Limite à 5 résultats
         }else{
             devoirs = await Devoir.find(query)
-                .sort({titre_en: 1 }) 
+                .sort({titreEn: 1 }) 
                 .populate({path:'utilisateur', select:'nom prenom'})
                 .limit(limit); // Limite à 5 résultats
         }
@@ -350,19 +350,19 @@ export const searchDevoirByEnseignant = async (req, res) => {
         if(langue==='fr'){
             let query = {
                 utilisateur:enseignantId,
-                titre_fr: { $regex: `^${searchString}`, $options: 'i' } 
+                titreFr: { $regex: `^${searchString}`, $options: 'i' } 
             }
             devoirs = await Devoir.find(query)
-                    .sort({ titre_fr: 1 }) 
+                    .sort({ titreFr: 1 }) 
                     .populate({path:'utilisateur', select:'nom prenom'})
                     .limit(limit);
         }else{
             let query = {
                 utilisateur:enseignantId,
-                titre_en: { $regex: `^${searchString}`, $options: 'i' } 
+                titreEn: { $regex: `^${searchString}`, $options: 'i' } 
             }
             devoirs = await Devoir.find(query)
-                    .sort({titre_en: 1 }) 
+                    .sort({titreEn: 1 }) 
                     .populate({path:'utilisateur', select:'nom prenom'})
                     .limit(limit); 
         }

@@ -4,52 +4,75 @@ import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
 
 export const createQuestion = async (req, res) => {
-    const { text_fr, text_en, type,nbPoint, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
-
+    const { textFr, textEn, type, nbPoint, options, devoir } = req.body;
     try {
         // Vérification des champs obligatoires
-        const requiredFields = ['text_fr', 'text_en', 'nbPoint', 'type', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
+        const requiredFields = ['textFr', 'textEn', 'nbPoint', 'type', 'options', 'devoir'];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({
                     success: false,
-                    message: `${field} est un champ obligatoire.`,
+                    message: message.champ_obligatoire,
                 });
             }
         }
 
         // Validation spécifique au type de question
-        if (type === 'QCM' && ((!options_fr || !options_en || options_fr.length < 2 || options_en.length < 2))) {
+        if (type === 'QCM' && options.length < 2) {
             return res.status(400).json({
                 success: false,
                 message: message.qcm_incorrect,
             });
         }
 
-       
-        if (type === 'VRAI_FAUX' && (!['Vrai', 'Faux'].includes(reponseCorrect_fr) || !['True', 'False'].includes(reponseCorrect_en))) {
+        if (type === 'VRAI_FAUX' && options.length !== 2) {
             return res.status(400).json({
                 success: false,
                 message: message.vf_incorrect,
             });
         }
 
+        // Validation des pourcentages
+        const totalPourcentagePositif = options
+            .filter(opt => opt.pourcentage > 0)
+            .reduce((sum, opt) => sum + opt.pourcentage, 0);
+        const totalPourcentageNegatif = options
+            .filter(opt => opt.pourcentage < 0)
+            .reduce((sum, opt) => sum + opt.pourcentage, 0);
+
+        if (totalPourcentagePositif !== 100) {
+            return res.status(400).json({
+                success: false,
+                message: message.somme_pourcentage_positif,
+            });
+        }
+
+        if (totalPourcentageNegatif < -100) {
+            return res.status(400).json({
+                success: false,
+                message: message.somme_pourcentage_negatif,
+            });
+        }
+
         // Vérifier l'existence du devoir
-        const devoirExists = await Devoir.findById(devoir);
+        const devoirExists = await Devoir.findById(devoir._id);
         if (!devoirExists) {
             return res.status(404).json({
                 success: false,
-                message: message.devoir_non_trouve,
+                message: message.devoir_non_trouve
             });
         }
 
         // Créer et sauvegarder la question
-        const question = new Question({ text_fr, text_en, type, nbPoint, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir });
+        const question = new Question({ textFr, textEn, type, nbPoint, options, devoir });
         const saveQuestion = await question.save();
+
+        // Ajouter la question au devoir
         await Devoir.findByIdAndUpdate(devoir, { $push: { questions: saveQuestion._id } });
+
         res.status(201).json({
             success: true,
-            message: message.ajouter_avec_success,
+            message:message.ajouter_avec_success,
             data: saveQuestion,
         });
     } catch (error) {
@@ -61,60 +84,82 @@ export const createQuestion = async (req, res) => {
     }
 };
 
+
 export const updateQuestion = async (req, res) => {
     const { id } = req.params;
-    const { text_fr, text_en, type,nbPoint, options_fr, options_en, reponseCorrect_fr, reponseCorrect_en, devoir } = req.body;
+    const { textFr, textEn, type, nbPoint, options, devoir } = req.body;
 
     try {
-         // Vérification des champs obligatoires
-         const requiredFields = ['text_fr', 'text_en', 'type','nbPoint', 'options_fr', 'options_en', 'reponseCorrect_fr', 'reponseCorrect_en', 'devoir'];
-         for (const field of requiredFields) {
-             if (!req.body[field]) {
-                 return res.status(400).json({
-                     success: false,
-                     message: `${field} est un champ obligatoire.`,
-                 });
-             }
-         }
+        // Vérification des champs obligatoires
+        const requiredFields = ['textFr', 'textEn', 'type', 'nbPoint', 'options', 'devoir'];
+        for (const field of requiredFields) {
+            if (!req.body[field]) {
+                return res.status(400).json({
+                    success: false,
+                    message: message.champ_obligatoire,
+                });
+            }
+        }
 
         // Vérification de l'existence de la question
         const existQuestion = await Question.findById(id);
         if (!existQuestion) {
             return res.status(404).json({
                 success: false,
-                message: message.question_non_trouvee,
+                message: message.question_non_trouvee
             });
         }
 
         // Validation spécifique au type de question
-        if (type === 'QCM' && (!options_fr || !options_en || options_fr.length < 2 || options_en.length < 2)) {
+        if (type === 'QCM' && options.length < 2) {
             return res.status(400).json({
                 success: false,
-                message: message.qcm_incorrect,
+                message: message.qcm_incorrect
             });
         }
 
-
-        if (type === 'VRAI_FAUX' && (!['Vrai', 'Faux'].includes(reponseCorrect_fr) || !['True', 'False'].includes(reponseCorrect_en))) {
+        if (type === 'VRAI_FAUX' && options.length !== 2) {
             return res.status(400).json({
                 success: false,
-                message: message.vf_incorrect,
+                message: message.vf_incorrect
+            });
+        }
+
+        // Validation des pourcentages
+        const totalPourcentagePositif = options
+            .filter(opt => opt.pourcentage > 0)
+            .reduce((sum, opt) => sum + opt.pourcentage, 0);
+        const totalPourcentageNegatif = options
+            .filter(opt => opt.pourcentage < 0)
+            .reduce((sum, opt) => sum + opt.pourcentage, 0);
+
+        if (totalPourcentagePositif !== 100) {
+            return res.status(400).json({
+                success: false,
+                message: message.somme_pourcentage_positif
+            });
+        }
+
+        if (totalPourcentageNegatif < -100) {
+            return res.status(400).json({
+                success: false,
+                message: message.somme_pourcentage_negatif
             });
         }
 
         // Vérifier l'existence du devoir si modifié
         let newDevoir = null;
-        if (devoir && devoir !== String(existQuestion.devoir)) {
-            newDevoir = await Devoir.findById(devoir);
+        if (devoir && devoir._id.toString() !== String(existQuestion.devoir)) {
+            newDevoir = await Devoir.findById(devoir._id);
             if (!newDevoir) {
                 return res.status(404).json({
                     success: false,
-                    message: message.devoir_non_trouve,
+                    message: message.devoir_non_trouve
                 });
             }
         }
 
-        // Mise à jour de l'ancien devoir (si le devoir change)
+        // Mettre à jour l'ancien devoir si le devoir change
         if (newDevoir) {
             const oldDevoir = await Devoir.findById(existQuestion.devoir);
             if (oldDevoir) {
@@ -129,17 +174,13 @@ export const updateQuestion = async (req, res) => {
             await newDevoir.save();
         }
 
-        // Mettre à jour les champs de la question
-        existQuestion.text_fr = text_fr;
-        existQuestion.text_en = text_en;
+        existQuestion.textFr = textFr;
+        existQuestion.textEn = textEn;
         existQuestion.type = type;
         existQuestion.nbPoint = nbPoint;
-        existQuestion.options_fr = options_fr;
-        existQuestion.options_en = options_en;
-        existQuestion.reponseCorrect_fr = reponseCorrect_fr;
-        existQuestion.reponseCorrect_en = reponseCorrect_en;
-        existQuestion.devoir = newDevoir ? newDevoir._id : existQuestion.devoir;
-
+        existQuestion.options = options;
+        existQuestion.devoir = newDevoir? newDevoir._id:existQuestion.devoir;
+       
         await existQuestion.save();
 
         res.status(200).json({
@@ -148,13 +189,14 @@ export const updateQuestion = async (req, res) => {
             data: existQuestion,
         });
     } catch (error) {
-        console.error("Erreur lors de la modification de la question :", error);
+        console.error("Erreur lors de la mise à jour de la question :", error);
         res.status(500).json({
             success: false,
-            message: message.erreurServeur,
+            message: message.erreurServeur
         });
     }
 };
+
 
 export const deleteQuestion = async (req, res) => {
     const { id } = req.params;
@@ -193,7 +235,7 @@ export const deleteQuestion = async (req, res) => {
     }
 };
 
-export const obtenirQuestionsDevoir = async (req, res) => {
+export const obtenirQuestionsDevoirAvecPagination = async (req, res) => {
     const { devoirId } = req.params; // Récupération de l'ID du devoir
     const { page = 1, pageSize = 10 } = req.query; // Paramètres pour la pagination (par défaut page 1, pageSizee 10)
 
@@ -234,6 +276,44 @@ export const obtenirQuestionsDevoir = async (req, res) => {
         });
     }
 };
+
+export const obtenirQuestionsDevoir = async (req, res) => {
+    const { devoirId } = req.params; // Récupération de l'ID du devoir
+
+    try {
+        // Vérifier si le devoir existe
+        const devoir = await Devoir.findById(devoirId);
+        if (!devoir) {
+            return res.status(404).json({
+                success: false,
+                message: message.devoir_non_trouve,
+            });
+        }
+
+        // Récupérer les questions du devoir avec pagination
+        const questions = await Question.find({ devoir: devoirId })
+            .exec();
+
+
+        res.status(200).json({
+            success: true,
+            data: {
+                questions,
+                totalItems: questions.length,
+                currentPage: 1,
+                totalPages: 1,
+                pageSize: questions.length,
+            },
+        });
+    } catch (error) {
+        console.error("Erreur lors de la récupération des questions :", error);
+        res.status(500).json({
+            success: false,
+            message: "Une erreur interne est survenue.",
+        });
+    }
+};
+
 export const searchQuestion = async (req, res) => {
     const { langue, searchString } = req.params; // Récupère la chaîne de recherche depuis les paramètres de requête
     let {limit = 10, devoirId} = req.query;
@@ -242,12 +322,12 @@ export const searchQuestion = async (req, res) => {
     try {
         // Construire la requête pour filtrer les matières
         let query = {
-             text_fr: { $regex: `^${searchString}`, $options: 'i' },
+             textFr: { $regex: `^${searchString}`, $options: 'i' },
              devoir:devoirId,
         }
         if(langue!=='fr'){
             query = {
-                text_en: { $regex: `^${searchString}`, $options: 'i' },
+                textEn: { $regex: `^${searchString}`, $options: 'i' },
                 devoir:devoirId,
             }
         }
@@ -256,11 +336,11 @@ export const searchQuestion = async (req, res) => {
 
         if(langue ==='fr'){
             questions = await Question.find(query)
-                .sort({ text_fr: 1 }) 
+                .sort({ textFr: 1 }) 
                 .limit(limit); // Limite à 5 résultats
         }else{
             questions = await Question.find(query)
-                .sort({text_en: 1 }) 
+                .sort({textEn: 1 }) 
                 .limit(limit); // Limite à 5 résultats
         }
         
