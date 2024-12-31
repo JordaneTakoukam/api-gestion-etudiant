@@ -101,40 +101,82 @@ export const soumettreTentative = async (req, res) => {
     }
 };
 
-
-
 export const obtenirTentativesEtudiant = async (req, res) => {
-    const { devoirId, etudiantId } = req.params;
-
     try {
-        // Vérifier l'existence du devoir
-        const devoir = await Devoir.findById(devoirId);
-        if (!devoir) {
-            return res.status(404).json({
-                success: false,
-                message: message.devoir_non_trouve,
-            });
-        }
-
-        // Récupérer les tentatives pour l'étudiant et le devoir
-        const reponse = await Reponse.findOne({ devoir: devoirId, etudiant: etudiantId });
-        if (!reponse) {
-            return res.status(404).json({
-                success: false,
-                message: message.pas_de_tentatives,
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: reponse.tentative,
+      const { devoirId, etudiantId } = req.params;
+  
+      // Vérification si le devoir existe
+      const devoir = await Devoir.findById(devoirId);
+      if (!devoir) {
+        return res.status(404).json({ message: message.devoir_non_trouve });
+      }
+  
+      // Récupération des réponses de l'étudiant pour le devoir
+      const reponse = await Reponse.findOne({ devoir: devoirId, etudiant: etudiantId })
+        .populate({
+          path: "tentative.reponses.question",
+          select: "textFr textEn nbPoint options",
         });
+  
+      if (!reponse) {
+        return res.status(404).json({ message: message.etudiant_tentative_non_trouvee });
+      }
+  
+      // Structuration des données
+      const detailsTentatives = reponse.tentative.map((tentative) => ({
+        dateSoumission: tentative.dateSoumission,
+        score: tentative.score,
+        reponses: tentative.reponses.map((rep) => ({
+          question: rep.question.textFr,
+          reponses: rep.reponses,
+        })),
+      }));
+  
+      return res.status(200).json({
+        etudiantId: reponse.etudiant,
+        devoirId,
+        meilleureScore: reponse.meilleureScore,
+        tentatives: detailsTentatives,
+      });
     } catch (error) {
-        console.error("Erreur lors de la récupération des tentatives :", error);
-        res.status(500).json({
-            success: false,
-            message: message.erreurServeur,
-        });
+      console.error(error);
+      return res.status(500).json({ message: "Erreur serveur" });
     }
 };
+
+// export const obtenirTentativesEtudiant = async (req, res) => {
+//     const { devoirId, etudiantId } = req.params;
+
+//     try {
+//         // Vérifier l'existence du devoir
+//         const devoir = await Devoir.findById(devoirId);
+//         if (!devoir) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: message.devoir_non_trouve,
+//             });
+//         }
+
+//         // Récupérer les tentatives pour l'étudiant et le devoir
+//         const reponse = await Reponse.findOne({ devoir: devoirId, etudiant: etudiantId });
+//         if (!reponse) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: message.pas_de_tentatives,
+//             });
+//         }
+
+//         res.status(200).json({
+//             success: true,
+//             data: reponse.tentative,
+//         });
+//     } catch (error) {
+//         console.error("Erreur lors de la récupération des tentatives :", error);
+//         res.status(500).json({
+//             success: false,
+//             message: message.erreurServeur,
+//         });
+//     }
+// };
+  
 

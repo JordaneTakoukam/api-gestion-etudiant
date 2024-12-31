@@ -362,6 +362,11 @@ const message = {
         en:"No attempt found for this assignment."
     },
 
+    etudiant_tentative_non_trouvee:{
+        fr:"Aucune tentative trouvée pour cet étudiant",
+        en:"No attempts found for this student",
+    },
+
     soumission_reussie:{
         fr:"Soumission réussie.",
         en:"Successful submission."

@@ -432,6 +432,73 @@ export const voirStatistiquesDevoir = async (req, res) => {
     }
 };
 
+export const getDevoirStats = async (req, res) => {
+    try {
+      const { devoirId } = req.params;
+  
+      // Vérification si le devoir existe
+      const devoir = await Devoir.findById(devoirId);
+      if (!devoir) {
+        return res.status(404).json({ message: message.devoir_non_trouve });
+      }
+  
+      // Récupération des réponses associées au devoir
+      const reponses = await Reponse.find({ devoir: devoirId })
+        .populate("etudiant", "nom prenom") // Inclure les détails de l'étudiant
+        .populate({
+          path: "tentative.reponses.question",
+          select: "textFr textEn nbPoint options",
+        });
+  
+      // Calcul des statistiques
+      const nombreParticipants = reponses.length;
+      let meilleureNote = -Infinity;
+      let pireNote = Infinity;
+      let sommeNotes = 0; // Initialisation pour le calcul de la moyenne
+      const etudiants = [];
+  
+      reponses.forEach((reponse) => {
+        const { etudiant, meilleureScore, tentative } = reponse;
+  
+        // Mettre à jour les statistiques de note
+        meilleureNote = Math.max(meilleureNote, meilleureScore);
+        pireNote = Math.min(pireNote, meilleureScore);
+        sommeNotes += meilleureScore;
+  
+        // Ajouter l'étudiant à la liste
+        etudiants.push({
+          etudiant,
+          meilleureScore,
+          nombreTentatives: tentative.length,
+        });
+      });
+  
+      // Calcul de la note moyenne
+      const noteMoyenne = nombreParticipants > 0 ? sommeNotes / nombreParticipants : null;
+  
+      // Résultat structuré
+      const stats = {
+        devoir: {
+          _id: devoir._id,
+          titreFr: devoir.titreFr,
+          titreEn: devoir.titreEn,
+          noteSur: devoir.noteSur,
+        },
+        nombreParticipants,
+        meilleureNote: meilleureNote === -Infinity ? null : meilleureNote,
+        pireNote: pireNote === Infinity ? null : pireNote,
+        noteMoyenne,
+        etudiants,
+      };
+      return res.status(200).json(stats);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Erreur serveur" });
+    }
+};
+  
+  
+
 
 
 
