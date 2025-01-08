@@ -1,5 +1,5 @@
 import express from "express";
-import { createDevoir, deleteDevoir, getDevoirsByEnseignantPaginated, getDevoirsByNiveauPaginated, getDevoirStats, searchDevoir, searchDevoirByEnseignant, updateDevoir, voirStatistiquesDevoir } from "../controllers/devoirs/devoir.controller.js";
+import { createDevoir, deleteDevoir, getDevoirsByEnseignantPaginated, getDevoirsByNiveauPaginated, getDevoirStats, searchDevoir, searchDevoirByEnseignant, searchStudentStatsByName, updateDevoir, voirStatistiquesDevoir } from "../controllers/devoirs/devoir.controller.js";
 import { createQuestion, deleteQuestion, obtenirQuestionsDevoir, obtenirQuestionsDevoirAvecPagination, searchQuestion, updateQuestion } from "../controllers/devoirs/question.controller.js";
 import { obtenirTentativesEtudiant, soumettreTentative } from "../controllers/devoirs/reponse.controller.js";
 
@@ -16,6 +16,7 @@ router.get("/voirStatistiquesDevoir/:devoirId", voirStatistiquesDevoir);
 router.get("/getDevoirStats/:devoirId", getDevoirStats);
 router.get("/searchDevoir/:langue/:searchString", searchDevoir);
 router.get("/searchDevoirByEnseignant/:langue/:searchString", searchDevoirByEnseignant);
+router.get("/searchStudentStatsByName/:devoirId/:searchString", searchStudentStatsByName);
 
 router.post("/question/create", createQuestion);
 router.put("/question/update/:id", updateQuestion);

@@ -496,6 +496,61 @@ export const getDevoirStats = async (req, res) => {
       return res.status(500).json({ message: "Erreur serveur" });
     }
 };
+
+export const searchStudentStatsByName = async (req, res) => {
+    try {
+      const { devoirId, searchString } = req.params; // ID du devoir
+  
+      // Vérification si le devoir existe
+      const devoir = await Devoir.findById(devoirId);
+      if (!devoir) {
+        return res.status(404).json({
+          message: message.devoir_non_trouve,
+        });
+      }
+  
+      // Récupération des réponses associées au devoir
+      const reponses = await Reponse.find({ devoir: devoirId })
+        .populate("etudiant", "nom prenom") // Inclure les détails de l'étudiant
+        .populate({
+          path: "tentative.reponses.question",
+          select: "textFr textEn nbPoint options",
+        });
+  
+      // Filtrer les réponses en fonction du nom ou prénom de l'étudiant
+      const filteredResponses = reponses.filter(({ etudiant }) => {
+        const fullName = `${etudiant.nom} ${etudiant.prenom}`.toLowerCase();
+        return fullName.includes(searchString?.toLowerCase());
+      });
+  
+    //   Vérification si des étudiants correspondent à la recherche
+      
+  
+      // Transformation des données pour correspondre au format attendu
+      const studentStats = filteredResponses.map((reponse) => {
+        const { etudiant, meilleureScore, tentative } = reponse;
+        return {
+          etudiant: {
+            _id: etudiant._id,
+            nom: etudiant.nom,
+            prenom: etudiant.prenom,
+          },
+          meilleureScore,
+          nombreTentatives: tentative.length,
+        };
+      });
+      
+      // Retourner la liste des statistiques des étudiants
+      return res.status(200).json(studentStats);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: message.erreurServeur,
+      });
+    }
+  };
+  
+  
   
   
 
