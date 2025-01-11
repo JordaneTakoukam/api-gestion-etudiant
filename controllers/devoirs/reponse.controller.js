@@ -41,7 +41,6 @@ export const soumettreTentative = async (req, res) => {
         const score = questions.reduce((total, question) => {
             // Trouver les réponses associées à la question courante
             const questionResponses = reponses.find((r) => r.question.toString() === question._id.toString());
-            console.log(questionResponses)
             if (!questionResponses) return total;
         
             // Calculer le score total pour la question courante
@@ -90,8 +89,12 @@ export const soumettreTentative = async (req, res) => {
         res.status(201).json({
             success: true,
             message: message.soumission_reussie,
-            data: nouvelleTentative,
+            data: {
+              nouvelleTentative, 
+              nombreTentatives: reponse.tentative.length
+            },
         });
+        
     } catch (error) {
         console.error("Erreur lors de la soumission de la tentative :", error);
         res.status(500).json({
@@ -127,7 +130,7 @@ export const obtenirTentativesEtudiant = async (req, res) => {
         dateSoumission: tentative.dateSoumission,
         score: tentative.score,
         reponses: tentative.reponses.map((rep) => ({
-          question: rep.question.textFr,
+          question: rep.question._id,
           reponses: rep.reponses,
         })),
       }));
@@ -144,39 +147,85 @@ export const obtenirTentativesEtudiant = async (req, res) => {
     }
 };
 
-// export const obtenirTentativesEtudiant = async (req, res) => {
-//     const { devoirId, etudiantId } = req.params;
+export const obtenirMeilleurTentativeEtudiant = async (req, res) => {
+  try {
+    const { devoirId, etudiantId } = req.params;
 
-//     try {
-//         // Vérifier l'existence du devoir
-//         const devoir = await Devoir.findById(devoirId);
-//         if (!devoir) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: message.devoir_non_trouve,
-//             });
-//         }
+    // Vérification si le devoir existe
+    const devoir = await Devoir.findById(devoirId);
+    if (!devoir) {
+      return res.status(404).json({ message: message.devoir_non_trouve });
+    }
 
-//         // Récupérer les tentatives pour l'étudiant et le devoir
-//         const reponse = await Reponse.findOne({ devoir: devoirId, etudiant: etudiantId });
-//         if (!reponse) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: message.pas_de_tentatives,
-//             });
-//         }
+    // Récupération des réponses de l'étudiant pour le devoir
+    const reponse = await Reponse.findOne({ devoir: devoirId, etudiant: etudiantId })
+      .populate({
+        path: "tentative.reponses.question",
+        select: "textFr textEn nbPoint options",
+      });
 
-//         res.status(200).json({
-//             success: true,
-//             data: reponse.tentative,
-//         });
-//     } catch (error) {
-//         console.error("Erreur lors de la récupération des tentatives :", error);
-//         res.status(500).json({
-//             success: false,
-//             message: message.erreurServeur,
-//         });
-//     }
-// };
-  
+    if (!reponse) {
+      return res.status(404).json({ message: message.etudiant_tentative_non_trouvee });
+    }
 
+    // Trouver la tentative avec le meilleur score
+    const meilleureTentative = reponse.tentative.reduce((best, current) => {
+      return current.score > best.score ? current : best;
+    }, reponse.tentative[0]);
+
+    // Structuration des données pour la meilleure tentative
+    const detailsMeilleureTentative = {
+      dateSoumission: meilleureTentative.dateSoumission,
+      score: meilleureTentative.score,
+      reponses: meilleureTentative.reponses.map((rep) => ({
+        question: rep.question._id,
+        reponses: rep.reponses,
+      })),
+    };
+
+    return res.status(200).json({
+      etudiantId: reponse.etudiant,
+      devoirId,
+      meilleureScore: meilleureTentative.score,
+      tentative: detailsMeilleureTentative, // Envoi de la meilleure tentative
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+export const obtenirNombreTentativesEffectuee = async (req, res) => {
+  try {
+    const { devoirId, etudiantId } = req.params;
+
+    // Vérification si le devoir existe
+    const devoir = await Devoir.findById(devoirId);
+    if (!devoir) {
+      return res.status(404).json({
+        message: message.devoir_non_trouve
+      });
+    }
+
+    // Vérification si des réponses existent pour cet utilisateur et ce devoir
+    const reponse = await Reponse.findOne({
+      devoir: devoirId,
+      etudiant: etudiantId,
+    });
+
+    // Retourner le nombre de tentatives
+    const nombreTentatives =reponse? reponse.tentative.length:0;
+
+    return res.status(200).json({
+      nombreTentatives,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: {
+        fr: "Erreur serveur.",
+        en: "Server error.",
+      },
+    });
+  }
+};

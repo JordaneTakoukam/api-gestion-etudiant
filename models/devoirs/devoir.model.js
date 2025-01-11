@@ -9,6 +9,7 @@ const devoirSchema = new mongoose.Schema({
     niveau: { type: mongoose.Schema.Types.ObjectId, ref: 'Niveau', required: true },
     noteSur:{type:Number, required: true},
     questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }], // Référence aux questions
+    totalQuestionPoints: { type: Number, default: 0 }, // total des points par question Par défaut à 0
     deadline: { type: Date, required: true },
     ordreAleatoire: { type: Boolean, default: false }, // Si les questions doivent être affichées aléatoirement
     tentativesMax: { type: Number, default: 1 }, // Nombre maximum de tentatives autorisées

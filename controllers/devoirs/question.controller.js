@@ -68,7 +68,14 @@ export const createQuestion = async (req, res) => {
         const saveQuestion = await question.save();
 
         // Ajouter la question au devoir
-        await Devoir.findByIdAndUpdate(devoir, { $push: { questions: saveQuestion._id } });
+        await Devoir.findByIdAndUpdate(
+            devoir,
+            {
+                $push: { questions: saveQuestion._id },
+                $inc: { totalQuestionPoints: saveQuestion.nbPoint }, // Met à jour la somme des points
+            },
+            { new: true }
+        );
 
         res.status(201).json({
             success: true,
@@ -159,20 +166,40 @@ export const updateQuestion = async (req, res) => {
             }
         }
 
-        // Mettre à jour l'ancien devoir si le devoir change
-        if (newDevoir) {
+        // Vérifier si le devoir reste le même
+        if (!newDevoir) {
+            // Calculer la différence de points si le nombre de points a changé
+            if (existQuestion.nbPoint !== nbPoint) {
+                const oldDevoir = await Devoir.findById(existQuestion.devoir);
+                const pointDifference = nbPoint - existQuestion.nbPoint;
+                // Mettre à jour `totalQuestionPoints` en ajoutant la différence
+                oldDevoir.totalQuestionPoints += pointDifference;
+
+                await oldDevoir.save();
+            }
+        } else {
+            // Cas où le devoir change (voir le code précédent)
             const oldDevoir = await Devoir.findById(existQuestion.devoir);
             if (oldDevoir) {
+                // Retirer la question de l'ancien devoir
                 oldDevoir.questions = oldDevoir.questions.filter(
                     (questionId) => String(questionId) !== id
                 );
+
+                // Mettre à jour `totalQuestionPoints` en soustrayant les points de l'ancienne question
+                oldDevoir.totalQuestionPoints -= existQuestion.nbPoint;
                 await oldDevoir.save();
             }
 
             // Ajouter la question au nouveau devoir
             newDevoir.questions.push(existQuestion._id);
+
+            // Mettre à jour `totalQuestionPoints` du nouveau devoir en ajoutant les points de la question
+            newDevoir.totalQuestionPoints += nbPoint;
             await newDevoir.save();
         }
+
+
 
         existQuestion.textFr = textFr;
         existQuestion.textEn = textEn;

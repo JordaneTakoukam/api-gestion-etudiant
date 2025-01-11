@@ -479,10 +479,12 @@ export const getDevoirStats = async (req, res) => {
       // Résultat structuré
       const stats = {
         devoir: {
-          _id: devoir._id,
-          titreFr: devoir.titreFr,
-          titreEn: devoir.titreEn,
-          noteSur: devoir.noteSur,
+            _id: devoir._id,
+            titreFr: devoir.titreFr,
+            titreEn: devoir.titreEn,
+            noteSur: devoir.noteSur,
+            totalQuestionPoints:devoir.totalQuestionPoints
+
         },
         nombreParticipants,
         meilleureNote: meilleureNote === -Infinity ? null : meilleureNote,
