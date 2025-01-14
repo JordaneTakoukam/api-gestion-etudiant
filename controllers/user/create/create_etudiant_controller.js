@@ -642,6 +642,39 @@ export const getTotalEtudiantsByYear = async (req, res) => {
 };
 
 export const getTotalEtudiantsByNiveau = async (req, res) => {
+    const {niveau, annee}=req.query;
+    try {
+        // Construire la requête en utilisant $elemMatch pour correspondre exactement à l'année dans 'niveaux'
+        let role = appConfigs.role.etudiant;
+        
+        // Pour chaque niveau enseigné par l'enseignant
+        // console.log(niveaux)
+        
+        const query = {
+            roles: { $in: [role] },
+            niveaux: {
+                $elemMatch: { niveau:niveau, annee: annee }
+            }
+        };
+        // Récupérer les étudiants associés à ce niveau pour l'année donnée
+        const etudiants = await User.find(query);
+        // Compter le nombre d'étudiants pour ce niveau
+        const nombreEtudiants = etudiants.length;
+       
+           
+        
+        res.json({
+            success: true,
+            nombreEtudiants
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de la récupération des étudiants :', error);
+        return { success: false, message: 'Une erreur est survenue lors de la récupération des étudiants.' };
+    }
+};
+
+export const getTotalEtudiantsByNiveaux = async (req, res) => {
     const {niveaux, annee}=req.query;
     try {
         // Construire la requête en utilisant $elemMatch pour correspondre exactement à l'année dans 'niveaux'

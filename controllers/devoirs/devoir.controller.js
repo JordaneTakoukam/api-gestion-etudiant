@@ -3,6 +3,11 @@ import Question from '../../models/devoirs/question.model.js'
 import Reponse from '../../models/devoirs/reponse.model.js'
 import { message } from '../../configs/message.js';
 import mongoose from 'mongoose';
+import {formatYear, generatePDFAndSendToBrowser, loadHTML } from '../../fonctions/fonctions.js';
+import cheerio from 'cheerio';
+import ExcelJS from 'exceljs';
+import { appConfigs } from '../../configs/app_configs.js';
+import User from '../../models/user.model.js';
 
 export const createDevoir = async (req, res) => {
     const {
@@ -441,6 +446,21 @@ export const getDevoirStats = async (req, res) => {
       if (!devoir) {
         return res.status(404).json({ message: message.devoir_non_trouve });
       }
+
+      //Récupération du nombre d'étudiant du niveau
+      // Construire la requête en utilisant $elemMatch pour correspondre exactement à l'année dans 'niveaux'
+      let role = appConfigs.role.etudiant;
+              
+      const query = {
+          roles: { $in: [role] },
+          niveaux: {
+              $elemMatch: { niveau:devoir.niveau, annee: devoir.annee }
+          }
+      };
+      // Récupérer les étudiants associés à ce niveau pour l'année donnée
+      const countEtudiants = await User.find(query);
+      // Compter le nombre d'étudiants pour ce niveau
+      const nombreEtudiants = countEtudiants.length;
   
       // Récupération des réponses associées au devoir
       const reponses = await Reponse.find({ devoir: devoirId })
@@ -452,6 +472,7 @@ export const getDevoirStats = async (req, res) => {
   
       // Calcul des statistiques
       const nombreParticipants = reponses.length;
+      const nombreParticipantsSurEffectif = `${reponses.length}/${nombreEtudiants}`;
       let meilleureNote = -Infinity;
       let pireNote = Infinity;
       let sommeNotes = 0; // Initialisation pour le calcul de la moyenne
@@ -487,6 +508,7 @@ export const getDevoirStats = async (req, res) => {
 
         },
         nombreParticipants,
+        nombreParticipantsSurEffectif,
         meilleureNote: meilleureNote === -Infinity ? null : meilleureNote,
         pireNote: pireNote === Infinity ? null : pireNote,
         noteMoyenne,
@@ -550,8 +572,177 @@ export const searchStudentStatsByName = async (req, res) => {
         message: message.erreurServeur,
       });
     }
-  };
-  
+};
+
+
+
+export const generateDevoirStats = async (req, res) => {
+    const { devoirId } = req.params;
+    const {departement, section, cycle, niveau, fileType, langue } = req.query;
+
+    try {
+        // Récupérer les statistiques du devoir
+        const devoir = await Devoir.findById(devoirId);
+        if (!devoir) {
+            return res.status(404).json({ message: message.devoir_non_trouve });
+        }
+
+        //Récupération du nombre d'étudiant du niveau
+        // Construire la requête en utilisant $elemMatch pour correspondre exactement à l'année dans 'niveaux'
+        let role = appConfigs.role.etudiant;
+                
+        const query = {
+            roles: { $in: [role] },
+            niveaux: {
+                $elemMatch: { niveau:devoir.niveau, annee: devoir.annee }
+            }
+        };
+        // Récupérer les étudiants associés à ce niveau pour l'année donnée
+        const countEtudiants = await User.find(query);
+        // Compter le nombre d'étudiants pour ce niveau
+        const nombreEtudiants = countEtudiants.length;
+
+        const reponses = await Reponse.find({ devoir: devoirId })
+            .populate("etudiant", "nom prenom")
+            .populate({
+                path: "tentative.reponses.question",
+                select: "textFr textEn nbPoint options",
+            });
+
+        // Calcul des statistiques
+        const nombreParticipants = reponses.length;
+        const nombreParticipantsSurEffectif = `${reponses.length}/${nombreEtudiants}`;
+        let meilleureNote = -Infinity;
+        let pireNote = Infinity;
+        let sommeNotes = 0;
+        const etudiants = [];
+
+        reponses.forEach((reponse) => {
+            const { etudiant, meilleureScore, tentative } = reponse;
+            meilleureNote = Math.max(meilleureNote, meilleureScore);
+            pireNote = Math.min(pireNote, meilleureScore);
+            sommeNotes += meilleureScore;
+
+            etudiants.push({
+                etudiant,
+                meilleureScore,
+                nombreTentatives: tentative.length,
+            });
+        });
+
+        const noteMoyenne = nombreParticipants > 0 ? sommeNotes / nombreParticipants : null;
+
+        const stats = {
+            devoir: {
+                titreFr: devoir.titreFr,
+                titreEn: devoir.titreEn,
+                noteSur: devoir.noteSur,
+                totalQuestionPoints: devoir.totalQuestionPoints,
+            },
+            nombreParticipants,
+            nombreParticipantsSurEffectif,
+            meilleureNote: meilleureNote === -Infinity ? null : (meilleureNote*devoir.noteSur)/devoir.totalQuestionPoints,
+            pireNote: pireNote === Infinity ? null : (pireNote*devoir.noteSur)/devoir.totalQuestionPoints,
+            noteMoyenne:(noteMoyenne*devoir.noteSur)/devoir.totalQuestionPoints,
+            etudiants,
+        };
+
+        if (fileType.toLowerCase() === 'pdf') {
+            const filePath =
+                langue === 'fr'
+                    ? './templates/templates_fr/template_devoir_stats_fr.html'
+                    : './templates/templates_en/template_devoir_stats_en.html';
+            const htmlContent = await fillDevoirStatsTemplate(departement, section, cycle, niveau, devoir.annee, stats, filePath);
+            generatePDFAndSendToBrowser(htmlContent, res);
+        } else {
+            exportDevoirStatsToExcel(stats, langue, res);
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Erreur serveur" });
+    }
+};
+
+async function fillDevoirStatsTemplate(departement, section, cycle, niveau, annee, stats, filePath) {
+    try {
+        const htmlString = await loadHTML(filePath);
+        const $ = cheerio.load(htmlString);
+
+        $('#division-fr').text(departement.libelleFr);
+        $('#division-en').text(departement.libelleEn);
+        $('#section-fr').text(section.libelleFr);
+        $('#section-en').text(section.libelleEn);
+        $('#cycle-niveau').text(cycle.code+""+niveau.code);
+        $('#annee').text(formatYear(parseInt(annee)));
+
+        // Insérer les données du devoir
+        const { devoir, nombreParticipants, nombreParticipantsSurEffectif, meilleureNote, pireNote, noteMoyenne, etudiants } = stats;
+        $('#devoir-titre-fr').text(devoir.titreFr);
+        $('#devoir-titre-en').text(devoir.titreEn);
+        // $('#note-sur').text(devoir.noteSur);
+        $('#total-points').text(devoir.noteSur);
+        $('#nombre-participants').text(nombreParticipantsSurEffectif);
+        $('#meilleure-note').text(meilleureNote !== null ? meilleureNote.toFixed(2) : "N/A");
+        $('#pire-note').text(pireNote !== null ? pireNote.toFixed(2) : "N/A");
+        $('#note-moyenne').text(noteMoyenne !== null ? noteMoyenne.toFixed(2) : "N/A");
+
+        const studentTable = $('#student-table');
+        const rowTemplate = $('.row_template');
+        etudiants.forEach((etudiant, index) => {
+            const clonedRow = rowTemplate.clone();
+            clonedRow.find('#num').text(index + 1);
+            clonedRow.find('#nom').text(etudiant.etudiant.nom);
+            clonedRow.find('#prenom').text(etudiant.etudiant.prenom);
+            const meilleureScore = (etudiant.meilleureScore*devoir.noteSur)/devoir.totalQuestionPoints
+            clonedRow.find('#meilleure-score').text(meilleureScore.toFixed(2));
+            clonedRow.find('#nombre-tentatives').text(etudiant.nombreTentatives);
+            studentTable.append(clonedRow);
+        });
+        rowTemplate.first().remove();
+
+        return $.html();
+    } catch (error) {
+        console.error('Erreur lors du remplissage du template :', error);
+        return '';
+    }
+}
+
+const exportDevoirStatsToExcel = async (stats, langue, res) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Devoir Stats');
+
+    // En-têtes
+    const headers = langue === 'fr'
+        ? ['#', 'Nom', 'Prénom', 'Meilleure Note', 'Nombre Tentatives']
+        : ['#', 'Last Name', 'First Name', 'Best Score', 'Attempts'];
+    worksheet.addRow(headers);
+
+    // Données des étudiants
+    stats.etudiants.forEach((etudiant, index) => {
+        worksheet.addRow([
+            index + 1,
+            etudiant.etudiant.nom,
+            etudiant.etudiant.prenom,
+            ((etudiant.meilleureScore*stats.devoir.noteSur)/stats.devoir.totalQuestionPoints).toFixed(2),
+            etudiant.nombreTentatives,
+        ]);
+    });
+
+    // Définir les headers HTTP
+    res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=devoir_stats_${langue}.xlsx`
+    );
+    res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+
+    // Envoyer le fichier
+    await workbook.xlsx.write(res);
+    res.end();
+};
+
   
   
   
