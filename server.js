@@ -4,9 +4,11 @@ import dotenv from "dotenv";
 import cors from "cors";
 import session from "express-session";
 import path from "path";
-
+import * as faceapi from "@vladmandic/face-api";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 //
 // connexion a mongodb online
 import connectMongoDB from "./database/mongodb.connection.js";
@@ -56,6 +58,10 @@ import notificationRoutes from "./routes/notification.route.js";
 
 // Crée une nouvelle instance de l'application Express
 const app = express();
+
+// Recréer __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Utilise le middleware express.json pour parser les corps de requête au format JSON avec une limite de 50 Mo
 app.use(express.json({ limit: "50mb" }));
@@ -130,6 +136,17 @@ app.use("/api/v1/absence", abscenceRoutes);
 app.use("/api/v1/notification", notificationRoutes);
 app.use("/api/v1/alerte", abscenceRoutes);
 
+async function loadModels() {
+    // Assurez-vous que ce chemin pointe vers votre dossier de modèles
+    const modelPath = path.join(__dirname, '/public/face-api-models');
+    console.log(modelPath)
+    await Promise.all([
+        faceapi.nets.faceRecognitionNet.loadFromDisk(modelPath),
+        faceapi.nets.faceLandmark68Net.loadFromDisk(modelPath),
+        faceapi.nets.ssdMobilenetv1.loadFromDisk(modelPath)
+    ]);
+}
+
 
 const server = createServer(app);
 // Détecter l'environnement (local ou production)
@@ -154,7 +171,7 @@ export const io = new Server(server,
 
 
 connectMongoDB(process.env.MONGODB_URL)
-    .then(() => {
+    .then(async () => {
 
         // Gestion des connexions Socket.io
         io.on('connection', (socket) => {
@@ -165,6 +182,9 @@ connectMongoDB(process.env.MONGODB_URL)
                 console.log('Connexion socket déconnectée :', socket.id);
             });
         });
+
+        await loadModels();
+        console.log('Modèles chargés avec succès');
 
         // Démarrage du serveur HTTP
         const port = process.env.PORT || 8085;

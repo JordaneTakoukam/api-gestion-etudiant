@@ -8,10 +8,94 @@ import Periode from '../../models/periode.model.js';
 import {generatePDFAndSendToBrowser, formatYear, loadHTML, calculGrossBonus, calculIRNC, calculNetBonus} from '../../fonctions/fonctions.js';
 import Setting from '../../models/setting.model.js'
 import moment from 'moment-timezone';
+import * as faceapi from "@vladmandic/face-api";
+import fs from "fs";
+import path from "path";
+import multer from 'multer';
+import User from '../../models/user.model.js';
+import { Canvas, Image, loadImage } from "canvas";
 
-export const createPresence = async (req, res) => {
+const MODEL_PATH = path.resolve("./public/face-api-models");
+faceapi.env.monkeyPatch({ Canvas, Image });
+
+// Fonction principale de reconnaissance faciale
+async function optimizeImage(imageInput) {
+    // Taille cible optimale pour face-api
+    const TARGET_SIZE = 640;
+    
+    const canvas = new Canvas();
+    const ctx = canvas.getContext('2d');
+    
+    // Calculer le ratio pour le redimensionnement
+    const ratio = TARGET_SIZE / Math.max(imageInput.width, imageInput.height);
+    const newWidth = Math.round(imageInput.width * ratio);
+    const newHeight = Math.round(imageInput.height * ratio);
+    
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    
+    // Redimensionner l'image
+    ctx.drawImage(imageInput, 0, 0, newWidth, newHeight);
+    
+    return canvas;
+}
+
+async function compareFaces(image1Buffer, image2Path) {
+    const startTime = process.hrtime();
+    
+    try {
+        // Charger les images
+        const img1 = await loadImage(image1Buffer);
+        const img2 = await loadImage(image2Path);
+        
+        // Optimiser les images
+        const optimizedImg1 = await optimizeImage(img1);
+        const optimizedImg2 = await optimizeImage(img2);
+        
+        // Détecter les visages et obtenir les descripteurs
+        const detection1 = await faceapi.detectSingleFace(optimizedImg1)
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+        
+        const detection2 = await faceapi.detectSingleFace(optimizedImg2)
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+            
+        if (!detection1 || !detection2) {
+            return res.status(400).json({ 
+                success: false, 
+                message: {fr:"Impossible de détecter un visage dans une ou les deux images", en:""} 
+            });
+        }
+        
+        // Calculer la distance euclidienne entre les descripteurs
+        const distance = faceapi.euclideanDistance(detection1.descriptor, detection2.descriptor);
+            
+        // Seuil de similitude (à ajuster selon vos besoins)
+        const threshold = 0.6;
+        
+        const [seconds, nanoseconds] = process.hrtime(startTime);
+        const processingTime = seconds * 1000 + nanoseconds / 1000000;
+        
+        return {
+            isMatch: distance < threshold,
+            distance: distance,
+            confidence: 1 - distance,
+            processingTime: processingTime
+        };
+    } catch (error) {
+        throw new Error(`Erreur lors de la comparaison: ${error.message}`);
+    }
+} 
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 } // Limite à 10MB
+});
+
+export const createPresence = [
+    upload.single('file'), async (req, res) => {
     const { utilisateur, matiere, niveau, annee, semestre, jour, heureDebut, heureFin } = req.body;
-
     try {
         // Vérification des champs obligatoires
         if (!utilisateur || !matiere || !niveau || !jour || !heureDebut || !heureFin || !annee || !semestre) {
@@ -22,11 +106,37 @@ export const createPresence = async (req, res) => {
         }
 
         // Vérification de la validité des ObjectIds
-        if (!mongoose.Types.ObjectId.isValid(utilisateur._id) || !mongoose.Types.ObjectId.isValid(matiere._id) || !mongoose.Types.ObjectId.isValid(niveau)) {
+        if (!mongoose.Types.ObjectId.isValid(utilisateur) || !mongoose.Types.ObjectId.isValid(matiere) || !mongoose.Types.ObjectId.isValid(niveau)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide,
             });
+        }
+
+        // Vérifier si une image est envoyée
+        
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ success: false, message:{ fr:"Image manquante pour la reconnaissance faciale", en:""} });
+        }
+
+        const user = await User.findById(utilisateur).select("photo_profil");
+        if(!user.photo_profil){
+            return res.status(404).json({ success: false, message: {fr:"Photo de profil non trouvée", en:""} });   
+        }
+
+       
+         // Charger l'image de l'utilisateur depuis la base de données
+        const fileName = path.basename(user.photo_profil);
+        const filePath = path.join('./public/images/images_profile',fileName);  
+        const utilisateurImagePath = path.resolve(filePath);
+        if (!fs.existsSync(utilisateurImagePath)) {
+            return res.status(404).json({ success: false, message: {fr:"Photo de profil non trouvée", en:""} });
+        }
+
+        // Comparer les visages
+        const result = await compareFaces(req.file.buffer, utilisateurImagePath);
+        if(!result.isMatch){
+            return res.status(400).json({ success: false, message: {fr:"Reconnaissance faciale échouée", en:""} });
         }
 
         // Vérification si le jour envoyé correspond au jour actuel
@@ -130,7 +240,7 @@ export const createPresence = async (req, res) => {
             message: message.erreurServeur,
         });
     }
-};
+}];
 
 
 export const updatePresence = async (req, res) => {
