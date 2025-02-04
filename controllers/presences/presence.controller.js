@@ -17,7 +17,7 @@ export const createPresence = async (req, res) => {
         if (!utilisateur || !matiere || !niveau || !jour || !heureDebut || !heureFin || !annee || !semestre) {
             return res.status(400).json({
                 success: false,
-                message: message.champ_obligatoire,
+                message: message.champ_obligatoire, 
             });
         }
 
