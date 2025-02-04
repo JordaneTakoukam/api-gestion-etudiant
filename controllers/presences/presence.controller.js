@@ -39,7 +39,7 @@ async function optimizeImage(imageInput) {
     return canvas;
 }
 
-async function compareFaces(image1Buffer, image2Path) {
+async function compareFaces(res, image1Buffer, image2Path) {
     const startTime = process.hrtime();
     
     try {
@@ -95,6 +95,7 @@ const upload = multer({
 export const createPresence = [
     upload.single('file'), async (req, res) => {
     const { utilisateur, matiere, niveau, annee, semestre, jour, heureDebut, heureFin } = req.body;
+   
     try {
         // Vérification des champs obligatoires
         if (!utilisateur || !matiere || !niveau || !jour || !heureDebut || !heureFin || !annee || !semestre) {
@@ -113,7 +114,6 @@ export const createPresence = [
         }
 
         // Vérifier si une image est envoyée
-        
         if (!req.file || !req.file.buffer) {
             return res.status(400).json({ success: false, message:message.img_rf_mqte});
         }
@@ -133,7 +133,7 @@ export const createPresence = [
         }
 
         // Comparer les visages
-        const result = await compareFaces(req.file.buffer, utilisateurImagePath);
+        const result = await compareFaces(res, req.file.buffer, utilisateurImagePath);
         if(!result.isMatch){
             return res.status(400).json({ 
                 success: false, 
