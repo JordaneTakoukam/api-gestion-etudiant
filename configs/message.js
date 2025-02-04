@@ -469,6 +469,26 @@ const message = {
     absence_retiree_succes: {
         fr:"Absence retirée de l'utilisateur avec succès",
         en:"Absence removed from user successfully"
+    },
+
+    echec_rf:{
+        fr:"Reconnaissance faciale échouée",
+        en:"Failed facial recognition"
+    },
+
+    pp_non_trouve:{
+        fr:"Photo de profil non trouvée",
+        en:"Profile photo not found"
+    },
+
+    img_rf_mqte:{
+        fr:"Image manquante pour la reconnaissance faciale",
+        en:"Missing image for facial recognition"
+    },
+
+    img_det_imp:{
+        fr:"Impossible de détecter un visage dans une ou les deux images",
+        en:"Unable to detect a face in one or both images"
     }
 
 };

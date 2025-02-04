@@ -15,7 +15,6 @@ import multer from 'multer';
 import User from '../../models/user.model.js';
 import { Canvas, Image, loadImage } from "canvas";
 
-const MODEL_PATH = path.resolve("./public/face-api-models");
 faceapi.env.monkeyPatch({ Canvas, Image });
 
 // Fonction principale de reconnaissance faciale
@@ -64,7 +63,7 @@ async function compareFaces(image1Buffer, image2Path) {
         if (!detection1 || !detection2) {
             return res.status(400).json({ 
                 success: false, 
-                message: {fr:"Impossible de détecter un visage dans une ou les deux images", en:""} 
+                message: message.img_det_imp
             });
         }
         
@@ -116,12 +115,12 @@ export const createPresence = [
         // Vérifier si une image est envoyée
         
         if (!req.file || !req.file.buffer) {
-            return res.status(400).json({ success: false, message:{ fr:"Image manquante pour la reconnaissance faciale", en:""} });
+            return res.status(400).json({ success: false, message:message.img_rf_mqte});
         }
 
         const user = await User.findById(utilisateur).select("photo_profil");
         if(!user.photo_profil){
-            return res.status(404).json({ success: false, message: {fr:"Photo de profil non trouvée", en:""} });   
+            return res.status(404).json({ success: false, message: message.pp_non_trouve });   
         }
 
        
@@ -130,13 +129,16 @@ export const createPresence = [
         const filePath = path.join('./public/images/images_profile',fileName);  
         const utilisateurImagePath = path.resolve(filePath);
         if (!fs.existsSync(utilisateurImagePath)) {
-            return res.status(404).json({ success: false, message: {fr:"Photo de profil non trouvée", en:""} });
+            return res.status(404).json({ success: false, message: message.pp_non_trouve });
         }
 
         // Comparer les visages
         const result = await compareFaces(req.file.buffer, utilisateurImagePath);
         if(!result.isMatch){
-            return res.status(400).json({ success: false, message: {fr:"Reconnaissance faciale échouée", en:""} });
+            return res.status(400).json({ 
+                success: false, 
+                message: message.echec_rf 
+            });
         }
 
         // Vérification si le jour envoyé correspond au jour actuel
@@ -164,7 +166,7 @@ export const createPresence = [
         // Rechercher une présence existante pour cet utilisateur, matière, niveau, année, semestre, jour, dans la plage de la journée actuelle
         const presenceExistante = await Presence.findOne({
             utilisateur: utilisateur._id,
-            matiere: matiere._id,
+            matiere: matiere,
             niveau,
             annee,
             semestre,
@@ -189,7 +191,7 @@ export const createPresence = [
             // Si pas de présence, marquer la présence au début du cours
             const nouvellePresence = new Presence({
                 utilisateur: utilisateur._id,
-                matiere: matiere._id,
+                matiere: matiere,
                 niveau,
                 jour,
                 heureDebut,
