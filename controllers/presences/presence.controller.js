@@ -39,7 +39,7 @@ async function optimizeImage(imageInput) {
     return canvas;
 }
 
-async function compareFaces(res, image1Buffer, image2Path) {
+async function compareFaces(image1Buffer, image2Path) {
     const startTime = process.hrtime();
     
     try {
@@ -61,10 +61,10 @@ async function compareFaces(res, image1Buffer, image2Path) {
             .withFaceDescriptor();
             
         if (!detection1 || !detection2) {
-            return res.status(400).json({ 
-                success: false, 
+            return {
+                error: true,
                 message: message.img_det_imp
-            });
+            };
         }
         
         // Calculer la distance euclidienne entre les descripteurs
@@ -133,7 +133,13 @@ export const createPresence = [
         }
 
         // Comparer les visages
-        const result = await compareFaces(res, req.file.buffer, utilisateurImagePath);
+        const result = await compareFaces(req.file.buffer, utilisateurImagePath);
+        if (result.error) {
+            return res.status(400).json({
+                success: false,
+                message: result.message
+            });
+        }
         if(!result.isMatch){
             return res.status(400).json({ 
                 success: false, 
