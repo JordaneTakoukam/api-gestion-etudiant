@@ -432,16 +432,23 @@ export const getProgressionGlobalEnseignantsNiveauObj = async (req, res) => {
         }
 
         // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
-
+        const periodes = await Periode.find(filter).select('enseignements').exec();
+        console.log(periodes)
         // Extraire les identifiants uniques des matières
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
+        // const matiereIds = [...new Set(periodes.flatMap(periode => periode.enseignements.matiere))];
+        const matiereIds = [
+            ...new Set(
+                periodes.flatMap(periode => 
+                    periode.enseignements.map(e => e.matiere) // Récupérer l'ID de la matière
+                )
+            )
+        ];
 
         // Récupérer les détails de chaque matière à partir des identifiants uniques
         const matieres = await Matiere.find({ _id: { $in: matiereIds } })
                         .populate('objectifs');
 
-
+        console.log(matieres)
         let totalObjectifsAvecEtat1 = 0;
         let totalObjectifs = 0;
 

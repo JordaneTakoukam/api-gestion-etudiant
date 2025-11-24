@@ -94,11 +94,10 @@ const upload = multer({
 
 export const createPresence = [
     upload.single('file'), async (req, res) => {
-    const { utilisateur, matiere, niveau, annee, semestre, jour, heureDebut, heureFin } = req.body;
-   
+    const { utilisateur, matiere, niveau, annee, semestre, jour, heureDebut, heureFin, qrCode } = req.body;
     try {
         // Vérification des champs obligatoires
-        if (!utilisateur || !matiere || !niveau || !jour || !heureDebut || !heureFin || !annee || !semestre) {
+        if (!utilisateur || !matiere || !niveau || !jour || !heureDebut || !heureFin || !annee || !semestre || !qrCode) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire,
@@ -114,7 +113,7 @@ export const createPresence = [
         }
 
         // Vérifier si une image est envoyée
-        if (!req.file || !req.file.buffer) {
+        if (qrCode == 1 && (!req.file || !req.file.buffer)) {
             return res.status(400).json({ success: false, message:message.img_rf_mqte});
         }
 
@@ -123,28 +122,29 @@ export const createPresence = [
             return res.status(404).json({ success: false, message: message.pp_non_trouve });   
         }
 
-       
-         // Charger l'image de l'utilisateur depuis la base de données
-        const fileName = path.basename(user.photo_profil);
-        const filePath = path.join('./public/images/images_profile',fileName);  
-        const utilisateurImagePath = path.resolve(filePath);
-        if (!fs.existsSync(utilisateurImagePath)) {
-            return res.status(404).json({ success: false, message: message.pp_non_trouve });
-        }
+        if(qrCode == 1){
+            // Charger l'image de l'utilisateur depuis la base de données
+            const fileName = path.basename(user.photo_profil);
+            const filePath = path.join('./public/images/images_profile',fileName);  
+            const utilisateurImagePath = path.resolve(filePath);
+            if (!fs.existsSync(utilisateurImagePath)) {
+                return res.status(404).json({ success: false, message: message.pp_non_trouve });
+            }
 
-        // Comparer les visages
-        const result = await compareFaces(req.file.buffer, utilisateurImagePath);
-        if (result.error) {
-            return res.status(400).json({
-                success: false,
-                message: result.message
-            });
-        }
-        if(!result.isMatch){
-            return res.status(400).json({ 
-                success: false, 
-                message: message.echec_rf 
-            });
+            // Comparer les visages
+            const result = await compareFaces(req.file.buffer, utilisateurImagePath);
+            if (result.error) {
+                return res.status(400).json({
+                    success: false,
+                    message: result.message
+                });
+            }
+            if(!result.isMatch){
+                return res.status(400).json({ 
+                    success: false, 
+                    message: message.echec_rf 
+                });
+            }
         }
 
         // Vérification si le jour envoyé correspond au jour actuel
