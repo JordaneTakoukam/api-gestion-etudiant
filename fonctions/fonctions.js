@@ -164,12 +164,13 @@ export const generatePDFAndSendToBrowser = async (htmlContent, res, orientation 
         browser = await puppeteer.launch({
             headless: true,
             args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--disable-software-rasterizer',
-                '--disable-extensions'
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--no-zygote",
+                "--single-process",
+                "--disable-extensions"
             ]
         });
         
