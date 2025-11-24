@@ -168,24 +168,27 @@ export const generatePDFAndSendToBrowser = async (htmlContent, res, orientation 
 
         if (process.env.NODE_ENV === "production") {
             const chromeDir = process.env.PUPPETEER_CACHE_DIR;
+
+            // Nouveau chemin valide pour Chromium sur Render
             executablePath = path.join(
                 chromeDir,
-                "chrome",
+                "chromium",
                 "linux-ubuntu-22.04",
                 "chrome-linux",
                 "chrome"
             );
 
-            console.log("Chemin Chrome attendu :", executablePath);
+            console.log("Chemin Chromium attendu :", executablePath);
 
-            // Vérification que le fichier existe vraiment
+            // Vérification réelle
             if (!fs.existsSync(executablePath)) {
-                console.error("❌ Chrome introuvable à :", executablePath);
-                throw new Error("Chrome n’est pas installé dans PUPPETEER_CACHE_DIR");
+                console.error("❌ Chromium introuvable à :", executablePath);
+                throw new Error("Chromium n’est pas installé dans PUPPETEER_CACHE_DIR");
             }
 
-            console.log("✅ Chrome trouvé !");
-        } 
+            console.log("✅ Chromium trouvé !");
+        }
+
 
         // ================================
         // 🔥 Lancement du navigateur

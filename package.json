@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "watch": "nodemon server.js",
-    "postinstall": "puppeteer browsers install chrome" 
+    "postinstall": "puppeteer browsers install chromium"
   },
   "author": "MBA Idriss Jordane",
   "license": "ISC",
