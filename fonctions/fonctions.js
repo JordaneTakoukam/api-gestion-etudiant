@@ -2,6 +2,7 @@ import * as crypto from 'crypto';
 import { message } from '../configs/message.js';
 import { create } from 'html-pdf';
 import { readFile } from 'fs';
+import puppeteer from 'puppeteer';
 
 
 
@@ -143,43 +144,124 @@ export function loadHTML(filePath) {
 // Dans votre fichier fonctions.js
 
 export const generatePDFAndSendToBrowser = async (htmlContent, res, orientation = 'portrait') => {
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--font-render-hinting=none' // Important pour le rendu des polices
-        ]
-    });
+    let browser = null;
     
-    const page = await browser.newPage();
-    
-    await page.setContent(htmlContent, {
-        waitUntil: ['load', 'networkidle0'] // Attendre que toutes les ressources soient chargées
-    });
-    
-    // Attendre explicitement que les polices soient chargées
-    await page.evaluateHandle('document.fonts.ready');
-    
-    const pdf = await page.pdf({
-        format: 'A4',
-        landscape: orientation === 'landscape',
-        printBackground: true,
-        margin: {
-            top: '20px',
-            right: '20px',
-            bottom: '20px',
-            left: '20px'
+    try {
+        console.log('=== Début génération PDF ===');
+        console.log('Longueur HTML:', htmlContent?.length);
+        console.log('Orientation:', orientation);
+        
+        // Vérifier que le contenu HTML est valide
+        if (!htmlContent || htmlContent.trim() === '') {
+            throw new Error('Le contenu HTML est vide');
         }
-    });
-    
-    await browser.close();
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename=document.pdf');
-    res.send(pdf);
+
+        // Vérifier que res est valide
+        if (!res || res.headersSent) {
+            throw new Error('La réponse a déjà été envoyée ou est invalide');
+        }
+
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-extensions'
+            ]
+        });
+        
+        console.log('Navigateur lancé');
+        
+        const page = await browser.newPage();
+        
+        // Définir le viewport pour assurer un rendu cohérent
+        await page.setViewport({
+            width: 1200,
+            height: 800,
+            deviceScaleFactor: 1
+        });
+        
+        console.log('Page créée');
+        
+        // Définir le contenu avec un timeout
+        await page.setContent(htmlContent, {
+            waitUntil: ['load', 'domcontentloaded', 'networkidle0'],
+            timeout: 30000
+        });
+        
+        console.log('Contenu chargé');
+        
+        // Attendre que les polices soient chargées
+        await page.evaluateHandle('document.fonts.ready');
+        
+        console.log('Polices chargées');
+        
+        // Générer le PDF avec des options strictes
+        const pdf = await page.pdf({
+            format: 'A4',
+            landscape: orientation === 'landscape',
+            printBackground: true,
+            margin: {
+                top: '20px',
+                right: '20px',
+                bottom: '20px',
+                left: '20px'
+            },
+            preferCSSPageSize: false,
+            displayHeaderFooter: false
+        });
+        
+        console.log('PDF généré, taille:', pdf.length, 'bytes');
+        
+        // Fermer le navigateur
+        await browser.close();
+        browser = null;
+        
+        console.log('Navigateur fermé');
+        
+        // Vérifier que le PDF n'est pas vide
+        if (!pdf || pdf.length === 0) {
+            throw new Error('Le PDF généré est vide');
+        }
+        
+        // Définir les headers et envoyer le PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Length', pdf.length.toString());
+        res.setHeader('Content-Disposition', 'attachment; filename=liste_etudiants.pdf');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        
+        res.end(pdf, 'binary');
+        
+        console.log('=== PDF envoyé avec succès ===');
+        
+    } catch (error) {
+        console.error('=== ERREUR lors de la génération du PDF ===');
+        console.error('Message:', error.message);
+        console.error('Stack:', error.stack);
+        
+        // Fermer le navigateur si encore ouvert
+        if (browser) {
+            try {
+                await browser.close();
+            } catch (closeError) {
+                console.error('Erreur lors de la fermeture du navigateur:', closeError);
+            }
+        }
+        
+        // Vérifier si les headers n'ont pas encore été envoyés
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                message: 'Erreur lors de la génération du PDF',
+                error: error.message
+            });
+        }
+    }
 };
 
 export function nbTotalAbsences(listeAbsences) {

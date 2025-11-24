@@ -853,42 +853,76 @@ export const getNbAbsencesParSection = async (req, res) => {
     }
 };
 
-export const generateListEtudiant = async (req, res)=>{
+export const generateListEtudiant = async (req, res) => {
     const { annee } = req.params;
-    const { departement, section, cycle, niveau, langue, fileType } = req.query;
+    const { departement, section, cycle, niveau, langue, fileType } = req.body;
     
-    // Vérifier si l'ID du niveau est un ObjectId valide
-    if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
-        return res.status(400).json({
-            success: false,
-            message: message.identifiant_invalide
-        });
-    }
-    const query = {
-        'niveaux': {
-            $elemMatch: {
-                niveau: niveau._id,
-                annee: Number(annee),
-            },
-        },
-    };
-
-    const etudiants = await User.find(query).sort({nom:1, prenom:1});
-    if(fileType.toLowerCase()==='pdf'){
-        let filePath='./templates/templates_fr/template_liste_etudiant_fr.html';
-        
-        if(langue==='en'){
-            filePath='./templates/templates_en/template_liste_etudiant_en.html'
+    try {
+        // Vérifier si l'ID du niveau est un ObjectId valide
+        if (!mongoose.Types.ObjectId.isValid(niveau._id)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide
+            });
         }
-        const htmlContent = await fillTemplate( departement, section, cycle, niveau, etudiants, filePath, annee);
+        
+        const query = {
+            'niveaux': {
+                $elemMatch: {
+                    niveau: niveau._id,
+                    annee: Number(annee),
+                },
+            },
+        };
 
-        // Générer le PDF à partir du contenu HTML
-        generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
-    }else{
-        exportToExcel(etudiants, langue, res, section, cycle, niveau);
+        const etudiants = await User.find(query).sort({nom: 1, prenom: 1});
+        
+        if (!etudiants || etudiants.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Aucun étudiant trouvé'
+            });
+        }
+        
+        if (fileType.toLowerCase() === 'pdf') {
+            let filePath = './templates/templates_fr/template_liste_etudiant_fr.html';
+            
+            if (langue === 'en') {
+                filePath = './templates/templates_en/template_liste_etudiant_en.html';
+            }
+            
+            const htmlContent = await fillTemplate(
+                departement, 
+                section, 
+                cycle, 
+                niveau, 
+                etudiants, 
+                filePath, 
+                annee
+            );
+            
+            if (!htmlContent || htmlContent.trim() === '') {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Erreur lors de la génération du contenu HTML'
+                });
+            }
+            
+            await generatePDFAndSendToBrowser(htmlContent, res, 'landscape');
+        } else {
+            await exportToExcel(etudiants, langue, res, section, cycle, niveau);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la génération de la liste:', error);
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                message: 'Erreur lors de la génération de la liste',
+                error: error.message
+            });
+        }
     }
-}
-
+};
 const exportToExcel = async (etudiants, langue, res,section, cycle, niveau ) => {
     if (etudiants) {
         // Créer un nouveau classeur Excel
@@ -928,41 +962,75 @@ const exportToExcel = async (etudiants, langue, res,section, cycle, niveau ) => 
     }
 };
 
-async function fillTemplate (departement, section, cycle, niveau, etudiants, filePath, annee) {
+async function fillTemplate(departement, section, cycle, niveau, etudiants, filePath, annee) {
     try {
+        console.log('=== Début fillTemplate ===');
+        console.log('FilePath:', filePath);
+        console.log('Nombre étudiants:', etudiants?.length);
+        
         const htmlString = await loadHTML(filePath);
-        const $ = cheerio.load(htmlString); // Charger le template HTML avec cheerio
+        
+        if (!htmlString || htmlString.trim() === '') {
+            throw new Error('Le template HTML est vide');
+        }
+        
+        const $ = cheerio.load(htmlString);
         const body = $('body');
-        body.find('#division-fr').text(departement.libelleFr);
-        body.find('#division-en').text(departement.libelleEn);
-        body.find('#section-fr').text(section.libelleFr);
-        body.find('#section-en').text(section.libelleEn);
-        body.find('#cycle-niveau').text(cycle.code+""+niveau.code);
+        
+        // Remplir les informations de base
+        body.find('#division-fr').text(departement?.libelleFr || '');
+        body.find('#division-en').text(departement?.libelleEn || '');
+        body.find('#section-fr').text(section?.libelleFr || '');
+        body.find('#section-en').text(section?.libelleEn || '');
+        body.find('#cycle-niveau').text((cycle?.code || '') + (niveau?.code || ''));
         body.find('#annee').text(formatYear(parseInt(annee)));
-        const userTable = $('#table-etudiant');
-        const rowTemplate = $('.row_template');
+        
+        // Trouver le tbody
+        const userTableBody = $('#table-etudiant tbody');
+        
+        // Vider complètement le tbody
+        userTableBody.empty();
+        
+        console.log('Tbody vidé');
+        
+        // Créer les lignes pour chaque étudiant
         let i = 1;
         for (const etudiant of etudiants) {
-            const clonedRow = rowTemplate.clone();
-            clonedRow.find('#num').text(i);
-            clonedRow.find('#matricule').text(etudiant.matricule!=null?etudiant.matricule:"");
-            clonedRow.find('#nom').text(etudiant.nom);
-            clonedRow.find('#prenom').text(etudiant.prenom);
-            clonedRow.find('#genre').text(etudiant.genre);
-            clonedRow.find('#e-mail').text(etudiant.email);
-            clonedRow.find('#date-naiss').text(etudiant.date_naiss!=null?formatDateFr(etudiant.date_naiss):"");
-            clonedRow.find('#lieu-naiss').text(etudiant.lieu_naiss!=null?etudiant.lieu_naiss:"");
-            userTable.append(clonedRow);
+            const row = `
+                <tr>
+                    <td class="num">${i}</td>
+                    <td>${etudiant.matricule || ''}</td>
+                    <td>${etudiant.nom || ''}</td>
+                    <td>${etudiant.prenom || ''}</td>
+                    <td>${etudiant.genre || ''}</td>
+                    <td>${etudiant.email || ''}</td>
+                    <td>${etudiant.date_naiss ? formatDateFr(etudiant.date_naiss) : ''}</td>
+                    <td>${etudiant.lieu_naiss || ''}</td>
+                </tr>
+            `;
+            
+            userTableBody.append(row);
+            
+            console.log(`Étudiant ${i} ajouté: ${etudiant.nom} ${etudiant.prenom}`);
             i++;
         }
-        rowTemplate.first().remove();
-
-        return $.html(); // Récupérer le HTML mis à jour
+        
+        const finalHtml = $.html();
+        console.log('HTML généré, longueur:', finalHtml.length);
+        console.log('Nombre de lignes dans le tbody:', userTableBody.find('tr').length);
+        
+        // Debug: afficher un extrait du tbody généré
+        const tbodyHtml = userTableBody.html();
+        console.log('Extrait tbody (premiers 500 chars):', tbodyHtml?.substring(0, 500));
+        
+        console.log('=== Fin fillTemplate ===');
+        
+        return finalHtml;
     } catch (error) {
-        console.error('Erreur lors du remplissage du template :', error);
-        return '';
+        console.error('Erreur dans fillTemplate:', error);
+        throw error;
     }
-};
+}
 
 async function lireDonneesFichierCSV(niveau, fichier) {
     

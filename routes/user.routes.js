@@ -26,7 +26,7 @@ router.get("/getNbAbsencesParSection", getNbAbsencesParSection);
 router.get("/getEtudiantsByLevelAndYear/:niveauId", getEtudiantsByLevelAndYear);
 router.get("/searchEtudiant/:searchString/:limit", searchEtudiant);
 router.get("/getAllEtudiantsByLevelAndYear/:niveauId", getAllEtudiantsByLevelAndYear);
-router.get("/generateListEtudiant/:annee", generateListEtudiant);
+router.post("/generateListEtudiant/:annee", generateListEtudiant);
 
 router.get("/getEnseignantsByFilter", getEnseignantsByFilter);
 router.get("/searchEnseignant/:searchString/:limit", searchEnseignant);
