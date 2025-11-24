@@ -3,6 +3,8 @@ import { message } from '../configs/message.js';
 import { create } from 'html-pdf';
 import { readFile } from 'fs';
 import puppeteer from 'puppeteer';
+import fs from "fs";
+import path from "path";
 
 
 
@@ -142,27 +144,55 @@ export function loadHTML(filePath) {
 }
 
 // Dans votre fichier fonctions.js
-
-export const generatePDFAndSendToBrowser = async (htmlContent, res, orientation = 'portrait') => {
+export const generatePDFAndSendToBrowser = async (htmlContent, res, orientation = "portrait") => {
     let browser = null;
-    
+
     try {
-        console.log('=== Début génération PDF ===');
-        console.log('Longueur HTML:', htmlContent?.length);
-        console.log('Orientation:', orientation);
-        
-        // Vérifier que le contenu HTML est valide
-        if (!htmlContent || htmlContent.trim() === '') {
-            throw new Error('Le contenu HTML est vide');
+        console.log("=== Début génération PDF ===");
+        console.log("Longueur HTML:", htmlContent?.length);
+        console.log("Orientation:", orientation);
+        console.log("NODE_ENV =", process.env.NODE_ENV);
+
+        if (!htmlContent || htmlContent.trim() === "") {
+            throw new Error("Le contenu HTML est vide");
         }
 
-        // Vérifier que res est valide
         if (!res || res.headersSent) {
-            throw new Error('La réponse a déjà été envoyée ou est invalide');
+            throw new Error("La réponse est invalide ou déjà envoyée");
         }
 
+        // ================================
+        // 🔥 Détection du chemin Chrome
+        // ================================
+        let executablePath = null;
+
+        if (process.env.NODE_ENV === "production") {
+            const chromeDir = process.env.PUPPETEER_CACHE_DIR;
+            executablePath = path.join(
+                chromeDir,
+                "chrome",
+                "linux-ubuntu-22.04",
+                "chrome-linux",
+                "chrome"
+            );
+
+            console.log("Chemin Chrome attendu :", executablePath);
+
+            // Vérification que le fichier existe vraiment
+            if (!fs.existsSync(executablePath)) {
+                console.error("❌ Chrome introuvable à :", executablePath);
+                throw new Error("Chrome n’est pas installé dans PUPPETEER_CACHE_DIR");
+            }
+
+            console.log("✅ Chrome trouvé !");
+        } 
+
+        // ================================
+        // 🔥 Lancement du navigateur
+        // ================================
         browser = await puppeteer.launch({
             headless: true,
+            executablePath, // auto null si dev
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -173,97 +203,70 @@ export const generatePDFAndSendToBrowser = async (htmlContent, res, orientation 
                 "--disable-extensions"
             ]
         });
-        
-        console.log('Navigateur lancé');
-        
+
+        console.log("Navigateur lancé");
+
         const page = await browser.newPage();
-        
-        // Définir le viewport pour assurer un rendu cohérent
+
         await page.setViewport({
             width: 1200,
             height: 800,
             deviceScaleFactor: 1
         });
-        
-        console.log('Page créée');
-        
-        // Définir le contenu avec un timeout
+
         await page.setContent(htmlContent, {
-            waitUntil: ['load', 'domcontentloaded', 'networkidle0'],
+            waitUntil: ["load", "networkidle0"],
             timeout: 30000
         });
-        
-        console.log('Contenu chargé');
-        
-        // Attendre que les polices soient chargées
-        await page.evaluateHandle('document.fonts.ready');
-        
-        console.log('Polices chargées');
-        
-        // Générer le PDF avec des options strictes
+
+        await page.evaluateHandle("document.fonts.ready");
+
+        console.log("HTML + Polices chargés");
+
         const pdf = await page.pdf({
-            format: 'A4',
-            landscape: orientation === 'landscape',
+            format: "A4",
+            landscape: orientation === "landscape",
             printBackground: true,
             margin: {
-                top: '20px',
-                right: '20px',
-                bottom: '20px',
-                left: '20px'
-            },
-            preferCSSPageSize: false,
-            displayHeaderFooter: false
+                top: "20px",
+                right: "20px",
+                bottom: "20px",
+                left: "20px"
+            }
         });
-        
-        console.log('PDF généré, taille:', pdf.length, 'bytes');
-        
-        // Fermer le navigateur
+
+        console.log("PDF généré :", pdf.length, "bytes");
+
         await browser.close();
         browser = null;
-        
-        console.log('Navigateur fermé');
-        
-        // Vérifier que le PDF n'est pas vide
-        if (!pdf || pdf.length === 0) {
-            throw new Error('Le PDF généré est vide');
-        }
-        
-        // Définir les headers et envoyer le PDF
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Length', pdf.length.toString());
-        res.setHeader('Content-Disposition', 'attachment; filename=liste_etudiants.pdf');
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        
-        res.end(pdf, 'binary');
-        
-        console.log('=== PDF envoyé avec succès ===');
-        
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Length", pdf.length.toString());
+        res.setHeader("Content-Disposition", "attachment; filename=liste_etudiants.pdf");
+
+        res.end(pdf, "binary");
+
+        console.log("=== PDF envoyé avec succès ===");
+
     } catch (error) {
-        console.error('=== ERREUR lors de la génération du PDF ===');
-        console.error('Message:', error.message);
-        console.error('Stack:', error.stack);
-        
-        // Fermer le navigateur si encore ouvert
+        console.error("=== ERREUR PDF ===", error.message);
+
         if (browser) {
             try {
                 await browser.close();
-            } catch (closeError) {
-                console.error('Erreur lors de la fermeture du navigateur:', closeError);
-            }
+            } catch {}
         }
-        
-        // Vérifier si les headers n'ont pas encore été envoyés
+
         if (!res.headersSent) {
             res.status(500).json({
                 success: false,
-                message: 'Erreur lors de la génération du PDF',
+                message: "Erreur lors de la génération du PDF",
                 error: error.message
             });
         }
     }
 };
+
 
 export function nbTotalAbsences(listeAbsences) {
     // Vérifier si la liste d'absences est vide
