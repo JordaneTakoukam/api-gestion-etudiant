@@ -140,34 +140,47 @@ export function loadHTML(filePath) {
     });
 }
 
-export function generatePDFAndSendToBrowser(htmlContent, res, orientation) {
-    const options = {
-        format: 'A4', // Format de page
-        border: {
-            top: '10mm',    // Marge supérieure
-            right: '10mm',  // Marge droite
-            bottom: '10mm', // Marge inférieure
-            left: '10mm'    // Marge gauche
-        },
-        orientation: orientation // Par défaut, portrait
-    };
-    create(htmlContent, options).toStream((err, stream) => {
-        if (err) {
-            console.error('Erreur lors de la génération du PDF :', err);
-            res.status(500).json({
-                success: false,
-                message: 'Erreur lors de la génération du PDF'
-            });
-        } else {
-            res.set({
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': 'attachment; filename=evenements.pdf' // Nom du fichier PDF
-            });
-            stream.pipe(res);
+// Dans votre fichier fonctions.js
+
+export const generatePDFAndSendToBrowser = async (htmlContent, res, orientation = 'portrait') => {
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--font-render-hinting=none' // Important pour le rendu des polices
+        ]
+    });
+    
+    const page = await browser.newPage();
+    
+    await page.setContent(htmlContent, {
+        waitUntil: ['load', 'networkidle0'] // Attendre que toutes les ressources soient chargées
+    });
+    
+    // Attendre explicitement que les polices soient chargées
+    await page.evaluateHandle('document.fonts.ready');
+    
+    const pdf = await page.pdf({
+        format: 'A4',
+        landscape: orientation === 'landscape',
+        printBackground: true,
+        margin: {
+            top: '20px',
+            right: '20px',
+            bottom: '20px',
+            left: '20px'
         }
     });
     
-}
+    await browser.close();
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename=document.pdf');
+    res.send(pdf);
+};
 
 export function nbTotalAbsences(listeAbsences) {
     // Vérifier si la liste d'absences est vide
