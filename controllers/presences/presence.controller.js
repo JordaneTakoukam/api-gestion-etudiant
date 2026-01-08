@@ -149,7 +149,8 @@ export const createPresence = [
 
         // Vérification si le jour envoyé correspond au jour actuel
         const currentDay = new Date().getDay(); // 0=Dimanche, 1=Lundi, ..., 6=Samedi
-        if (jour !== currentDay) {
+       
+        if (jour.toString() !== currentDay.toString()) {
             return res.status(400).json({
                 success: false,
                 message: message.jour_non_correspondant,
@@ -171,7 +172,7 @@ export const createPresence = [
 
         // Rechercher une présence existante pour cet utilisateur, matière, niveau, année, semestre, jour, dans la plage de la journée actuelle
         const presenceExistante = await Presence.findOne({
-            utilisateur: utilisateur._id,
+            utilisateur: utilisateur,
             matiere: matiere,
             niveau,
             annee,
@@ -181,7 +182,7 @@ export const createPresence = [
         });
 
 
-
+        
         if (!presenceExistante) {
             // Marquer la présence au début du cours : 5 minutes avant et jusqu'à 15 minutes après le début du cours
             const startBuffer = startCourseTime.clone().subtract(5, 'minutes');
@@ -193,10 +194,10 @@ export const createPresence = [
                     message: message.horaire_non_conforme,
                 });
             }
-
+            
             // Si pas de présence, marquer la présence au début du cours
             const nouvellePresence = new Presence({
-                utilisateur: utilisateur._id,
+                utilisateur: utilisateur,
                 matiere: matiere,
                 niveau,
                 jour,

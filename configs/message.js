@@ -170,8 +170,8 @@ const message = {
         en:"Attendance already confirmed for this class."
     },
     horaire_non_conforme:{
-        fr:"Vous ne pouvez marquer votre présence qu'entre 5 minutes avant et 5 minutes après l'horaire du cours.",
-        en:"You can only mark your attendance between 5 minutes before and 5 minutes after the scheduled class time."
+        fr:"Vous ne pouvez marquer votre présence qu'entre 5 minutes avant et 15 minutes après l'horaire du cours.",
+        en:"You can only mark your attendance between 5 minutes before and 15 minutes after the scheduled class time."
     },
     identifiant_invalide: {
         fr: "L'identifiant est invalide",
