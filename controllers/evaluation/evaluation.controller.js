@@ -26,7 +26,8 @@ export const createEvaluation = async (req, res) => {
         dateEpreuve,
         dateLimiteSaisie,
         noteMax,
-        noteMin
+        noteMin,
+        creePar
     } = req.body;
 
     try {
@@ -92,7 +93,7 @@ export const createEvaluation = async (req, res) => {
             dateLimiteSaisie,
             noteMax: noteMax || 20,
             noteMin: noteMin || 0,
-            creePar: req.user._id, // Supposant que l'utilisateur est dans req.user
+            creePar: creePar, // Supposant que l'utilisateur est dans req.user
             statut: 'BROUILLON'
         });
 
