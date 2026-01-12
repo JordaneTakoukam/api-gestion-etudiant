@@ -10,7 +10,7 @@ import {
  * Créer ou mettre à jour un coefficient de matière
  */
 export const setCoefficient = async (req, res) => {
-    const { matiere, niveau, annee, semestre, coefficient } = req.body;
+    const { matiere, niveau, annee, semestre, coefficient, modifiePar } = req.body;
 
     try {
         // Vérifications
@@ -62,7 +62,7 @@ export const setCoefficient = async (req, res) => {
             // Mise à jour
             coefficientMatiere.coefficient = coefficient;
             coefficientMatiere.dateModification = new Date();
-            coefficientMatiere.modifiePar = req.user._id;
+            coefficientMatiere.modifiePar = modifiePar;
             await coefficientMatiere.save();
 
             return res.status(200).json({
@@ -78,7 +78,7 @@ export const setCoefficient = async (req, res) => {
                 annee,
                 semestre,
                 coefficient,
-                modifiePar: req.user._id
+                modifiePar: modifiePar
             });
 
             await coefficientMatiere.save();
@@ -128,7 +128,6 @@ export const getCoefficient = async (req, res) => {
             semestre: parseInt(semestre)
         })
             .populate('matiere', 'libelleFr libelleEn')
-            .populate('niveau');
 
         if (!coefficient) {
             return res.status(404).json({
@@ -158,6 +157,7 @@ export const getCoefficientsByNiveau = async (req, res) => {
     const { niveauId } = req.params;
     const { annee, semestre, page = 1, pageSize = 50 } = req.query;
 
+
     try {
         if (!mongoose.Types.ObjectId.isValid(niveauId)) {
             return res.status(400).json({
@@ -174,7 +174,6 @@ export const getCoefficientsByNiveau = async (req, res) => {
 
         const coefficients = await CoefficientMatiere.find(filter)
             .populate('matiere', 'libelleFr libelleEn code')
-            .populate('niveau')
             .populate('modifiePar', 'nom prenom')
             .sort({ 'matiere.libelleFr': 1 })
             .skip(skip)

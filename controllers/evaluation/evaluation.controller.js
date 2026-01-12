@@ -190,7 +190,7 @@ export const getEvaluationsByNiveau = async (req, res) => {
         const skip = (page - 1) * pageSize;
 
         const evaluations = await Evaluation.find(filter)
-            .populate('niveau')
+            // .populate('niveau')
             .populate('matieres.matiere')
             .populate('creePar', 'nom prenom email')
             .sort({ dateCreation: -1 })

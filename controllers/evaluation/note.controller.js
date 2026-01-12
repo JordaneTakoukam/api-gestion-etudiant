@@ -11,21 +11,25 @@ import mongoose from 'mongoose';
  */
 export const saisirNote = async (req, res) => {
     const {
-        evaluationId,
-        matiereId,
-        numeroAnonymat,
+        evaluation,
+        matiere,
+        anonymat,
         note,
         appreciationFr,
         appreciationEn,
         absent,
         fraude,
         detailsFraude,
-        copieBlanche
+        copieBlanche,
+        saisiePar,
+        modifiePar
     } = req.body;
-
+    console.log("evaluationId ", evaluation)
+    console.log("matiereId ", matiere)
+    console.log("anonymatId ", anonymat)
     try {
         // Vérifications des champs obligatoires
-        if (!evaluationId || !matiereId || !numeroAnonymat) {
+        if (!evaluation || !matiere || !anonymat) {
             return res.status(400).json({
                 success: false,
                 message: message.champ_obligatoire
@@ -41,8 +45,8 @@ export const saisirNote = async (req, res) => {
         }
 
         // Vérifier la validité des IDs
-        if (!mongoose.Types.ObjectId.isValid(evaluationId) || 
-            !mongoose.Types.ObjectId.isValid(matiereId)) {
+        if (!mongoose.Types.ObjectId.isValid(evaluation) || 
+            !mongoose.Types.ObjectId.isValid(matiere)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide
@@ -50,8 +54,8 @@ export const saisirNote = async (req, res) => {
         }
 
         // Récupérer l'évaluation
-        const evaluation = await Evaluation.findById(evaluationId);
-        if (!evaluation) {
+        const eva = await Evaluation.findById(evaluation);
+        if (!eva) {
             return res.status(404).json({
                 success: false,
                 message: "Évaluation non trouvée"
@@ -59,7 +63,7 @@ export const saisirNote = async (req, res) => {
         }
 
         // Vérifier que l'évaluation n'est pas verrouillée
-        if (evaluation.notesVerrouillees) {
+        if (eva.notesVerrouillees) {
             return res.status(403).json({
                 success: false,
                 message: "Les notes de cette évaluation sont verrouillées"
@@ -67,8 +71,8 @@ export const saisirNote = async (req, res) => {
         }
 
         // Vérifier que la matière fait partie de l'évaluation
-        const matiereExiste = evaluation.matieres.some(
-            m => m.matiere.toString() === matiereId
+        const matiereExiste = eva.matieres.some(
+            m => m.matiere.toString() === matiere
         );
         if (!matiereExiste) {
             return res.status(400).json({
@@ -78,12 +82,12 @@ export const saisirNote = async (req, res) => {
         }
 
         // Vérifier l'anonymat
-        const anonymat = await Anonymat.findOne({
-            numeroAnonymat,
-            evaluation: evaluationId
+        const ano = await Anonymat.findOne({
+            numeroAnonymat:anonymat,
+            evaluation: evaluation
         });
 
-        if (!anonymat) {
+        if (!ano) {
             return res.status(404).json({
                 success: false,
                 message: "Numéro d'anonymat invalide ou inexistant pour cette évaluation",
@@ -91,27 +95,27 @@ export const saisirNote = async (req, res) => {
             });
         }
 
-        if (anonymat.invalide) {
+        if (ano.invalide) {
             return res.status(400).json({
                 success: false,
                 message: "Cet anonymat a été invalidé",
-                raison: anonymat.raisonInvalidation
+                raison: ano.raisonInvalidation
             });
         }
 
         // Vérifier que la note est dans les limites
-        if (!absent && (note < evaluation.noteMin || note > evaluation.noteMax)) {
+        if (!absent && (note < eva.noteMin || note > eva.noteMax)) {
             return res.status(400).json({
                 success: false,
-                message: `La note doit être comprise entre ${evaluation.noteMin} et ${evaluation.noteMax}`
+                message: `La note doit être comprise entre ${eva.noteMin} et ${eva.noteMax}`
             });
         }
 
         // Vérifier si une note existe déjà pour cet anonymat et cette matière
         const noteExistante = await Note.findOne({
-            evaluation: evaluationId,
-            matiere: matiereId,
-            anonymat: anonymat._id
+            evaluation: evaluation,
+            matiere: matiere,
+            anonymat: ano._id
         });
 
         let noteSauvegardee;
@@ -128,13 +132,13 @@ export const saisirNote = async (req, res) => {
             noteExistante.detailsFraude = detailsFraude;
             noteExistante.copieBlanche = copieBlanche || false;
             noteExistante.dateModification = new Date();
-            noteExistante.modifiePar = req.user._id;
+            noteExistante.modifiePar = modifiePar;
 
             // Ajouter à l'historique
             noteExistante.historique.push({
                 ancienneNote,
                 nouvelleNote: absent ? 0 : note,
-                modifiePar: req.user._id,
+                modifiePar: modifiePar,
                 dateModification: new Date(),
                 raison: "Modification par l'enseignant"
             });
@@ -143,14 +147,14 @@ export const saisirNote = async (req, res) => {
         } else {
             // Création d'une nouvelle note
             const nouvelleNote = new Note({
-                evaluation: evaluationId,
-                matiere: matiereId,
-                anonymat: anonymat._id,
+                evaluation: evaluation,
+                matiere: matiere,
+                anonymat: ano._id,
                 note: absent ? 0 : note,
                 noteMax: evaluation.noteMax,
                 appreciationFr,
                 appreciationEn,
-                saisiePar: req.user._id,
+                saisiePar: saisiePar,
                 absent: absent || false,
                 fraude: fraude || false,
                 detailsFraude,
@@ -161,9 +165,9 @@ export const saisirNote = async (req, res) => {
             noteSauvegardee = await nouvelleNote.save();
 
             // Marquer l'anonymat comme utilisé
-            anonymat.utilise = true;
-            anonymat.statut = 'UTILISE';
-            await anonymat.save();
+            ano.utilise = true;
+            ano.statut = 'UTILISE';
+            await ano.save();
         }
 
         res.status(201).json({

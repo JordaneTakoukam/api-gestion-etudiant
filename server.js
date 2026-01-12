@@ -54,6 +54,10 @@ import roleRoutes from "./routes/settings/role.routes.js";
 import abscenceRoutes from "./routes/absence.routes.js";
 import notificationRoutes from "./routes/notification.route.js";
 import evaluationRoutes from "./routes/evaluation.route.js";
+import coefficientRoutes from "./routes/coefficient.route.js";
+import noteRoutes from "./routes/note.route.js";
+import semestreEvaluationRoutes from "./routes/semestre.route.js";
+import anonymatRoutes from "./routes/anonymat.route.js";
 
 
 
@@ -132,6 +136,10 @@ app.use("/api/v1/setting/semestre", semestreRoutes);
 app.use("/api/v1/setting/taux-horaire", tauxHoraireRoutes);
 app.use("/api/v1/setting/role", roleRoutes);
 app.use("/api/v1/evaluation", evaluationRoutes)
+app.use("/api/v1/coefficient", coefficientRoutes)
+app.use("/api/v1/anonymat", anonymatRoutes)
+app.use("/api/v1/note", noteRoutes)
+app.use("/api/v1/semestre", semestreEvaluationRoutes)
 
 // new
 app.use("/api/v1/absence", abscenceRoutes);
