@@ -25,7 +25,7 @@ export const genererAnonymats = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -33,7 +33,7 @@ export const genererAnonymats = async (req, res) => {
         if (evaluation.anonymatsGeneres) {
             return res.status(400).json({
                 success: false,
-                message: "Les anonymats ont déjà été générés pour cette évaluation"
+                message: message.anonymats_deja_generes
             });
         }
 
@@ -47,7 +47,7 @@ export const genererAnonymats = async (req, res) => {
         if (etudiants.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: "Aucun étudiant trouvé pour ce niveau et cette année"
+                message: message.etudiant_non_trouvee
             });
         }
 
@@ -76,7 +76,7 @@ export const genererAnonymats = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: `${anonymatsGeneres.length} anonymats générés avec succès`,
+            message: `${anonymatsGeneres.length} ${message.anonymats_generes_succes}`,
             data: {
                 nombreAnonymats: anonymatsGeneres.length,
                 evaluationId: evaluation._id
@@ -214,7 +214,7 @@ export const verifierAnonymat = async (req, res) => {
         if (!anonymat) {
             return res.status(404).json({
                 success: false,
-                message: "Numéro d'anonymat invalide ou inexistant",
+                message: message.anonymat_invalide_inexistant,
                 valide: false
             });
         }
@@ -222,7 +222,7 @@ export const verifierAnonymat = async (req, res) => {
         if (anonymat.invalide) {
             return res.status(400).json({
                 success: false,
-                message: "Cet anonymat a été invalidé",
+                message: message.anonymat_invalider,
                 valide: false,
                 raison: anonymat.raisonInvalidation
             });
@@ -230,7 +230,7 @@ export const verifierAnonymat = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Anonymat valide",
+            message: message.anonymat_valide,
             valide: true,
             data: {
                 numeroAnonymat: anonymat.numeroAnonymat,
@@ -266,7 +266,7 @@ export const invaliderAnonymat = async (req, res) => {
         if (!anonymat) {
             return res.status(404).json({
                 success: false,
-                message: "Anonymat non trouvé"
+                message: message.anonymat_non_trouve
             });
         }
 
@@ -280,7 +280,7 @@ export const invaliderAnonymat = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Anonymat invalidé avec succès",
+            message: message.anonymat_invalide_succes,
             data: anonymat
         });
     } catch (error) {
@@ -315,7 +315,7 @@ export const getMonAnonymat = async (req, res) => {
         if (!anonymat) {
             return res.status(404).json({
                 success: false,
-                message: "Anonymat non trouvé pour cette évaluation"
+                message: message.anonymat_non_trouve
             });
         }
 

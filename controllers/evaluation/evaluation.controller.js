@@ -74,7 +74,7 @@ export const createEvaluation = async (req, res) => {
             if (!mat.coefficient || mat.coefficient <= 0) {
                 return res.status(400).json({
                     success: false,
-                    message: "Coefficient invalide pour une des matières"
+                    message: message.coeff_invalide
                 });
             }
         }
@@ -135,7 +135,7 @@ export const updateEvaluation = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -143,7 +143,7 @@ export const updateEvaluation = async (req, res) => {
         if (evaluation.notesVerrouillees) {
             return res.status(403).json({
                 success: false,
-                message: "Impossible de modifier une évaluation dont les notes sont verrouillées"
+                message: message.modification_note_impossible
             });
         }
 
@@ -237,7 +237,7 @@ export const deleteEvaluation = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -245,7 +245,7 @@ export const deleteEvaluation = async (req, res) => {
         if (evaluation.statut !== 'BROUILLON') {
             return res.status(403).json({
                 success: false,
-                message: "Impossible de supprimer une évaluation qui n'est pas en brouillon"
+                message: message.suppression_eval_impossible
             });
         }
 
@@ -283,7 +283,7 @@ export const changerStatutEvaluation = async (req, res) => {
         if (!statutsValides.includes(statut)) {
             return res.status(400).json({
                 success: false,
-                message: "Statut invalide"
+                message: message.statut_invalide
             });
         }
 
@@ -296,13 +296,13 @@ export const changerStatutEvaluation = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
         res.status(200).json({
             success: true,
-            message: "Statut mis à jour avec succès",
+            message: message.mis_a_jour,
             data: evaluation
         });
     } catch (error) {

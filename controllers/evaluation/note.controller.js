@@ -38,7 +38,7 @@ export const saisirNote = async (req, res) => {
         if (!absent && (note === undefined || note === null)) {
             return res.status(400).json({
                 success: false,
-                message: "La note est obligatoire si l'étudiant n'est pas absent"
+                message: message.note_obligatoire_absent
             });
         }
 
@@ -56,7 +56,7 @@ export const saisirNote = async (req, res) => {
         if (!eva) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -64,7 +64,7 @@ export const saisirNote = async (req, res) => {
         if (eva.notesVerrouillees) {
             return res.status(403).json({
                 success: false,
-                message: "Les notes de cette évaluation sont verrouillées"
+                message: message.notes_evaluation_verrouillees
             });
         }
 
@@ -75,7 +75,7 @@ export const saisirNote = async (req, res) => {
         if (!matiereExiste) {
             return res.status(400).json({
                 success: false,
-                message: "Cette matière ne fait pas partie de l'évaluation"
+                message: message.matiere_non_evaluation
             });
         }
 
@@ -88,7 +88,7 @@ export const saisirNote = async (req, res) => {
         if (!ano) {
             return res.status(404).json({
                 success: false,
-                message: "Numéro d'anonymat invalide ou inexistant pour cette évaluation",
+                message: message.anonymat_invalide_inexistant,
                 valide: false
             });
         }
@@ -96,7 +96,7 @@ export const saisirNote = async (req, res) => {
         if (ano.invalide) {
             return res.status(400).json({
                 success: false,
-                message: "Cet anonymat a été invalidé",
+                message: message.anonymat_invalider,
                 raison: ano.raisonInvalidation
             });
         }
@@ -105,7 +105,7 @@ export const saisirNote = async (req, res) => {
         if (!absent && (note < eva.noteMin || note > eva.noteMax)) {
             return res.status(400).json({
                 success: false,
-                message: `La note doit être comprise entre ${eva.noteMin} et ${eva.noteMax}`
+                message: `${message.note_comprise} ${eva.noteMin} - ${eva.noteMax}`
             });
         }
 
@@ -157,7 +157,7 @@ export const saisirNote = async (req, res) => {
                 fraude: fraude || false,
                 detailsFraude,
                 copieBlanche: copieBlanche || false,
-                statut: 'SAISIE'
+                statut: 'VALIDEE'
             });
 
             noteSauvegardee = await nouvelleNote.save();
@@ -170,7 +170,7 @@ export const saisirNote = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: noteExistante ? "Note mise à jour avec succès" : "Note saisie avec succès",
+            message: noteExistante ? message.mis_a_jour : message.ajouter_avec_success,
             data: noteSauvegardee
         });
     } catch (error) {
@@ -264,7 +264,7 @@ export const delibererEvaluation = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -283,7 +283,7 @@ export const delibererEvaluation = async (req, res) => {
         if (notes.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: "Aucune note à délibérer"
+                message: message.aucune_note_a_deliberer
             });
         }
 
@@ -309,7 +309,7 @@ export const delibererEvaluation = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Délibération effectuée avec succès",
+            message: message.deliberation_effectuee,
             data: {
                 notesRattachees,
                 totalNotes: notes.length
@@ -342,7 +342,7 @@ export const publierResultats = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -363,7 +363,7 @@ export const publierResultats = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Résultats publiés avec succès"
+            message: message.publie_succes
         });
     } catch (error) {
         console.error('Erreur lors de la publication:', error);
@@ -392,14 +392,14 @@ export const verrouillerNotes = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
         if (evaluation.notesVerrouillees) {
             return res.status(400).json({
                 success: false,
-                message: "Les notes sont déjà verrouillées"
+                message: message.notes_deja_verrouillees
             });
         }
 
@@ -422,7 +422,7 @@ export const verrouillerNotes = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Notes verrouillées avec succès"
+            message: message.notes_verrouillees
         });
     } catch (error) {
         console.error('Erreur lors du verrouillage:', error);
@@ -560,7 +560,7 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -568,7 +568,7 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
         if (!['PUBLIEE', 'VERROUILEE', 'DELIBERATION'].includes(evaluation.statut)) {
             return res.status(403).json({
                 success: false,
-                message: "Les résultats ne sont pas encore publiés"
+                message: message.resultats_non_publie
             });
         }
 
@@ -783,7 +783,7 @@ export const getMesResultatsDetailles = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 
@@ -791,7 +791,7 @@ export const getMesResultatsDetailles = async (req, res) => {
         if (!['PUBLIEE', 'VERROUILEE'].includes(evaluation.statut)) {
             return res.status(403).json({
                 success: false,
-                message: "Les résultats ne sont pas encore publiés"
+                message:message.resultats_non_publie
             });
         }
 
@@ -806,7 +806,7 @@ export const getMesResultatsDetailles = async (req, res) => {
         if (notes.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: "Aucune note trouvée pour cette évaluation"
+                message: message.note_non_trouvee
             });
         }
 
@@ -962,7 +962,7 @@ export const exporterResultatsExcel = async (req, res) => {
         if (!evaluation) {
             return res.status(404).json({
                 success: false,
-                message: "Évaluation non trouvée"
+                message: message.evaluation_non_trouvee
             });
         }
 

@@ -29,12 +29,12 @@ export const setCoefficient = async (req, res) => {
             });
         }
 
-        if (coefficient < 0.5 || coefficient > 10) {
-            return res.status(400).json({
-                success: false,
-                message: "Le coefficient doit être compris entre 0.5 et 10"
-            });
-        }
+        // if (coefficient < 0.5 || coefficient > 10) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: "Le coefficient doit être compris entre 0.5 et 10"
+        //     });
+        // }
 
         // Valider que le semestre est autorisé pour ce niveau
         const validation = await validerSemestreNiveauById(niveau, semestre);
@@ -67,7 +67,7 @@ export const setCoefficient = async (req, res) => {
 
             return res.status(200).json({
                 success: true,
-                message: "Coefficient mis à jour avec succès",
+                message: message.mis_a_jour,
                 data: coefficientMatiere
             });
         } else {
@@ -85,7 +85,7 @@ export const setCoefficient = async (req, res) => {
 
             return res.status(201).json({
                 success: true,
-                message: "Coefficient créé avec succès",
+                message: message.ajouter_avec_success,
                 data: coefficientMatiere
             });
         }
@@ -132,7 +132,7 @@ export const getCoefficient = async (req, res) => {
         if (!coefficient) {
             return res.status(404).json({
                 success: false,
-                message: "Coefficient non trouvé",
+                message: message.coef_non_trouve,
                 data: { coefficient: 1 } // Coefficient par défaut
             });
         }
@@ -219,7 +219,7 @@ export const deleteCoefficient = async (req, res) => {
         if (!coefficient) {
             return res.status(404).json({
                 success: false,
-                message: "Coefficient non trouvé"
+                message: message.coef_non_trouve
             });
         }
 
@@ -324,3 +324,53 @@ export const copierCoefficients = async (req, res) => {
         });
     }
 };
+
+/**
+ * Obtenir le coefficient le plus récent d'une matière pour un niveau
+ */
+export const getLatestCoefficient = async (req, res) => {
+    const { matiereId, niveauId } = req.params;
+
+    try {
+        // Validation des IDs
+        if (!mongoose.Types.ObjectId.isValid(matiereId) || 
+            !mongoose.Types.ObjectId.isValid(niveauId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide
+            });
+        }
+
+        // Rechercher le coefficient le plus récent (tri par année DESC, puis semestre DESC)
+        const coefficient = await CoefficientMatiere.findOne({
+            matiere: matiereId,
+            niveau: niveauId
+        })
+            .populate('matiere', 'libelleFr libelleEn code')
+            .populate('modifiePar', 'nom prenom')
+            .sort({ annee: -1, semestre: -1, dateModification: -1 })
+            .limit(1);
+
+        if (!coefficient) {
+            return res.status(404).json({
+                success: false,
+                message: message.coef_non_trouve,
+                data: { 
+                    coefficient: 1 // Coefficient par défaut
+                }
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: coefficient
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération du coefficient le plus récent:', error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur
+        });
+    }
+};
+

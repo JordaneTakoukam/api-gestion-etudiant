@@ -8,7 +8,8 @@ import {
     getCoefficient,
     getCoefficientsByNiveau,
     deleteCoefficient,
-    copierCoefficients
+    copierCoefficients,
+    getLatestCoefficient
 } from "../controllers/evaluation/coefficient.controller.js";
 
 
@@ -24,6 +25,9 @@ const router = express.Router();
  * Rôles: Admin, SuperAdmin
  */
 router.post("/set", setCoefficient);
+
+router.get('/latest/:matiereId/:niveauId', getLatestCoefficient);
+
 
 /**
  * Obtenir tous les coefficients d'un niveau

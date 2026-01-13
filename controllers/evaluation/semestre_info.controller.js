@@ -33,7 +33,7 @@ export const getSemestresByNiveau = async (req, res) => {
         if (!settings || !settings.niveaux) {
             return res.status(404).json({
                 success: false,
-                message: 'Configuration des niveaux non trouvée'
+                message: message.config_niveau_non_trouvee
             });
         }
 
@@ -42,7 +42,7 @@ export const getSemestresByNiveau = async (req, res) => {
         if (!niveau) {
             return res.status(404).json({
                 success: false,
-                message: 'Niveau non trouvé'
+                message: message.niveau_non_trouve
             });
         }
 
@@ -79,7 +79,7 @@ export const getAllSemestresInfo = async (req, res) => {
         if (!settings || !settings.niveaux) {
             return res.status(404).json({
                 success: false,
-                message: 'Configuration des niveaux non trouvée'
+                message: message.config_niveau_non_trouvee
             });
         }
 
@@ -134,7 +134,7 @@ export const getConfigurationNiveauSemestre = async (req, res) => {
         if (!settings || !settings.niveaux) {
             return res.status(404).json({
                 success: false,
-                message: 'Configuration des niveaux non trouvée'
+                message: message.config_niveau_non_trouvee
             });
         }
 
@@ -195,7 +195,7 @@ export const validerCombinaisonNiveauSemestre = async (req, res) => {
         if (isNaN(semestreNum) || ![1, 2, 3].includes(semestreNum)) {
             return res.status(400).json({
                 success: false,
-                message: 'Le semestre doit être 1, 2 ou 3'
+                message: message.nombre_semestre
             });
         }
 
