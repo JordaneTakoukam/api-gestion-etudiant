@@ -19,6 +19,7 @@ export const createEvaluation = async (req, res) => {
         descriptionFr,
         descriptionEn,
         type,
+        statut,
         niveau,
         annee,
         semestre,
@@ -94,7 +95,7 @@ export const createEvaluation = async (req, res) => {
             noteMax: noteMax || 20,
             noteMin: noteMin || 0,
             creePar: creePar, // Supposant que l'utilisateur est dans req.user
-            statut: 'BROUILLON'
+            statut: statut || 'BROUILLON'
         });
 
         const evaluationSauvegardee = await nouvelleEvaluation.save();

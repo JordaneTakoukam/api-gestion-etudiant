@@ -9,7 +9,10 @@ import {
     publierResultats,
     verrouillerNotes,
     getMesNotes,
-    calculerMoyennesEvaluation
+    calculerMoyennesEvaluation,
+    getResultatsDetaillesEvaluation,
+    getMesResultatsDetailles,
+    exporterResultatsExcel
 } from "../controllers/evaluation/note.controller.js";
 
 
@@ -64,12 +67,18 @@ router.get("/mes-notes/:evaluationId", getMesNotes);
  */
 router.get("/moyennes/:evaluationId", calculerMoyennesEvaluation);
 
+router.get('/resultats/:evaluationId', getResultatsDetaillesEvaluation);
+router.get('/mes-resultats/:evaluationId', getMesResultatsDetailles);
+router.get('/export-excel/:evaluationId', exporterResultatsExcel);
+
 /**
  * Obtenir les notes d'une évaluation pour une matière
  * GET /api/v1/note/:evaluationId/:matiereId
  * Rôles: Enseignant, Admin, SuperAdmin
  */
 router.get("/:evaluationId/:matiereId", getNotesByEvaluationMatiere);
+
+
 
 
 
