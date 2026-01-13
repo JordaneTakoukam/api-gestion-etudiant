@@ -768,9 +768,10 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
  */
 export const getMesResultatsDetailles = async (req, res) => {
     const { evaluationId } = req.params;
-
+    const {etudiantId} = req.query
+    console.log(etudiantId)
     try {
-        if (!mongoose.Types.ObjectId.isValid(evaluationId)) {
+        if (!mongoose.Types.ObjectId.isValid(evaluationId) || !mongoose.Types.ObjectId.isValid(etudiantId)) {
             return res.status(400).json({
                 success: false,
                 message: message.identifiant_invalide
@@ -798,7 +799,7 @@ export const getMesResultatsDetailles = async (req, res) => {
         // Récupérer les notes de l'étudiant
         const notes = await Note.find({
             evaluation: evaluationId,
-            etudiant: req.user._id,
+            etudiant: etudiantId,
             statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
         })
         .populate('matiere', 'libelleFr libelleEn code');
@@ -854,7 +855,7 @@ export const getMesResultatsDetailles = async (req, res) => {
         // Calculer le rang de l'étudiant
         const tousLesResultats = await calculerTousMoyennes(evaluationId);
         const rang = tousLesResultats.findIndex(
-            r => r.etudiantId.toString() === req.user._id.toString()
+            r => r.etudiantId.toString() === etudiantId.toString()
         ) + 1;
 
         const evaluationInfo = {
