@@ -1281,3 +1281,205 @@ export const exporterResultatsExcel = async (req, res) => {
         });
     }
 };
+
+
+/**
+ * NOUVEAU - Saisie rapide de note (validation + enregistrement)
+ * Cette fonction combine la vérification de l'anonymat et l'enregistrement
+ * POST /api/v1/note/saisie-rapide
+ */
+export const saisieRapideNote = async (req, res) => {
+    const {
+        evaluation,
+        matiere,
+        anonymat: numeroAnonymat,
+        note,
+        appreciationFr,
+        appreciationEn,
+        absent,
+        fraude,
+        detailsFraude,
+        copieBlanche,
+        saisiePar,
+        modifiePar
+    } = req.body;
+    
+    try {
+        // Vérifications des champs obligatoires
+        if (!evaluation || !matiere || !numeroAnonymat) {
+            return res.status(400).json({
+                success: false,
+                message: message.champ_obligatoire,
+                code: 'MISSING_FIELDS'
+            });
+        }
+
+        // Vérifier que la note est fournie si l'étudiant n'est pas absent
+        if (!absent && (note === undefined || note === null)) {
+            return res.status(400).json({
+                success: false,
+                message: message.note_obligatoire_absent,
+                code: 'NOTE_REQUIRED'
+            });
+        }
+
+        // Vérifier la validité des IDs
+        if (!mongoose.Types.ObjectId.isValid(evaluation) || 
+            !mongoose.Types.ObjectId.isValid(matiere)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide,
+                code: 'INVALID_ID'
+            });
+        }
+
+        // Récupérer l'évaluation
+        const eva = await Evaluation.findById(evaluation);
+        if (!eva) {
+            return res.status(404).json({
+                success: false,
+                message: message.evaluation_non_trouvee,
+                code: 'EVALUATION_NOT_FOUND'
+            });
+        }
+
+        // Vérifier que l'évaluation n'est pas verrouillée
+        if (eva.notesVerrouillees) {
+            return res.status(403).json({
+                success: false,
+                message: message.notes_evaluation_verrouillees,
+                code: 'LOCKED'
+            });
+        }
+
+        // Vérifier que la matière fait partie de l'évaluation
+        const matiereExiste = eva.matieres.some(
+            m => m.matiere.toString() === matiere
+        );
+        if (!matiereExiste) {
+            return res.status(400).json({
+                success: false,
+                message: message.matiere_non_evaluation,
+                code: 'MATIERE_NOT_IN_EVALUATION'
+            });
+        }
+
+        // VÉRIFICATION DE L'ANONYMAT (intégrée)
+        const ano = await Anonymat.findOne({
+            numeroAnonymat: numeroAnonymat,
+            evaluation: evaluation
+        });
+
+        if (!ano) {
+            return res.status(404).json({
+                success: false,
+                message: message.anonymat_invalide_inexistant,
+                code: 'ANONYMAT_NOT_FOUND',
+                valide: false
+            });
+        }
+
+        if (ano.invalide) {
+            return res.status(400).json({
+                success: false,
+                message: message.anonymat_invalider,
+                code: 'ANONYMAT_INVALID',
+                raison: ano.raisonInvalidation,
+                valide: false
+            });
+        }
+
+        // Vérifier que la note est dans les limites
+        if (!absent && (note < eva.noteMin || note > eva.noteMax)) {
+            return res.status(400).json({
+                success: false,
+                message: {
+                    fr: `La note doit être comprise entre ${eva.noteMin} et ${eva.noteMax}`,
+                    en: `Grade must be between ${eva.noteMin} and ${eva.noteMax}`
+                },
+                code: 'NOTE_OUT_OF_RANGE'
+            });
+        }
+
+        // Vérifier si une note existe déjà pour cet anonymat et cette matière
+        const noteExistante = await Note.findOne({
+            evaluation: evaluation,
+            matiere: matiere,
+            anonymat: ano._id
+        });
+
+        let noteSauvegardee;
+        let isUpdate = false;
+
+        if (noteExistante) {
+            // Mise à jour de la note existante
+            const ancienneNote = noteExistante.note;
+            
+            noteExistante.note = absent ? 0 : note;
+            noteExistante.appreciationFr = appreciationFr;
+            noteExistante.appreciationEn = appreciationEn;
+            noteExistante.absent = absent || false;
+            noteExistante.fraude = fraude || false;
+            noteExistante.detailsFraude = detailsFraude;
+            noteExistante.copieBlanche = copieBlanche || false;
+            noteExistante.dateModification = new Date();
+            noteExistante.modifiePar = modifiePar;
+
+            // Ajouter à l'historique
+            noteExistante.historique.push({
+                ancienneNote,
+                nouvelleNote: absent ? 0 : note,
+                modifiePar: modifiePar,
+                dateModification: new Date(),
+                raison: "Modification par l'enseignant"
+            });
+
+            noteSauvegardee = await noteExistante.save();
+            isUpdate = true;
+        } else {
+            // Création d'une nouvelle note
+            const nouvelleNote = new Note({
+                evaluation: evaluation,
+                matiere: matiere,
+                anonymat: ano._id,
+                note: absent ? 0 : note,
+                noteMax: eva.noteMax,
+                appreciationFr,
+                appreciationEn,
+                saisiePar: saisiePar,
+                absent: absent || false,
+                fraude: fraude || false,
+                detailsFraude,
+                copieBlanche: copieBlanche || false,
+                statut: 'VALIDEE',
+                
+            });
+
+            noteSauvegardee = await nouvelleNote.save();
+
+            // Marquer l'anonymat comme utilisé
+            ano.utilise = true;
+            ano.statut = 'UTILISE';
+            await ano.save();
+        }
+
+        // Peupler les données pour la réponse
+        await noteSauvegardee.populate('anonymat', 'numeroAnonymat statut');
+        await noteSauvegardee.populate('matiere', 'libelleFr libelleEn');
+
+        res.status(201).json({
+            success: true,
+            message: isUpdate ? message.mis_a_jour : message.ajouter_avec_success,
+            code: isUpdate ? 'UPDATED' : 'CREATED',
+            data: noteSauvegardee,
+            valide: true
+        });
+    } catch (error) {
+        console.error('Erreur lors de la saisie rapide de la note:', error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+            code: 'SERVER_ERROR'
+        });
+    }
+};

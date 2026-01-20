@@ -42,6 +42,12 @@ const evaluationSchema = new Schema({
         // Coefficient spécifique pour cette évaluation (récupéré depuis CoefficientMatiere)
         coefficient: { type: Number, required: true }
     }],
+
+    coefficientDiscipline: { 
+        type: Number, 
+        required: true,
+        default: 1
+    },
     
     // Dates
     dateCreation: { type: Date, default: Date.now},

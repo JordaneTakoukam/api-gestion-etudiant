@@ -43,7 +43,7 @@ const noteSchema = new Schema({
     statut: {type: String, enum: ['BROUILLON', 'SAISIE', 'VALIDEE', 'PUBLIEE', 'VERROUILLEE'], default: 'SAISIE'},
     
     // Validation
-    validee: { type: Boolean, default: false},
+    validee: { type: Boolean, default: true},
     
     dateValidation: {type: Date, required: false},
     

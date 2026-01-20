@@ -58,6 +58,8 @@ import coefficientRoutes from "./routes/coefficient.route.js";
 import noteRoutes from "./routes/note.route.js";
 import semestreEvaluationRoutes from "./routes/semestre.route.js";
 import anonymatRoutes from "./routes/anonymat.route.js";
+import coefficientDisciplineRoutes from "./routes/coefficient_discipline.route.js";
+import disciplineRoutes from "./routes/discipline.route.js";
 
 
 
@@ -140,6 +142,8 @@ app.use("/api/v1/coefficient", coefficientRoutes)
 app.use("/api/v1/anonymat", anonymatRoutes)
 app.use("/api/v1/note", noteRoutes)
 app.use("/api/v1/semestre", semestreEvaluationRoutes)
+app.use("/api/v1/coefficient-discipline", coefficientDisciplineRoutes)
+app.use("/api/v1/discipline", disciplineRoutes)
 
 // new
 app.use("/api/v1/absence", abscenceRoutes);
