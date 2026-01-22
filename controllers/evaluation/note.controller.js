@@ -11,6 +11,7 @@ import ejs from 'ejs';
 import puppeteer from 'puppeteer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Pour obtenir __dirname dans ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -1560,7 +1561,11 @@ export const exporterResultatsPDF = async (req, res) => {
     const { evaluationId } = req.params;
     const { section } = req.query;
 
+    let browser = null;
+    let tempFilePath = null;
+
     try {
+
         if (!mongoose.Types.ObjectId.isValid(evaluationId)) {
             return res.status(400).json({
                 success: false,
@@ -1578,6 +1583,7 @@ export const exporterResultatsPDF = async (req, res) => {
                 message: message.evaluation_non_trouvee
             });
         }
+
 
         // Récupérer le coefficient de discipline
         const coefficientDiscipline = await CoefficientDiscipline.findOne({
@@ -1773,6 +1779,14 @@ export const exporterResultatsPDF = async (req, res) => {
         // Charger et rendre le template EJS
         const templatePath = path.join(__dirname, '../../templates/resultats-template.ejs');
         
+        if (!fs.existsSync(templatePath)) {
+            console.error('❌ Template introuvable:', templatePath);
+            return res.status(500).json({
+                success: false,
+                message: 'Template PDF introuvable'
+            });
+        }
+
         const html = await ejs.renderFile(templatePath, {
             evaluation: evaluationInfo,
             resultats: resultatsArray,
@@ -1780,19 +1794,40 @@ export const exporterResultatsPDF = async (req, res) => {
             section: section || 'Non spécifiée'
         });
 
+
+        // Créer un fichier temporaire
+        const tempDir = path.join(__dirname, '../../temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        tempFilePath = path.join(tempDir, `resultats_${evaluationId}_${Date.now()}.pdf`);
+
         // Générer le PDF avec Puppeteer
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
             headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu'
+            ]
         });
 
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        await page.setContent(html, { 
+            waitUntil: 'networkidle0',
+            timeout: 30000 
+        });
 
-        const pdfBuffer = await page.pdf({
+        // Sauvegarder le PDF dans un fichier temporaire
+        await page.pdf({
+            path: tempFilePath,
             format: 'A4',
             landscape: true,
             printBackground: true,
+            preferCSSPageSize: false,
             margin: {
                 top: '10mm',
                 right: '10mm',
@@ -1802,22 +1837,65 @@ export const exporterResultatsPDF = async (req, res) => {
         });
 
         await browser.close();
+        browser = null;
 
-        // Envoyer le PDF
+
+        // Vérifier que le fichier existe et n'est pas vide
+        const stats = fs.statSync(tempFilePath);
+
+        if (stats.size === 0) {
+            throw new Error('Le fichier PDF généré est vide');
+        }
+
+        // Lire le fichier
+        const pdfBuffer = fs.readFileSync(tempFilePath);
+
+        // Définir les en-têtes HTTP
+        const filename = `Resultats_${evaluation.libelleFr.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
+        
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader(
-            'Content-Disposition', 
-            `attachment; filename=Resultats_${evaluation.libelleFr.replace(/\s/g, '_')}_${Date.now()}.pdf`
-        );
+        res.setHeader('Content-Length', pdfBuffer.length);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        // Envoyer le fichier
         res.send(pdfBuffer);
 
+
+        // Supprimer le fichier temporaire après un délai
+        setTimeout(() => {
+            if (tempFilePath && fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+            }
+        }, 5000);
+
     } catch (error) {
-        console.error('Erreur lors de l\'export PDF:', error);
-        res.status(500).json({
-            success: false,
-            message: message.erreurServeur,
-            error: error.message
-        });
+        console.error('❌ Erreur lors de l\'export PDF:', error);
+        
+        // Fermer le navigateur en cas d'erreur
+        if (browser) {
+            try {
+                await browser.close();
+            } catch (closeError) {
+                console.error('Erreur lors de la fermeture du navigateur:', closeError);
+            }
+        }
+
+        // Supprimer le fichier temporaire en cas d'erreur
+        if (tempFilePath && fs.existsSync(tempFilePath)) {
+            try {
+                fs.unlinkSync(tempFilePath);
+            } catch (unlinkError) {
+                console.error('Erreur lors de la suppression du fichier temporaire:', unlinkError);
+            }
+        }
+
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                message: message.erreurServeur,
+                error: error.message
+            });
+        }
     }
 };
 
