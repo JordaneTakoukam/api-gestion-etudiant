@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résultats - <%= evaluation.libelleFr %></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 10px;
+            line-height: 1.3;
+            color: #000;
+            padding: 10mm;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        
+        .header h1 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        
+        .header .info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 8px;
+            font-size: 10px;
+        }
+        
+        .header .info-item strong {
+            margin-right: 3px;
+        }
+        
+        .stats-section {
+            background: #f5f5f5;
+            border: 1px solid #000;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .stats-section h2 {
+            font-size: 10px;
+            margin-bottom: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        
+        .stat-box {
+            background: white;
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        
+        .stat-value {
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 10px;
+        }
+        
+        th {
+            background-color: #e0e0e0;
+            color: #000;
+            padding: 5px 2px;
+            text-align: center;
+            border: 1px solid #000;
+            font-size: 10px;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+        
+        td {
+            border: 1px solid #000;
+            padding: 3px 2px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .matiere-header {
+            max-width: 60px;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.2;
+            padding: 3px 2px;
+        }
+        
+        .rank-1 {
+            background-color: #d0d0d0 !important;
+            font-weight: bold;
+        }
+        
+        .rank-2 {
+            background-color: #e8e8e8 !important;
+            font-weight: bold;
+        }
+        
+        .rank-3 {
+            background-color: #f0f0f0 !important;
+            font-weight: bold;
+        }
+        
+        .note-success {
+            font-weight: bold;
+        }
+        
+        .note-danger {
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        
+        .moyenne-success {
+            background-color: #d0d0d0 !important;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        .moyenne-danger {
+            background-color: #e8e8e8 !important;
+            font-weight: bold;
+            font-size: 10px;
+            text-decoration: underline;
+        }
+        
+        .absent {
+            font-weight: bold;
+        }
+        
+        .discipline-col {
+            background-color: #f5f5f5 !important;
+        }
+        
+        .total-col {
+            background-color: #e8e8e8 !important;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 9px;
+            border-top: 1px solid #000;
+            padding-top: 8px;
+        }
+        
+        .page-break {
+            page-break-after: always;
+        }
+        
+        @media print {
+            body {
+                padding: 5mm;
+            }
+            
+            .page-break {
+                page-break-after: always;
+            }
+            
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+        
+        .signature-section {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+        }
+        
+        .signature-box {
+            width: 45%;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            text-align: center;
+            font-size: 9px;
+        }
+
+        /* Styles spécifiques pour les cellules de notes */
+        .note-cell {
+            min-width: 35px;
+        }
+
+        /* Style pour les en-têtes de colonnes fixes */
+        .fixed-col {
+            background-color: #e8e8e8;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header">
+        <h1><%= evaluation.libelleFr %></h1>
+        <div class="info">
+            <div class="info-item">
+                <strong>Année:</strong> <%= evaluation.annee %>
+            </div>
+            <div class="info-item">
+                <strong>Semestre:</strong> <%= evaluation.semestre %>
+            </div>
+            <div class="info-item">
+                <strong>Classe:</strong> <%= section %>
+            </div>
+            <div class="info-item">
+                <strong>Date d'édition:</strong> <%= new Date().toLocaleDateString('fr-FR') %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <% if (statistiques) { %>
+    <div class="stats-section">
+        <h2>STATISTIQUES DE LA PROMOTION</h2>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">Nombre d'étudiants</div>
+                <div class="stat-value"><%= statistiques.nombreEtudiants %></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Moyenne de classe</div>
+                <div class="stat-value"><%= statistiques.moyenneClasse ? statistiques.moyenneClasse.toFixed(2) : 'N/A' %></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Moyenne Max</div>
+                <div class="stat-value"><%= statistiques.moyenneMax ? statistiques.moyenneMax.toFixed(2) : 'N/A' %></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Moyenne Min</div>
+                <div class="stat-value"><%= statistiques.moyenneMin ? statistiques.moyenneMin.toFixed(2) : 'N/A' %></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Admis</div>
+                <div class="stat-value"><%= statistiques.nombreAdmis %></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Ajournés</div>
+                <div class="stat-value"><%= statistiques.nombreAjournes %></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Taux de réussite</div>
+                <div class="stat-value"><%= statistiques.tauxReussite ? statistiques.tauxReussite.toFixed(2) : 'N/A' %>%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Note sur</div>
+                <div class="stat-value"><%= evaluation.noteMax %></div>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <!-- Tableau des résultats -->
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25px;">Rang</th>
+                <th style="width: 70px;">Matricule</th>
+                <th style="width: 90px;">Nom</th>
+                <th style="width: 90px;">Prénom</th>
+                
+                <!-- Matières avec libellé complet -->
+                <% evaluation.matieres.forEach(function(matiere) { %>
+                    <th class="matiere-header" style="min-width: 60px;">
+                        <%= matiere.libelleFr %>
+                        <br/>
+                        <span style="font-size: 10px;">(Coef <%= matiere.coefficient %>)</span>
+                    </th>
+                <% }); %>
+                
+                <!-- Discipline avec nom complet -->
+                <% if (evaluation.coefficientDiscipline && evaluation.coefficientDiscipline > 0) { %>
+                    <th class="matiere-header discipline-col" style="min-width: 60px;">
+                        Discipline
+                        <br/>
+                        <span style="font-size: 10px;">(Coef <%= evaluation.coefficientDiscipline %>)</span>
+                    </th>
+                <% } %>
+                
+                <!-- Totaux -->
+                <th class="fixed-col" style="width: 45px;">Total<br/>(Note×Coef)</th>
+                <th class="fixed-col" style="width: 35px;">Total<br/>Coef</th>
+                <th class="fixed-col" style="width: 45px;">Moyenne<br/>/20</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% resultats.forEach(function(resultat, index) { %>
+                <tr>
+                    <!-- Rang -->
+                    <td class="<%= resultat.rang === 1 ? 'rank-1' : resultat.rang === 2 ? 'rank-2' : resultat.rang === 3 ? 'rank-3' : '' %>">
+                        <%= resultat.rang || '-' %>
+                    </td>
+                    
+                    <!-- Matricule -->
+                    <td style="font-family: monospace; font-size: 10px;">
+                        <%= resultat.etudiant.matricule || '-' %>
+                    </td>
+                    
+                    <!-- Nom -->
+                    <td style="text-align: left; font-weight: bold; font-size: 10px;">
+                        <%= resultat.etudiant.nom %>
+                    </td>
+                    
+                    <!-- Prénom -->
+                    <td style="text-align: left; font-size: 10px;">
+                        <%= resultat.etudiant.prenom %>
+                    </td>
+                    
+                    <!-- Notes des matières -->
+                    <% evaluation.matieres.forEach(function(matiere) { 
+                        const note = resultat.notesMatieres.find(n => n.matiere._id.toString() === matiere._id.toString());
+                    %>
+                        <td class="note-cell <%= note && !note.absent && note.noteRamenee20 >= 10 ? 'note-success' : note && !note.absent && note.noteRamenee20 < 10 ? 'note-danger' : '' %>">
+                            <% if (note) { %>
+                                <% if (note.absent) { %>
+                                    <span class="absent">ABS</span>
+                                <% } else if (note.fraude) { %>
+                                    <span class="absent">FRD</span>
+                                <% } else { %>
+                                    <%= note.noteRamenee20.toFixed(2) %>
+                                <% } %>
+                            <% } else { %>
+                                -
+                            <% } %>
+                        </td>
+                    <% }); %>
+                    
+                    <!-- Note de discipline -->
+                    <% if (evaluation.coefficientDiscipline && evaluation.coefficientDiscipline > 0) { %>
+                        <td class="note-cell discipline-col <%= resultat.noteDiscipline && resultat.noteDiscipline.noteRamenee20 >= 10 ? 'note-success' : resultat.noteDiscipline && resultat.noteDiscipline.noteRamenee20 < 10 ? 'note-danger' : '' %>">
+                            <%= resultat.noteDiscipline ? resultat.noteDiscipline.noteRamenee20.toFixed(2) : '-' %>
+                        </td>
+                    <% } %>
+                    
+                    <!-- Total points -->
+                    <td class="total-col">
+                        <%= resultat.totalPoints > 0 ? resultat.totalPoints.toFixed(2) : '-' %>
+                    </td>
+                    
+                    <!-- Total coefficients -->
+                    <td class="total-col">
+                        <%= resultat.totalCoefficients > 0 ? resultat.totalCoefficients : '-' %>
+                    </td>
+                    
+                    <!-- Moyenne -->
+                    <td class="<%= resultat.moyenne !== null && resultat.moyenne >= 10 ? 'moyenne-success' : resultat.moyenne !== null ? 'moyenne-danger' : '' %>">
+                        <%= resultat.moyenne !== null ? resultat.moyenne.toFixed(2) : '-' %>
+                    </td>
+                </tr>
+                
+                <!-- Page break every 15 students for better readability with full labels -->
+                <% if ((index + 1) % 15 === 0 && index + 1 < resultats.length) { %>
+                    </tbody>
+                    </table>
+                    <div class="page-break"></div>
+                    
+                    <!-- Repeat header on new page -->
+                    <div class="header">
+                        <h1><%= evaluation.libelleFr %> (suite)</h1>
+                    </div>
+                    <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 25px;">Rang</th>
+                            <th style="width: 70px;">Matricule</th>
+                            <th style="width: 90px;">Nom</th>
+                            <th style="width: 90px;">Prénom</th>
+                            <% evaluation.matieres.forEach(function(matiere) { %>
+                                <th class="matiere-header" style="min-width: 60px;">
+                                    <%= matiere.libelleFr %>
+                                    <br/>
+                                    <span style="font-size: 10px;">(Coef <%= matiere.coefficient %>)</span>
+                                </th>
+                            <% }); %>
+                            <% if (evaluation.coefficientDiscipline && evaluation.coefficientDiscipline > 0) { %>
+                                <th class="matiere-header discipline-col" style="min-width: 60px;">
+                                    Discipline
+                                    <br/>
+                                    <span style="font-size: 10px;">(Coef <%= evaluation.coefficientDiscipline %>)</span>
+                                </th>
+                            <% } %>
+                            <th class="fixed-col" style="width: 45px;">Total<br/>(Note×Coef)</th>
+                            <th class="fixed-col" style="width: 35px;">Total<br/>Coef</th>
+                            <th class="fixed-col" style="width: 45px;">Moyenne<br/>/20</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                <% } %>
+            <% }); %>
+        </tbody>
+    </table>
+
+    <!-- Signatures -->
+    <div class="signature-section">
+        <div class="signature-box">
+            <strong>Le Directeur des Études</strong>
+        </div>
+        <div class="signature-box">
+            <strong>Le Chef d'Établissement</strong>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        Document généré automatiquement le <%= new Date().toLocaleString('fr-FR') %> - 
+        <%= resultats.length %> étudiant<%= resultats.length > 1 ? 's' : '' %>
+    </div>
+</body>
+</html>

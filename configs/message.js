@@ -71,6 +71,11 @@ const message = {
         fr: "Le niveau est manquant!",
         en: "Level is missing!"
     },
+
+    niveau_non_trouve: {
+        fr: "Le niveau non trouvé!",
+        en: "Level not found!"
+    },
     section_invalide: {
         fr: "La section est invalide!",
         en: "Section is invalid!"
@@ -170,8 +175,8 @@ const message = {
         en:"Attendance already confirmed for this class."
     },
     horaire_non_conforme:{
-        fr:"Vous ne pouvez marquer votre présence qu'entre 5 minutes avant et 5 minutes après l'horaire du cours.",
-        en:"You can only mark your attendance between 5 minutes before and 5 minutes after the scheduled class time."
+        fr:"Vous ne pouvez marquer votre présence qu'entre 5 minutes avant et 15 minutes après l'horaire du cours.",
+        en:"You can only mark your attendance between 5 minutes before and 15 minutes after the scheduled class time."
     },
     identifiant_invalide: {
         fr: "L'identifiant est invalide",
@@ -489,7 +494,117 @@ const message = {
     img_det_imp:{
         fr:"Impossible de détecter un visage dans une ou les deux images",
         en:"Unable to detect a face in one or both images"
+    },
+
+    evaluation_non_trouvee: {
+        fr: "Évaluation non trouvée",
+        en: "Evaluation not found"
+    },
+    coeff_invalide: {
+        fr: "Coefficient invalide pour une des matières",
+        en: "Invalid coefficient for one of the subjects"
+    },
+    modification_note_impossible: {
+        fr: "Impossible de modifier une évaluation dont les notes sont verrouillées",
+        en: "Unable to modify an evaluation with locked grades"
+    },
+    suppression_eval_impossible: {
+        fr: "Impossible de supprimer une évaluation qui n'est pas en brouillon",
+        en: "Unable to delete an evaluation that is not in draft status"
+    },
+    statut_invalide: {
+        fr: "Statut invalide",
+        en: "Invalid status"
+    },
+
+    anonymat_non_trouve: {
+        fr: "Anonymat non trouvé",
+        en: "Anonymous ID not found"
+    },
+    anonymats_deja_generes: {
+        fr: "Les anonymats ont déjà été générés pour cette évaluation",
+        en: "Anonymous IDs have already been generated for this evaluation"
+    },
+    anonymats_generes_succes: {
+        fr: "Anonymats générés avec succès",
+        en: "Anonymous IDs generated successfully"
+    },
+    anonymat_invalide_inexistant: {
+        fr: "Numéro d'anonymat invalide ou inexistant",
+        en: "Invalid or non-existent anonymous number"
+    },
+    anonymat_invalider: {
+        fr: "Cet anonymat a été invalidé",
+        en: "This anonymous ID has been invalidated"
+    },
+    anonymat_valide: {
+        fr: "Anonymat valide",
+        en: "Valid anonymous ID"
+    },
+    anonymat_invalide_succes: {
+        fr: "Anonymat invalidé avec succès",
+        en: "Anonymous ID invalidated successfully"
+    },
+
+    note_obligatoire_absent: {
+        fr: "La note est obligatoire si l'étudiant n'est pas absent",
+        en: "A grade is required if the student is not absent"
+    },
+    notes_evaluation_verrouillees: {
+        fr: "Les notes de cette évaluation sont verrouillées",
+        en: "Grades for this evaluation are locked"
+    },
+    matiere_non_evaluation: {
+        fr: "Cette matière ne fait pas partie de l'évaluation",
+        en: "This subject is not part of the evaluation"
+    },
+    note_comprise: {
+        fr: "La note doit être comprise entre",
+        en: "The grade must be between"
+    },
+    aucune_note_a_deliberer: {
+        fr: "Aucune note à délibérer",
+        en: "No grades to deliberate"
+    },
+    deliberation_effectuee: {
+        fr: "Délibération effectuée avec succès",
+        en: "Deliberation completed successfully"
+    },
+    publie_succes: {
+        fr: "Résultats publiés avec succès",
+        en: "Results published successfully"
+    },
+    notes_deja_verrouillees: {
+        fr: "Les notes sont déjà verrouillées",
+        en: "Grades are already locked"
+    },
+    notes_verrouillees: {
+        fr: "Notes verrouillées avec succès",
+        en: "Grades locked successfully"
+    },
+    resultats_non_publie: {
+        fr: "Les résultats ne sont pas encore publiés",
+        en: "Results have not been published yet"
+    },
+    note_non_trouvee: {
+        fr: "Aucune note trouvée pour cette évaluation",
+        en: "No grades found for this evaluation"
+    },
+    coef_non_trouve: {
+        fr: "Coefficient non trouvé",
+        en: "Coefficient not found"
+    },
+    config_niveau_non_trouvee: {
+        fr: "Configuration des niveaux non trouvée",
+        en: "Level configuration not found"
+    },
+    nombre_semestre: {
+        fr: "Le semestre doit être 1, 2 ou 3",
+        en: "Semester must be 1, 2, or 3"
     }
+
+
+
 
 };
 
