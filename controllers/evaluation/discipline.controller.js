@@ -258,7 +258,7 @@ export const getNotesDisciplineByEvaluation = async (req, res) => {
         res.status(200).json({
             success: true,
             data: {
-                notes,
+                disciplines:notes,
                 currentPage: parseInt(page),
                 totalPages: Math.ceil(total / pageSize),
                 totalItems: total,

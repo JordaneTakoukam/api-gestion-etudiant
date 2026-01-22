@@ -1,10 +1,20 @@
 import Note from '../../models/note.model.js';
+import Discipline from '../../models/discipline.model.js';
+import CoefficientDiscipline from '../../models/coefficient_discipline.model.js';
 import Anonymat from '../../models/anonymat.model.js';
 import Evaluation from '../../models/evaluation.model.js';
 import User from '../../models/user.model.js';
 import { message } from '../../configs/message.js';
 import { appConfigs } from '../../configs/app_configs.js';
 import mongoose from 'mongoose';
+import ejs from 'ejs';
+import puppeteer from 'puppeteer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Pour obtenir __dirname dans ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename)
 
 /**
  * Saisir une note via un numéro d'anonymat
@@ -536,9 +546,10 @@ export const calculerMoyennesEvaluation = async (req, res) => {
 
 
 /**
- * Obtenir les résultats détaillés d'une évaluation
+ * Obtenir les résultats détaillés d'une évaluation (MODIFIÉ - avec discipline)
  * Retourne pour chaque étudiant :
  * - Notes par matière avec coefficient
+ * - Note de discipline avec coefficient
  * - Moyenne générale
  * - Rang
  */
@@ -572,6 +583,14 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
             });
         }
 
+        // NOUVEAU - Récupérer le coefficient de discipline
+        const coefficientDiscipline = await CoefficientDiscipline.findOne({
+            niveau: evaluation.niveau,
+            annee: evaluation.annee,
+            semestre: evaluation.semestre
+        });
+        const coefDisc = coefficientDiscipline ? coefficientDiscipline.coefficient : 1;
+
         // Récupérer toutes les notes de l'évaluation
         const notes = await Note.find({
             evaluation: evaluationId,
@@ -581,10 +600,17 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
         .populate('matiere', 'libelleFr libelleEn code')
         .sort({ 'etudiant.matricule': 1 });
         
+        // NOUVEAU - Récupérer toutes les notes de discipline
+        const notesDiscipline = await Discipline.find({
+            evaluation: evaluationId,
+            statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
+        })
+        .populate('etudiant', 'nom prenom matricule email');
 
         // Grouper les notes par étudiant
         const notesParEtudiant = {};
 
+        // Traiter les notes des matières
         for (const note of notes) {
             if (!note.etudiant) continue;
 
@@ -599,7 +625,8 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
                         matricule: note.etudiant.matricule,
                         email: note.etudiant.email
                     },
-                    notes: [],
+                    notesMatieres: [],
+                    noteDiscipline: null,
                     totalPoints: 0,
                     totalCoefficients: 0,
                     moyenne: null,
@@ -613,11 +640,10 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
                 m => m.matiere._id.toString() === note.matiere._id.toString()
             );
 
-
             const coefficient = matiereEval ? matiereEval.coefficient : 1;
 
             // Ajouter la note
-            notesParEtudiant[etudiantId].notes.push({
+            notesParEtudiant[etudiantId].notesMatieres.push({
                 matiere: {
                     _id: note.matiere._id,
                     libelleFr: note.matiere.libelleFr,
@@ -627,7 +653,7 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
                 coefficient: coefficient,
                 note: note.note,
                 noteMax: note.noteMax,
-                noteRamenee20: (note.note / note.noteMax) * 20, // Ramener sur 20
+                noteRamenee20: (note.note / note.noteMax) * 20,
                 appreciationFr: note.appreciationFr,
                 appreciationEn: note.appreciationEn,
                 absent: note.absent,
@@ -647,6 +673,51 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
             if (note.fraude) {
                 notesParEtudiant[etudiantId].nombreFraudes++;
             }
+        }
+
+        // NOUVEAU - Traiter les notes de discipline
+        for (const noteDisc of notesDiscipline) {
+            if (!noteDisc.etudiant) continue;
+
+            const etudiantId = noteDisc.etudiant._id.toString();
+
+            // Créer l'entrée si elle n'existe pas (cas où étudiant a discipline mais pas de notes)
+            if (!notesParEtudiant[etudiantId]) {
+                notesParEtudiant[etudiantId] = {
+                    etudiant: {
+                        _id: noteDisc.etudiant._id,
+                        nom: noteDisc.etudiant.nom,
+                        prenom: noteDisc.etudiant.prenom,
+                        matricule: noteDisc.etudiant.matricule,
+                        email: noteDisc.etudiant.email
+                    },
+                    notesMatieres: [],
+                    noteDiscipline: null,
+                    totalPoints: 0,
+                    totalCoefficients: 0,
+                    moyenne: null,
+                    nombreAbsences: 0,
+                    nombreFraudes: 0
+                };
+            }
+
+            const noteRamenee20 = (noteDisc.note / noteDisc.noteMax) * 20;
+
+            // Ajouter la note de discipline
+            notesParEtudiant[etudiantId].noteDiscipline = {
+                note: noteDisc.note,
+                noteMax: noteDisc.noteMax,
+                noteRamenee20: parseFloat(noteRamenee20.toFixed(2)),
+                coefficient: coefDisc,
+                appreciationFr: noteDisc.appreciationFr,
+                appreciationEn: noteDisc.appreciationEn,
+                manquements: noteDisc.manquements || [],
+                bonus: noteDisc.bonus || []
+            };
+
+            // Ajouter au calcul de la moyenne
+            notesParEtudiant[etudiantId].totalPoints += noteRamenee20 * coefDisc;
+            notesParEtudiant[etudiantId].totalCoefficients += coefDisc;
         }
 
         // Calculer les moyennes
@@ -676,11 +747,9 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
             const resultat = resultatsTriesParMoyenne[i];
 
             if (moyennePrecedente !== null && resultat.moyenne === moyennePrecedente) {
-                // Même moyenne que le précédent = même rang
                 resultat.rang = rangActuel;
                 nombreEtudiantsMoyennePrecedente++;
             } else {
-                // Nouvelle moyenne
                 if (moyennePrecedente !== null) {
                     rangActuel += nombreEtudiantsMoyennePrecedente + 1;
                 }
@@ -696,7 +765,7 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
             resultat.rang = null;
         }
 
-        // Trier le résultat final par rang (puis par matricule pour ceux sans rang)
+        // Trier le résultat final par rang
         resultatsArray.sort((a, b) => {
             if (a.rang !== null && b.rang !== null) {
                 return a.rang - b.rang;
@@ -723,7 +792,7 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
                 : null
         };
 
-        // Informations sur l'évaluation
+        // Informations sur l'évaluation (avec coefficient discipline)
         const evaluationInfo = {
             _id: evaluation._id,
             libelleFr: evaluation.libelleFr,
@@ -741,7 +810,8 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
                 libelleEn: m.matiere.libelleEn,
                 code: m.matiere.code,
                 coefficient: m.coefficient
-            }))
+            })),
+            coefficientDiscipline: coefDisc // NOUVEAU
         };
 
         res.status(200).json({
@@ -763,13 +833,13 @@ export const getResultatsDetaillesEvaluation = async (req, res) => {
 };
 
 /**
- * Obtenir les résultats d'un étudiant spécifique pour une évaluation
+ * Obtenir les résultats d'un étudiant spécifique pour une évaluation (MODIFIÉ - avec discipline)
  * (Vue étudiant - uniquement ses propres résultats)
  */
 export const getMesResultatsDetailles = async (req, res) => {
     const { evaluationId } = req.params;
-    const {etudiantId} = req.query
-    console.log(etudiantId)
+    const { etudiantId } = req.query;
+
     try {
         if (!mongoose.Types.ObjectId.isValid(evaluationId) || !mongoose.Types.ObjectId.isValid(etudiantId)) {
             return res.status(400).json({
@@ -792,11 +862,19 @@ export const getMesResultatsDetailles = async (req, res) => {
         if (!['PUBLIEE', 'VERROUILEE'].includes(evaluation.statut)) {
             return res.status(403).json({
                 success: false,
-                message:message.resultats_non_publie
+                message: message.resultats_non_publie
             });
         }
 
-        // Récupérer les notes de l'étudiant
+        // NOUVEAU - Récupérer le coefficient de discipline
+        const coefficientDiscipline = await CoefficientDiscipline.findOne({
+            niveau: evaluation.niveau,
+            annee: evaluation.annee,
+            semestre: evaluation.semestre
+        });
+        const coefDisc = coefficientDiscipline ? coefficientDiscipline.coefficient : 1;
+
+        // Récupérer les notes de matières de l'étudiant
         const notes = await Note.find({
             evaluation: evaluationId,
             etudiant: etudiantId,
@@ -804,7 +882,14 @@ export const getMesResultatsDetailles = async (req, res) => {
         })
         .populate('matiere', 'libelleFr libelleEn code');
 
-        if (notes.length === 0) {
+        // NOUVEAU - Récupérer la note de discipline de l'étudiant
+        const noteDiscipline = await Discipline.findOne({
+            evaluation: evaluationId,
+            etudiant: etudiantId,
+            statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
+        });
+
+        if (notes.length === 0 && !noteDiscipline) {
             return res.status(404).json({
                 success: false,
                 message: message.note_non_trouvee
@@ -816,6 +901,7 @@ export const getMesResultatsDetailles = async (req, res) => {
         let totalCoefficients = 0;
         const notesDetailees = [];
 
+        // Traiter les notes de matières
         for (const note of notes) {
             const matiereEval = evaluation.matieres.find(
                 m => m.matiere._id.toString() === note.matiere._id.toString()
@@ -848,12 +934,32 @@ export const getMesResultatsDetailles = async (req, res) => {
             }
         }
 
+        // NOUVEAU - Traiter la note de discipline
+        let disciplineDetailee = null;
+        if (noteDiscipline) {
+            const noteRamenee20 = (noteDiscipline.note / noteDiscipline.noteMax) * 20;
+            
+            disciplineDetailee = {
+                note: noteDiscipline.note,
+                noteMax: noteDiscipline.noteMax,
+                noteRamenee20: parseFloat(noteRamenee20.toFixed(2)),
+                coefficient: coefDisc,
+                appreciationFr: noteDiscipline.appreciationFr,
+                appreciationEn: noteDiscipline.appreciationEn,
+                manquements: noteDiscipline.manquements || [],
+                bonus: noteDiscipline.bonus || []
+            };
+
+            totalPoints += noteRamenee20 * coefDisc;
+            totalCoefficients += coefDisc;
+        }
+
         const moyenne = totalCoefficients > 0 
             ? parseFloat((totalPoints / totalCoefficients).toFixed(2))
             : null;
 
         // Calculer le rang de l'étudiant
-        const tousLesResultats = await calculerTousMoyennes(evaluationId);
+        const tousLesResultats = await calculerTousMoyennesAvecDiscipline(evaluationId);
         const rang = tousLesResultats.findIndex(
             r => r.etudiantId.toString() === etudiantId.toString()
         ) + 1;
@@ -867,14 +973,16 @@ export const getMesResultatsDetailles = async (req, res) => {
             semestre: evaluation.semestre,
             dateEpreuve: evaluation.dateEpreuve,
             datePublication: evaluation.datePublication,
-            noteMax: evaluation.noteMax
+            noteMax: evaluation.noteMax,
+            coefficientDiscipline: coefDisc // NOUVEAU
         };
 
         res.status(200).json({
             success: true,
             data: {
                 evaluation: evaluationInfo,
-                notes: notesDetailees,
+                notesMatieres: notesDetailees,
+                noteDiscipline: disciplineDetailee, // NOUVEAU
                 moyenne: moyenne,
                 rang: rang > 0 ? rang : null,
                 totalEtudiants: tousLesResultats.length,
@@ -890,6 +998,92 @@ export const getMesResultatsDetailles = async (req, res) => {
         });
     }
 };
+
+/**
+ * NOUVELLE FONCTION HELPER - Calculer toutes les moyennes avec discipline (pour le classement)
+ */
+async function calculerTousMoyennesAvecDiscipline(evaluationId) {
+    const evaluation = await Evaluation.findById(evaluationId);
+    
+    // Récupérer le coefficient de discipline
+    const coefficientDiscipline = await CoefficientDiscipline.findOne({
+        niveau: evaluation.niveau,
+        annee: evaluation.annee,
+        semestre: evaluation.semestre
+    });
+    const coefDisc = coefficientDiscipline ? coefficientDiscipline.coefficient : 1;
+
+    // Notes de matières
+    const notes = await Note.find({
+        evaluation: evaluationId,
+        statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
+    }).populate('matiere');
+
+    // Notes de discipline
+    const notesDiscipline = await Discipline.find({
+        evaluation: evaluationId,
+        statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
+    });
+
+    const notesParEtudiant = {};
+
+    // Traiter les notes de matières
+    for (const note of notes) {
+        if (!note.etudiant) continue;
+
+        const etudiantId = note.etudiant.toString();
+
+        if (!notesParEtudiant[etudiantId]) {
+            notesParEtudiant[etudiantId] = {
+                etudiantId: note.etudiant,
+                totalPoints: 0,
+                totalCoefficients: 0
+            };
+        }
+
+        if (!note.absent) {
+            const matiereEval = evaluation.matieres.find(
+                m => m.matiere.toString() === note.matiere._id.toString()
+            );
+            const coefficient = matiereEval ? matiereEval.coefficient : 1;
+            const noteRamenee20 = (note.note / note.noteMax) * 20;
+
+            notesParEtudiant[etudiantId].totalPoints += noteRamenee20 * coefficient;
+            notesParEtudiant[etudiantId].totalCoefficients += coefficient;
+        }
+    }
+
+    // Traiter les notes de discipline
+    for (const noteDisc of notesDiscipline) {
+        if (!noteDisc.etudiant) continue;
+
+        const etudiantId = noteDisc.etudiant.toString();
+
+        if (!notesParEtudiant[etudiantId]) {
+            notesParEtudiant[etudiantId] = {
+                etudiantId: noteDisc.etudiant,
+                totalPoints: 0,
+                totalCoefficients: 0
+            };
+        }
+
+        const noteRamenee20 = (noteDisc.note / noteDisc.noteMax) * 20;
+        notesParEtudiant[etudiantId].totalPoints += noteRamenee20 * coefDisc;
+        notesParEtudiant[etudiantId].totalCoefficients += coefDisc;
+    }
+
+    const resultats = Object.values(notesParEtudiant)
+        .map(r => ({
+            etudiantId: r.etudiantId,
+            moyenne: r.totalCoefficients > 0 
+                ? r.totalPoints / r.totalCoefficients 
+                : null
+        }))
+        .filter(r => r.moyenne !== null)
+        .sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0));
+
+    return resultats;
+}
 
 /**
  * Fonction helper pour calculer toutes les moyennes (pour le classement)
@@ -945,9 +1139,12 @@ async function calculerTousMoyennes(evaluationId) {
 /**
  * Exporter les résultats en Excel (ADMIN uniquement)
  */
+/**
+ * Exporter les résultats en Excel (ADMIN uniquement) - MODIFIÉ avec discipline
+ */
 export const exporterResultatsExcel = async (req, res) => {
     const { evaluationId } = req.params;
-    const {section} = req.query;
+    const { section } = req.query;
 
     try {
         if (!mongoose.Types.ObjectId.isValid(evaluationId)) {
@@ -967,7 +1164,15 @@ export const exporterResultatsExcel = async (req, res) => {
             });
         }
 
-        // Récupérer tous les résultats en appelant directement la logique
+        // NOUVEAU - Récupérer le coefficient de discipline
+        const coefficientDiscipline = await CoefficientDiscipline.findOne({
+            niveau: evaluation.niveau,
+            annee: evaluation.annee,
+            semestre: evaluation.semestre
+        });
+        const coefDisc = coefficientDiscipline ? coefficientDiscipline.coefficient : 1;
+
+        // Récupérer toutes les notes de matières
         const notes = await Note.find({
             evaluation: evaluationId,
             statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
@@ -975,6 +1180,12 @@ export const exporterResultatsExcel = async (req, res) => {
         .populate('etudiant', 'nom prenom matricule email')
         .populate('matiere', 'libelleFr libelleEn code')
         .sort({ 'etudiant.matricule': 1 });
+
+        // NOUVEAU - Récupérer toutes les notes de discipline
+        const notesDiscipline = await Discipline.find({
+            evaluation: evaluationId,
+            statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
+        }).populate('etudiant', 'nom prenom matricule');
 
         // Grouper les notes par étudiant
         const notesParEtudiant = {};
@@ -993,6 +1204,7 @@ export const exporterResultatsExcel = async (req, res) => {
                         matricule: note.etudiant.matricule
                     },
                     notes: [],
+                    noteDiscipline: null, // NOUVEAU
                     totalPoints: 0,
                     totalCoefficients: 0,
                     moyenne: null
@@ -1025,6 +1237,43 @@ export const exporterResultatsExcel = async (req, res) => {
                 notesParEtudiant[etudiantId].totalPoints += noteRamenee20 * coefficient;
                 notesParEtudiant[etudiantId].totalCoefficients += coefficient;
             }
+        }
+
+        // NOUVEAU - Traiter les notes de discipline
+        for (const noteDisc of notesDiscipline) {
+            if (!noteDisc.etudiant) continue;
+
+            const etudiantId = noteDisc.etudiant._id.toString();
+
+            // Créer l'entrée si elle n'existe pas
+            if (!notesParEtudiant[etudiantId]) {
+                notesParEtudiant[etudiantId] = {
+                    etudiant: {
+                        _id: noteDisc.etudiant._id,
+                        nom: noteDisc.etudiant.nom,
+                        prenom: noteDisc.etudiant.prenom,
+                        matricule: noteDisc.etudiant.matricule
+                    },
+                    notes: [],
+                    noteDiscipline: null,
+                    totalPoints: 0,
+                    totalCoefficients: 0,
+                    moyenne: null
+                };
+            }
+
+            const noteRamenee20 = (noteDisc.note / noteDisc.noteMax) * 20;
+
+            notesParEtudiant[etudiantId].noteDiscipline = {
+                note: noteDisc.note,
+                noteMax: noteDisc.noteMax,
+                noteRamenee20: noteRamenee20,
+                noteCoef: noteRamenee20 * coefDisc,
+                coefficient: coefDisc
+            };
+
+            notesParEtudiant[etudiantId].totalPoints += noteRamenee20 * coefDisc;
+            notesParEtudiant[etudiantId].totalCoefficients += coefDisc;
         }
 
         // Calculer les moyennes et rangs
@@ -1074,8 +1323,8 @@ export const exporterResultatsExcel = async (req, res) => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Résultats');
 
-        // Titre
-        const totalCols = 4 + evaluation.matieres.length + 3; // Nom, Prénom, Matricule, Rang + Matières + Total, TotalCoef, Moyenne
+        // MODIFIÉ - Calcul du nombre total de colonnes (avec discipline)
+        const totalCols = 4 + evaluation.matieres.length + 1 + 3; // Rang, Matricule, Nom, Prénom + Matières + Discipline + Total, TotalCoef, Moyenne
         worksheet.mergeCells('A1', String.fromCharCode(65 + totalCols - 1) + '1');
         const titleCell = worksheet.getCell('A1');
         titleCell.value = evaluation.libelleFr;
@@ -1089,16 +1338,22 @@ export const exporterResultatsExcel = async (req, res) => {
         titleCell.font = { ...titleCell.font, color: { argb: 'FFFFFFFF' } };
 
         // Informations de l'évaluation
-        worksheet.getRow(2).values = ['Année:', evaluation.annee, 'Semestre:', evaluation.semestre, section, 'Date:', new Date().toLocaleDateString()];
+        worksheet.getRow(2).values = [
+            'Année:', evaluation.annee, 
+            'Semestre:', evaluation.semestre, 
+            section, 
+            'Date:', new Date().toLocaleDateString()
+        ];
         worksheet.getRow(2).font = { bold: true };
 
-        // En-têtes
+        // MODIFIÉ - En-têtes avec discipline
         const headers = [
             'Rang',
             'Matricule',
             'Nom',
             'Prénom',
             ...evaluation.matieres.map(m => `${m.matiere.libelleFr}\n(Coef ${m.coefficient})`),
+            `Discipline\n(Coef ${coefDisc})`, // NOUVEAU
             'Total\n(Note×Coef)',
             'Total\nCoef',
             'Moyenne'
@@ -1115,7 +1370,7 @@ export const exporterResultatsExcel = async (req, res) => {
         headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
         headerRow.height = 40;
 
-        // Données
+        // MODIFIÉ - Données avec discipline
         let currentRow = 5;
         for (const resultat of resultatsArray) {
             const row = worksheet.getRow(currentRow);
@@ -1133,6 +1388,10 @@ export const exporterResultatsExcel = async (req, res) => {
                     if (note.absent) return 'ABS';
                     return note.noteRamenee20.toFixed(2);
                 }),
+                // NOUVEAU - Colonne discipline
+                resultat.noteDiscipline 
+                    ? resultat.noteDiscipline.noteRamenee20.toFixed(2)
+                    : '-',
                 resultat.totalPoints > 0 ? resultat.totalPoints.toFixed(2) : '-',
                 resultat.totalCoefficients > 0 ? resultat.totalCoefficients : '-',
                 resultat.moyenne !== null ? resultat.moyenne.toFixed(2) : '-'
@@ -1141,8 +1400,8 @@ export const exporterResultatsExcel = async (req, res) => {
             row.values = rowData;
             row.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            // Coloration de la moyenne
-            const moyenneColIndex = 5 + evaluation.matieres.length + 2; // Après rang, matricule, nom, prénom, matières, total, totalCoef
+            // MODIFIÉ - Index de la colonne moyenne
+            const moyenneColIndex = 5 + evaluation.matieres.length + 1 + 2; // +1 pour discipline
             const moyenneCell = row.getCell(moyenneColIndex);
             if (resultat.moyenne !== null) {
                 moyenneCell.font = { bold: true, size: 12 };
@@ -1157,17 +1416,17 @@ export const exporterResultatsExcel = async (req, res) => {
             // Coloration du rang (or, argent, bronze)
             const rangCell = row.getCell(1);
             if (resultat.rang === 1) {
-                rangCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFD700' } }; // Or
+                rangCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFD700' } };
                 rangCell.font = { bold: true, size: 12 };
             } else if (resultat.rang === 2) {
-                rangCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0C0C0' } }; // Argent
+                rangCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0C0C0' } };
                 rangCell.font = { bold: true, size: 12 };
             } else if (resultat.rang === 3) {
-                rangCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCD7F32' } }; // Bronze
+                rangCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCD7F32' } };
                 rangCell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
             }
 
-            // Coloration des notes (vert si >=10, rouge si <10)
+            // Coloration des notes de matières (vert si >=10, rouge si <10)
             for (let i = 0; i < evaluation.matieres.length; i++) {
                 const noteCell = row.getCell(5 + i);
                 const noteValue = noteCell.value;
@@ -1181,9 +1440,23 @@ export const exporterResultatsExcel = async (req, res) => {
                 }
             }
 
+            // NOUVEAU - Coloration de la note de discipline
+            const disciplineColIndex = 5 + evaluation.matieres.length;
+            const disciplineCell = row.getCell(disciplineColIndex);
+            const disciplineValue = disciplineCell.value;
+            if (disciplineValue !== '-' && !isNaN(parseFloat(disciplineValue))) {
+                const note = parseFloat(disciplineValue);
+                if (note >= 10) {
+                    disciplineCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+                } else {
+                    disciplineCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7CE' } };
+                }
+                disciplineCell.font = { bold: true }; // Discipline en gras
+            }
+
             // Style pour Total (Note×Coef) et Total Coef
-            const totalCell = row.getCell(5 + evaluation.matieres.length);
-            const totalCoefCell = row.getCell(5 + evaluation.matieres.length + 1);
+            const totalCell = row.getCell(5 + evaluation.matieres.length + 1);
+            const totalCoefCell = row.getCell(5 + evaluation.matieres.length + 2);
             totalCell.font = { bold: true };
             totalCoefCell.font = { bold: true };
             totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE7E6E6' } };
@@ -1206,19 +1479,20 @@ export const exporterResultatsExcel = async (req, res) => {
             }
         });
 
-        // Ajuster la largeur des colonnes
+        // MODIFIÉ - Ajuster la largeur des colonnes (avec discipline)
         worksheet.columns = [
             { width: 8 },   // Rang
             { width: 15 },  // Matricule
             { width: 20 },  // Nom
             { width: 20 },  // Prénom
             ...evaluation.matieres.map(() => ({ width: 12 })), // Matières
+            { width: 12 },  // Discipline - NOUVEAU
             { width: 14 },  // Total (Note×Coef)
             { width: 12 },  // Total Coef
             { width: 12 }   // Moyenne
         ];
 
-        // Statistiques en bas
+        // Statistiques en bas (inchangé)
         const statsRow = currentRow + 2;
         worksheet.mergeCells(`A${statsRow}`, `D${statsRow}`);
         const statsTitle = worksheet.getCell(`A${statsRow}`);
@@ -1278,6 +1552,271 @@ export const exporterResultatsExcel = async (req, res) => {
         res.status(500).json({
             success: false,
             message: message.erreurServeur
+        });
+    }
+};
+
+export const exporterResultatsPDF = async (req, res) => {
+    const { evaluationId } = req.params;
+    const { section } = req.query;
+
+    try {
+        if (!mongoose.Types.ObjectId.isValid(evaluationId)) {
+            return res.status(400).json({
+                success: false,
+                message: message.identifiant_invalide
+            });
+        }
+
+        // Récupérer l'évaluation avec les matières
+        const evaluation = await Evaluation.findById(evaluationId)
+            .populate('matieres.matiere', 'libelleFr libelleEn code');
+
+        if (!evaluation) {
+            return res.status(404).json({
+                success: false,
+                message: message.evaluation_non_trouvee
+            });
+        }
+
+        // Récupérer le coefficient de discipline
+        const coefficientDiscipline = await CoefficientDiscipline.findOne({
+            niveau: evaluation.niveau,
+            annee: evaluation.annee,
+            semestre: evaluation.semestre
+        });
+        const coefDisc = coefficientDiscipline ? coefficientDiscipline.coefficient : 1;
+
+        // Récupérer toutes les notes de matières
+        const notes = await Note.find({
+            evaluation: evaluationId,
+            statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
+        })
+        .populate('etudiant', 'nom prenom matricule email')
+        .populate('matiere', 'libelleFr libelleEn code')
+        .sort({ 'etudiant.matricule': 1 });
+
+        // Récupérer toutes les notes de discipline
+        const notesDiscipline = await Discipline.find({
+            evaluation: evaluationId,
+            statut: { $in: ['VALIDEE', 'PUBLIEE', 'VERROUILLEE'] }
+        }).populate('etudiant', 'nom prenom matricule');
+
+        // Grouper les notes par étudiant
+        const notesParEtudiant = {};
+
+        // Traiter les notes des matières
+        for (const note of notes) {
+            if (!note.etudiant) continue;
+
+            const etudiantId = note.etudiant._id.toString();
+
+            if (!notesParEtudiant[etudiantId]) {
+                notesParEtudiant[etudiantId] = {
+                    etudiant: {
+                        _id: note.etudiant._id,
+                        nom: note.etudiant.nom,
+                        prenom: note.etudiant.prenom,
+                        matricule: note.etudiant.matricule
+                    },
+                    notesMatieres: [],
+                    noteDiscipline: null,
+                    totalPoints: 0,
+                    totalCoefficients: 0,
+                    moyenne: null
+                };
+            }
+
+            const matiereEval = evaluation.matieres.find(
+                m => m.matiere._id.toString() === note.matiere._id.toString()
+            );
+
+            const coefficient = matiereEval ? matiereEval.coefficient : 1;
+            const noteRamenee20 = (note.note / note.noteMax) * 20;
+
+            notesParEtudiant[etudiantId].notesMatieres.push({
+                matiere: {
+                    _id: note.matiere._id,
+                    libelleFr: note.matiere.libelleFr,
+                    libelleEn: note.matiere.libelleEn,
+                    code: note.matiere.code
+                },
+                coefficient: coefficient,
+                note: note.note,
+                noteMax: note.noteMax,
+                noteRamenee20: noteRamenee20,
+                absent: note.absent,
+                fraude: note.fraude
+            });
+
+            if (!note.absent) {
+                notesParEtudiant[etudiantId].totalPoints += noteRamenee20 * coefficient;
+                notesParEtudiant[etudiantId].totalCoefficients += coefficient;
+            }
+        }
+
+        // Traiter les notes de discipline
+        for (const noteDisc of notesDiscipline) {
+            if (!noteDisc.etudiant) continue;
+
+            const etudiantId = noteDisc.etudiant._id.toString();
+
+            if (!notesParEtudiant[etudiantId]) {
+                notesParEtudiant[etudiantId] = {
+                    etudiant: {
+                        _id: noteDisc.etudiant._id,
+                        nom: noteDisc.etudiant.nom,
+                        prenom: noteDisc.etudiant.prenom,
+                        matricule: noteDisc.etudiant.matricule
+                    },
+                    notesMatieres: [],
+                    noteDiscipline: null,
+                    totalPoints: 0,
+                    totalCoefficients: 0,
+                    moyenne: null
+                };
+            }
+
+            const noteRamenee20 = (noteDisc.note / noteDisc.noteMax) * 20;
+
+            notesParEtudiant[etudiantId].noteDiscipline = {
+                note: noteDisc.note,
+                noteMax: noteDisc.noteMax,
+                noteRamenee20: noteRamenee20,
+                coefficient: coefDisc
+            };
+
+            notesParEtudiant[etudiantId].totalPoints += noteRamenee20 * coefDisc;
+            notesParEtudiant[etudiantId].totalCoefficients += coefDisc;
+        }
+
+        // Calculer les moyennes et rangs
+        const resultatsArray = Object.values(notesParEtudiant);
+
+        for (const resultat of resultatsArray) {
+            if (resultat.totalCoefficients > 0) {
+                resultat.moyenne = parseFloat(
+                    (resultat.totalPoints / resultat.totalCoefficients).toFixed(2)
+                );
+            }
+        }
+
+        // Trier et attribuer les rangs
+        const resultatsTriesParMoyenne = resultatsArray
+            .filter(r => r.moyenne !== null)
+            .sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0));
+
+        let rangActuel = 1;
+        let moyennePrecedente = null;
+        let nombreEtudiantsMoyennePrecedente = 0;
+
+        for (let i = 0; i < resultatsTriesParMoyenne.length; i++) {
+            const resultat = resultatsTriesParMoyenne[i];
+
+            if (moyennePrecedente !== null && resultat.moyenne === moyennePrecedente) {
+                resultat.rang = rangActuel;
+                nombreEtudiantsMoyennePrecedente++;
+            } else {
+                if (moyennePrecedente !== null) {
+                    rangActuel += nombreEtudiantsMoyennePrecedente + 1;
+                }
+                resultat.rang = rangActuel;
+                moyennePrecedente = resultat.moyenne;
+                nombreEtudiantsMoyennePrecedente = 0;
+            }
+        }
+
+        // Trier le résultat final par rang
+        resultatsArray.sort((a, b) => {
+            if (a.rang !== null && b.rang !== null) return a.rang - b.rang;
+            if (a.rang !== null) return -1;
+            if (b.rang !== null) return 1;
+            return a.etudiant.matricule.localeCompare(b.etudiant.matricule);
+        });
+
+        // Calculer les statistiques
+        const moyennesValides = resultatsTriesParMoyenne.map(r => r.moyenne);
+        const statistiques = {
+            nombreEtudiants: resultatsArray.length,
+            nombreMoyennesCalculees: moyennesValides.length,
+            moyenneClasse: moyennesValides.length > 0 
+                ? parseFloat((moyennesValides.reduce((a, b) => a + b, 0) / moyennesValides.length).toFixed(2))
+                : null,
+            moyenneMax: moyennesValides.length > 0 ? Math.max(...moyennesValides) : null,
+            moyenneMin: moyennesValides.length > 0 ? Math.min(...moyennesValides) : null,
+            nombreAdmis: moyennesValides.filter(m => m >= 10).length,
+            nombreAjournes: moyennesValides.filter(m => m < 10).length,
+            tauxReussite: moyennesValides.length > 0 
+                ? parseFloat(((moyennesValides.filter(m => m >= 10).length / moyennesValides.length) * 100).toFixed(2))
+                : null
+        };
+
+        // Préparer les données pour le template
+        const evaluationInfo = {
+            _id: evaluation._id,
+            libelleFr: evaluation.libelleFr,
+            libelleEn: evaluation.libelleEn,
+            type: evaluation.type,
+            annee: evaluation.annee,
+            semestre: evaluation.semestre,
+            noteMax: evaluation.noteMax,
+            matieres: evaluation.matieres.map(m => ({
+                _id: m.matiere._id,
+                libelleFr: m.matiere.libelleFr,
+                libelleEn: m.matiere.libelleEn,
+                code: m.matiere.code,
+                coefficient: m.coefficient
+            })),
+            coefficientDiscipline: coefDisc
+        };
+
+        // Charger et rendre le template EJS
+        const templatePath = path.join(__dirname, '../../templates/resultats-template.ejs');
+        
+        const html = await ejs.renderFile(templatePath, {
+            evaluation: evaluationInfo,
+            resultats: resultatsArray,
+            statistiques: statistiques,
+            section: section || 'Non spécifiée'
+        });
+
+        // Générer le PDF avec Puppeteer
+        const browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            landscape: true,
+            printBackground: true,
+            margin: {
+                top: '10mm',
+                right: '10mm',
+                bottom: '10mm',
+                left: '10mm'
+            }
+        });
+
+        await browser.close();
+
+        // Envoyer le PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader(
+            'Content-Disposition', 
+            `attachment; filename=Resultats_${evaluation.libelleFr.replace(/\s/g, '_')}_${Date.now()}.pdf`
+        );
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        console.error('Erreur lors de l\'export PDF:', error);
+        res.status(500).json({
+            success: false,
+            message: message.erreurServeur,
+            error: error.message
         });
     }
 };

@@ -12,7 +12,8 @@ import {
     getMesResultatsDetailles,
     exporterResultatsExcel,
     // NOUVELLE IMPORTATION
-    saisieRapideNote
+    saisieRapideNote,
+    exporterResultatsPDF
 } from "../controllers/evaluation/note.controller.js";
 
 const router = express.Router();
@@ -76,6 +77,15 @@ router.get('/mes-resultats/:evaluationId', getMesResultatsDetailles);
  * GET /api/v1/note/export-excel/:evaluationId
  */
 router.get('/export-excel/:evaluationId', exporterResultatsExcel);
+
+/**
+ * @route   GET /api/v1/note/evaluation/export-pdf/:evaluationId
+ * @desc    Exporter les résultats d'une évaluation en PDF
+ * @access  Private - Admin uniquement
+ * @query   section - Nom de la classe/section (optionnel)
+ */
+router.get('/export-pdf/:evaluationId', exporterResultatsPDF);
+
 
 /**
  * Obtenir les notes d'une évaluation pour une matière
