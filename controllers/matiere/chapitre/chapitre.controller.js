@@ -422,6 +422,7 @@ export const getProgressionGlobalEnseignant = async (req, res) => {
                 { 'typesEnseignement.enseignantSuppleant': enseignantId }
             ]
         }).populate('chapitres');
+        console.log(matieres)
 
         let totalObjectifsAvecEtat1 = 0;
         let totalObjectifs = 0;
