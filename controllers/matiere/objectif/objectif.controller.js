@@ -486,84 +486,120 @@ export const getProgressionGlobalEnseignantsNiveauObj = async (req, res) => {
 
 export const getProgressionGlobalEnseignantObj = async (req, res) => {
     const { enseignantId } = req.params;
-    const {annee=2023, semestre=1}=req.query;
-    try {
-        // Récupérer toutes les matières où l'enseignant est soit l'enseignant principal, soit l'enseignant suppléant
-        // const matieres = await Matiere.find({
-        //     $or: [
-        //         { 'typesEnseignement.enseignantPrincipal': enseignantId },
-        //         { 'typesEnseignement.enseignantSuppleant': enseignantId }
-        //     ]
-        // }).populate('objectifs');
+    const { annee = 2023, semestre = 1 } = req.query;
 
-        // Création du filtre initial pour les périodes
-        const filter = { 
+    try {
+        console.log('📊 Calcul de la progression globale pour l\'enseignant:', enseignantId);
+        console.log('📅 Année:', annee, '- Semestre:', semestre);
+
+        // 1. Construire le filtre pour rechercher les périodes
+        const filter = {
+            annee: parseInt(annee),
+            semestre: parseInt(semestre),
             $or: [
-                { enseignantsPrincipaux: enseignantId },
-                { enseignantsSuppleans: enseignantId }
+                { 'enseignements.enseignantPrincipal': enseignantId },
+                { 'enseignements.enseignantSuppleant': enseignantId }
             ]
         };
 
-        // Si une année est spécifiée dans la requête, l'utiliser
-        if (annee && !isNaN(annee)) {
-            filter.annee = parseInt(annee); 
+        // 2. Rechercher les périodes où l'enseignant intervient
+        const periodes = await Periode.find(filter).exec();
+        console.log('📚 Nombre de périodes trouvées:', periodes.length);
+
+        if (periodes.length === 0) {
+            console.log('⚠️ Aucune période trouvée pour cet enseignant');
+            return res.json({
+                success: true,
+                data: 0,
+                message: 'Aucune période trouvée pour cet enseignant'
+            });
         }
 
-        // Si un semestre est spécifié dans la requête, l'utiliser
-        if (semestre && !isNaN(semestre)) {
-            filter.semestre = parseInt(semestre);
-        }
-
-        // Rechercher les périodes en fonction du filtre
-        const periodes = await Periode.find(filter).select('matieres').exec();
-
-        // Extraire les identifiants uniques des matières
-        const matiereIds = [...new Set(periodes.flatMap(periode => periode.matieres))];
-
-        // Récupérer les détails de chaque matière à partir des identifiants uniques
-        const matieres = await Matiere.find({ _id: { $in: matiereIds } }).populate('objectifs').exec();
+        // 3. Extraire les identifiants uniques des matières enseignées
+        const matiereIds = new Set();
         
-        // console.log(matieres)
-        let totalObjectifsAvecEtat1 = 0;
-        let totalObjectifs = 0;
-        console.log(periodes)
-        // Pour chaque période de cours, compter le nombre total d'objectifs avec l'état 1 et le nombre total d'objectifs
-        matieres.forEach(matiere => {
-            matiere.objectifs.forEach(objectif => {
-                if(objectif.annee==annee && objectif.semestre == semestre){
-                    if (objectif.etat === 1) {
-                        totalObjectifsAvecEtat1++;
-                    }
-                    totalObjectifs++;
-                }
+        periodes.forEach(periode => {
+            periode.enseignements.forEach(enseignement => {
+                // Vérifier si l'enseignant est principal ou suppléant pour cette matière
+                const isEnseignantPrincipal = enseignement.enseignantPrincipal?.toString() === enseignantId;
+                const isEnseignantSuppleant = enseignement.enseignantSuppleant?.toString() === enseignantId;
                 
+                if (isEnseignantPrincipal || isEnseignantSuppleant) {
+                    matiereIds.add(enseignement.matiere.toString());
+                }
             });
         });
 
-        // Pour chaque matière, compter le nombre total d'objectifs avec l'état 1 et le nombre total d'objectifs
-        // matieres.forEach(matiere => {
-        //     matiere.objectifs.forEach(objectif => {
-        //         if (objectif.etat == 1) {
-        //             totalObjectifsAvecEtat1++;
-        //         }
-        //         totalObjectifs++;
-        //     });
-        // });
+        const matiereIdsArray = Array.from(matiereIds);
+        console.log('🔑 Matières uniques trouvées:', matiereIdsArray.length);
+        console.log('📋 IDs des matières:', matiereIdsArray);
 
-        // Calculer la progression globale
-        
-        let progressionGlobale = 0;
-        if(totalObjectifs != 0){
-            progressionGlobale = totalObjectifsAvecEtat1 / totalObjectifs;
+        if (matiereIdsArray.length === 0) {
+            console.log('⚠️ Aucune matière trouvée');
+            return res.json({
+                success: true,
+                data: 0,
+                message: 'Aucune matière trouvée'
+            });
         }
-        res.json({
-            success: true,
-            data: (progressionGlobale*100),
+
+        // 4. Récupérer les matières avec leurs objectifs
+        const matieres = await Matiere.find({ 
+            _id: { $in: matiereIdsArray } 
+        }).populate('objectifs').exec();
+
+        console.log('📚 Matières chargées:', matieres.length);
+
+        // 5. Calculer la progression
+        let totalObjectifsAvecEtat1 = 0;
+        let totalObjectifs = 0;
+
+        matieres.forEach(matiere => {
+            if (matiere.objectifs && matiere.objectifs.length > 0) {
+                matiere.objectifs.forEach(objectif => {
+                    // Vérifier que l'objectif correspond à l'année et au semestre
+                    if (objectif.annee == annee && objectif.semestre == semestre) {
+                        totalObjectifs++;
+                        
+                        // Compter les objectifs avec état = 1 (complétés)
+                        if (objectif.etat === 1) {
+                            totalObjectifsAvecEtat1++;
+                        }
+                    }
+                });
+            }
         });
-        
+
+        console.log('✅ Objectifs complétés:', totalObjectifsAvecEtat1);
+        console.log('📊 Total objectifs:', totalObjectifs);
+
+        // 6. Calculer la progression globale en pourcentage
+        let progressionGlobale = 0;
+        if (totalObjectifs > 0) {
+            progressionGlobale = (totalObjectifsAvecEtat1 / totalObjectifs) * 100;
+        }
+
+        console.log('🎯 Progression globale:', progressionGlobale.toFixed(2) + '%');
+
+        return res.json({
+            success: true,
+            data: Math.round(progressionGlobale * 100) / 100, // Arrondir à 2 décimales
+            details: {
+                totalObjectifs,
+                objectifsCompletes: totalObjectifsAvecEtat1,
+                objectifsRestants: totalObjectifs - totalObjectifsAvecEtat1,
+                nombreMatieres: matieres.length,
+                nombrePeriodes: periodes.length
+            }
+        });
+
     } catch (error) {
-        console.error('Erreur lors du calcul de la progression globale de l\'enseignant :', error);
-        res.status(500).json({ success: false, message: 'Une erreur est survenue lors du calcul de la progression globale de l\'enseignant.' });
+        console.error('❌ Erreur lors du calcul de la progression globale:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Une erreur est survenue lors du calcul de la progression globale de l\'enseignant.',
+            error: error.message
+        });
     }
 };
 
